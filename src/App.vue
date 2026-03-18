@@ -1,17 +1,44 @@
 <script setup lang="ts">
 import AppSidebar from './components/AppSidebar.vue'
 import AppHeader from './components/AppHeader.vue'
-import { ref } from 'vue'
+import QuickNote from './components/QuickNote.vue'
+import SearchDialog from './components/SearchDialog.vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 const sidebarCollapsed = ref(false)
+const showQuickNote = ref(false)
+const showSearch = ref(false)
 
 function toggleSidebar() {
   sidebarCollapsed.value = !sidebarCollapsed.value
 }
+
+function handleGlobalKeydown(e: KeyboardEvent) {
+  /* Ctrl+K → 搜索 */
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault()
+    showSearch.value = !showSearch.value
+    showQuickNote.value = false
+  }
+  /* Ctrl+Q → 快速笔记 */
+  if ((e.ctrlKey || e.metaKey) && e.key === 'q') {
+    e.preventDefault()
+    showQuickNote.value = !showQuickNote.value
+    showSearch.value = false
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', handleGlobalKeydown))
+onUnmounted(() => window.removeEventListener('keydown', handleGlobalKeydown))
 </script>
 
 <template>
-  <AppHeader :sidebar-collapsed="sidebarCollapsed" @toggle-sidebar="toggleSidebar" />
+  <AppHeader
+    :sidebar-collapsed="sidebarCollapsed"
+    @toggle-sidebar="toggleSidebar"
+    @open-search="showSearch = true"
+    @open-quick-note="showQuickNote = true"
+  />
 
   <div class="app-layout">
     <AppSidebar :collapsed="sidebarCollapsed" @collapse="sidebarCollapsed = true" />
@@ -24,6 +51,10 @@ function toggleSidebar() {
       </RouterView>
     </main>
   </div>
+
+  <!-- 全局弹窗 -->
+  <QuickNote :open="showQuickNote" @close="showQuickNote = false" />
+  <SearchDialog :open="showSearch" @close="showSearch = false" />
 </template>
 
 <style scoped>

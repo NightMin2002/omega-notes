@@ -4,6 +4,7 @@ import { useNotesStore } from '../stores/notes'
 import { useRouter } from 'vue-router'
 import MilkdownEditor from '../components/MilkdownEditor.vue'
 import MarkdownRenderer from '../components/MarkdownRenderer.vue'
+import { templates, type NoteTemplate } from '../utils/templates'
 
 const notesStore = useNotesStore()
 const router = useRouter()
@@ -13,9 +14,20 @@ const content = ref('')
 const category = ref('')
 const tags = ref('')
 const isSaving = ref(false)
+const showTemplates = ref(true)
 
 type EditorMode = 'wysiwyg' | 'split'
 const editorMode = ref<EditorMode>('wysiwyg')
+
+function applyTemplate(tpl: NoteTemplate) {
+  title.value = tpl.title
+  content.value = tpl.content
+  category.value = tpl.category
+  showTemplates.value = false
+  if (tpl.content) {
+    editorMode.value = 'split'
+  }
+}
 
 async function handleSubmit() {
   if (!content.value.trim()) return
@@ -33,37 +45,104 @@ async function handleSubmit() {
   isSaving.value = false
   router.push(`/note/${note.id}`)
 }
+
+/** 处理分屏 textarea 的图片粘贴 */
+async function handlePaste(e: ClipboardEvent) {
+  if (!e.clipboardData) return
+  const { getImageFiles, saveImage } = await import('../utils/images')
+  const images = getImageFiles(e.clipboardData)
+  if (images.length === 0) return
+
+  e.preventDefault()
+  for (const img of images) {
+    const md = await saveImage(img)
+    content.value += `\n${md}\n`
+  }
+}
 </script>
 
 <template>
   <div class="write-page">
     <div class="page-header">
       <h2 class="page-title">新建笔记</h2>
-      <div class="mode-switcher">
+      <div class="header-actions">
         <button
-          class="mode-btn"
-          :class="{ active: editorMode === 'wysiwyg' }"
-          @click="editorMode = 'wysiwyg'"
+          v-if="!showTemplates"
+          class="template-back-btn"
+          @click="showTemplates = true; title = ''; content = ''; category = ''"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6" />
           </svg>
-          <span>编辑</span>
+          <span>模板</span>
         </button>
-        <button
-          class="mode-btn"
-          :class="{ active: editorMode === 'split' }"
-          @click="editorMode = 'split'"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" /><line x1="12" y1="3" x2="12" y2="21" />
-          </svg>
-          <span>分屏</span>
-        </button>
+        <div v-if="!showTemplates" class="mode-switcher">
+          <button
+            class="mode-btn"
+            :class="{ active: editorMode === 'wysiwyg' }"
+            @click="editorMode = 'wysiwyg'"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
+            <span>编辑</span>
+          </button>
+          <button
+            class="mode-btn"
+            :class="{ active: editorMode === 'split' }"
+            @click="editorMode = 'split'"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" /><line x1="12" y1="3" x2="12" y2="21" />
+            </svg>
+            <span>分屏</span>
+          </button>
+        </div>
       </div>
     </div>
 
-    <form class="write-form" @submit.prevent="handleSubmit" novalidate>
+    <!-- 模板选择器 -->
+    <div v-if="showTemplates" class="template-grid">
+      <button
+        v-for="tpl in templates"
+        :key="tpl.id"
+        class="template-card"
+        @click="applyTemplate(tpl)"
+      >
+        <!-- file -->
+        <svg v-if="tpl.icon === 'file'" class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+        </svg>
+        <!-- users -->
+        <svg v-else-if="tpl.icon === 'users'" class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+        <!-- book -->
+        <svg v-else-if="tpl.icon === 'book'" class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        </svg>
+        <!-- calendar -->
+        <svg v-else-if="tpl.icon === 'calendar'" class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+        <!-- lightbulb -->
+        <svg v-else-if="tpl.icon === 'lightbulb'" class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 18h6" /><path d="M10 22h4" />
+          <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
+        </svg>
+        <!-- check -->
+        <svg v-else-if="tpl.icon === 'check'" class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
+        <span class="template-name">{{ tpl.name }}</span>
+        <span class="template-desc">{{ tpl.description }}</span>
+      </button>
+    </div>
+
+    <form v-else class="write-form" @submit.prevent="handleSubmit" novalidate>
       <input
         v-model="title"
         type="text"
@@ -84,8 +163,9 @@ async function handleSubmit() {
           <textarea
             v-model="content"
             class="source-textarea"
-            placeholder="在此输入或粘贴 Markdown 内容…"
+            placeholder="在此输入或粘贴 Markdown 内容…&#10;&#10;支持粘贴图片（Ctrl+V）"
             spellcheck="false"
+            @paste="handlePaste"
           />
         </div>
         <div class="split-divider" />
@@ -154,6 +234,82 @@ async function handleSubmit() {
   align-items: center;
   justify-content: space-between;
   margin-bottom: var(--space-6);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.template-back-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .template-back-btn:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+  }
+}
+
+/* ─── 模板网格 ─── */
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-4);
+}
+
+.template-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .template-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--color-accent);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  }
+  .template-card:hover .template-icon {
+    color: var(--color-accent);
+  }
+}
+
+.template-icon {
+  color: var(--color-text-tertiary);
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.template-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.template-desc {
+  font-size: 0.75rem;
+  color: var(--color-text-tertiary);
 }
 
 .page-title {

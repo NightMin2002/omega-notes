@@ -7,6 +7,8 @@ defineProps<{
 
 const emit = defineEmits<{
   toggleSidebar: []
+  openSearch: []
+  openQuickNote: []
 }>()
 
 const themeStore = useThemeStore()
@@ -35,6 +37,23 @@ const themeStore = useThemeStore()
     </div>
 
     <div class="header-right">
+      <!-- 搜索按钮 -->
+      <button class="header-btn search-trigger" aria-label="搜索笔记" @click="emit('openSearch')">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <span class="search-trigger-label">搜索</span>
+        <kbd class="search-trigger-kbd">Ctrl K</kbd>
+      </button>
+
+      <!-- 快速笔记按钮 -->
+      <button class="header-btn" aria-label="快速笔记" @click="emit('openQuickNote')" data-tooltip="快速笔记 Ctrl+Q">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+      </button>
+
+      <!-- 主题切换 -->
       <button class="header-btn theme-btn" aria-label="切换主题" @click="themeStore.toggle()">
         <Transition name="icon-swap" mode="out-in">
           <svg v-if="themeStore.theme === 'dark'" key="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -112,6 +131,40 @@ const themeStore = useThemeStore()
   .header-btn:hover {
     background: var(--color-bg-hover);
     color: var(--color-text-primary);
+  }
+}
+
+/* ─── 搜索触发按钮 ─── */
+.search-trigger {
+  width: auto;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+}
+
+.search-trigger-label {
+  font-size: 0.8rem;
+  color: var(--color-text-tertiary);
+}
+
+.search-trigger-kbd {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-secondary);
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--color-border);
+}
+
+@media (max-width: 640px) {
+  .search-trigger-label,
+  .search-trigger-kbd { display: none; }
+  .search-trigger {
+    width: 36px;
+    padding: 0;
+    justify-content: center;
   }
 }
 

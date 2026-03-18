@@ -1,13 +1,26 @@
 <script setup lang="ts">
+import { watch } from 'vue'
 import { useNotesStore } from '../stores/notes'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { truncateText } from '../utils/markdown'
 
 const notesStore = useNotesStore()
 const router = useRouter()
+const route = useRoute()
+
+/* 根据 URL query 自动切换分类 */
+watch(() => route.query.category, (cat) => {
+  if (typeof cat === 'string' && cat) {
+    notesStore.currentCategory = cat
+  }
+}, { immediate: true })
 
 function selectCategory(cat: string) {
   notesStore.currentCategory = cat
+  /* 清除 URL 中的 category 参数 */
+  if (route.query.category) {
+    router.replace({ query: {} })
+  }
 }
 
 function openNote(id: string) {
