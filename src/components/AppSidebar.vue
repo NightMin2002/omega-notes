@@ -16,6 +16,12 @@ const navItems = [
   { path: '/notes', name: '知识库', icon: 'book' },
   { path: '/write', name: '新建笔记', icon: 'edit' },
 ]
+
+function collapseIfMobile() {
+  if (window.innerWidth <= 768) {
+    emit('collapse')
+  }
+}
 </script>
 
 <template>
@@ -28,7 +34,7 @@ const navItems = [
           :to="item.path"
           class="nav-item"
           :class="{ active: route.path === item.path }"
-          @click="$emit('collapse')"
+          @click="collapseIfMobile"
         >
           <!-- Home -->
           <svg v-if="item.icon === 'home'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

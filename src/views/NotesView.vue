@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useNotesStore } from '../stores/notes'
 import { useRouter } from 'vue-router'
+import { truncateText } from '../utils/markdown'
 
 const notesStore = useNotesStore()
 const router = useRouter()
@@ -11,11 +12,6 @@ function selectCategory(cat: string) {
 
 function openNote(id: string) {
   router.push(`/note/${id}`)
-}
-
-function truncate(text: string, max = 120): string {
-  if (text.length <= max) return text
-  return text.slice(0, max) + '…'
 }
 
 function formatDate(dateStr: string): string {
@@ -80,7 +76,7 @@ function formatDate(dateStr: string): string {
           </svg>
         </div>
         <h3 class="note-card-title">{{ note.title || '未命名笔记' }}</h3>
-        <p class="note-card-content">{{ truncate(note.content) }}</p>
+        <p class="note-card-content">{{ truncateText(note.content) }}</p>
         <div class="note-card-footer">
           <span class="note-card-category">{{ note.category }}</span>
           <span class="note-card-date">{{ formatDate(note.updatedAt) }}</span>

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 /**
- * MarkdownRenderer — 纯渲染组件
- * 将 Markdown 字符串渲染为 HTML（阅读模式用）
+ * MarkdownRenderer — Markdown → HTML 渲染
+ * 用于笔记详情的阅读模式
  */
 import { computed } from 'vue'
 import MarkdownIt from 'markdown-it'
+import highlightjs from 'markdown-it-highlightjs'
+import 'highlight.js/styles/github-dark.min.css'
 
 const props = defineProps<{
   content: string
@@ -16,6 +18,8 @@ const md = new MarkdownIt({
   typographer: true,
   breaks: true,
 })
+
+md.use(highlightjs)
 
 const rendered = computed(() => md.render(props.content))
 </script>
@@ -50,6 +54,15 @@ const rendered = computed(() => md.render(props.content))
   margin-bottom: var(--space-3);
 }
 
+.md-rendered :deep(strong) {
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.md-rendered :deep(em) {
+  font-style: italic;
+}
+
 .md-rendered :deep(code) {
   font-family: var(--font-mono);
   background: var(--color-bg-tertiary);
@@ -71,7 +84,9 @@ const rendered = computed(() => md.render(props.content))
 .md-rendered :deep(pre code) {
   background: transparent;
   padding: 0;
-  color: var(--color-text-primary);
+  color: inherit;
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
 
 .md-rendered :deep(blockquote) {
@@ -130,7 +145,9 @@ const rendered = computed(() => md.render(props.content))
   border-radius: var(--radius-md);
 }
 
-.md-rendered :deep(input[type="checkbox"]) {
-  margin-right: var(--space-2);
+/* ─── highlight.js 暗色覆盖 ─── */
+.md-rendered :deep(.hljs) {
+  background: var(--color-bg-tertiary) !important;
+  color: var(--color-text-primary) !important;
 }
 </style>
