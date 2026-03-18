@@ -15,8 +15,9 @@
 | 状态管理 | `state.js` + 散落在 controllers 中 | **Pinia** 集中管理 |
 | 路由 | 自定义 `showPage()` 无 URL 映射 | **Vue Router** Hash 模式 |
 | 类型安全 | 无 | **TypeScript** |
-| 数据持久化 | IndexedDB（清缓存即丢失） | localStorage → **本地 .md 文件**（规划中） |
-| 运行形态 | 必须打开浏览器 | **Tauri 2 桌面应用** |
+| 数据持久化 | IndexedDB（清缓存即丢失） | **本地 .md 文件**（Tauri 环境）/ localStorage（浏览器降级） |
+| 数学公式 | 无 | **KaTeX** 行内/块级公式渲染 |
+| 运行形态 | 必须打开浏览器 | **Tauri 2 桌面应用**（系统托盘 + 全局快捷键） |
 
 ### 为什么重写而非迁移？
 
@@ -33,7 +34,8 @@ V1 的 CSS 设计系统和架构思路值得肯定，但 1200 行的 `ui.js` 手
 | 语言 | TypeScript | ~5.9 |
 | 桌面壳 | Tauri 2 | ^2.10 |
 | 编辑器 | Milkdown (ProseMirror) | ^7.19 |
-| 渲染 | markdown-it + highlight.js | ^14.1 / ^11.11 |
+| 数学公式 | KaTeX + @milkdown/plugin-math | ^0.16 / ^4.16 |
+| 渲染 | markdown-it + highlight.js + markdown-it-texmath | ^14.1 / ^11.11 |
 
 ## 🚀 快速开始
 
@@ -41,12 +43,19 @@ V1 的 CSS 设计系统和架构思路值得肯定，但 1200 行的 `ui.js` 手
 # 安装依赖
 npm install
 
-# 启动开发服务器
+# 启动开发服务器（仅前端）
 npm run dev
 
-# 构建生产版本
-npm run build
+# 启动 Tauri 桌面应用（前端 + Rust 后端）
+npm run tauri dev
+
+# 构建生产版本（桌面安装包）
+npm run tauri build
 ```
+
+构建后会在 `src-tauri/target/release/bundle/` 下生成：
+- **NSIS 安装包**：`Omega Notes_2.0.0_x64-setup.exe`
+- **MSI 安装包**：`Omega Notes_2.0.0_x64_en-US.msi`
 
 ## 📂 项目结构
 
@@ -68,19 +77,55 @@ npm run build
 - [x] 接入 Markdown 编辑器引擎（Milkdown v7）
 - [x] Markdown 阅读渲染（markdown-it）
 - [x] 代码高亮（highlight.js）
-- [ ] 数学公式支持（KaTeX）
+- [x] 数学公式支持（KaTeX）— 编辑器 + 阅读模式双端渲染
 
-### Phase 3 — 桌面化（部分完成）
+### Phase 3 ✅ 桌面化
 - [x] 安装 Rust + Tauri 2
-- [ ] 本地文件系统读写（.md 文件）
-- [ ] 全局快捷键唤起
-- [ ] 系统托盘常驻
+- [x] 本地文件系统读写（AppData/notes/*.md，YAML frontmatter 元数据）
+- [x] 浏览器环境 localStorage 自动降级
+- [x] 旧 localStorage 数据自动迁移到文件系统
+- [x] 全局快捷键（Ctrl+Shift+N 新建 / Ctrl+Shift+O 呼出窗口）
+- [x] 系统托盘常驻（显示窗口 / 退出菜单）
 
 ### Phase 4 — 功能恢复
 - [ ] 分类树组件（递归 `<TreeNode />`）
 - [ ] 学习计划模块
 - [ ] AI 对话解析器
 - [ ] 数据导入/导出
+
+## 🔑 全局快捷键
+
+| 快捷键 | 功能 |
+|---|---|
+| `Ctrl + Shift + N` | 新建笔记（呼出窗口并跳转到新建页） |
+| `Ctrl + Shift + O` | 显示/聚焦窗口 |
+
+## 📝 笔记存储格式
+
+Tauri 桌面环境下，每条笔记以独立 `.md` 文件存储在系统 AppData 目录：
+
+```
+AppData/
+  notes/
+    abc123.md
+    def456.md
+```
+
+每个文件使用 YAML frontmatter 保存元数据：
+
+```markdown
+---
+id: abc123
+title: 我的笔记标题
+category: 学习笔记
+tags: [Vue, TypeScript]
+pinned: false
+createdAt: 2026-03-18T12:00:00.000Z
+updatedAt: 2026-03-18T12:30:00.000Z
+---
+
+这里是笔记的 Markdown 正文内容...
+```
 
 ## 🤖 AI 开发指南
 

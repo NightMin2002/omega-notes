@@ -44,10 +44,12 @@ omega-v2/
 │   │
 │   ├── stores/                 # Pinia 状态仓库
 │   │   ├── theme.ts            # 主题管理（暗色/亮色 + 持久化）
-│   │   └── notes.ts            # 笔记数据（CRUD + 分类 + 搜索 + 排序）
+│   │   └── notes.ts            # 笔记数据（async CRUD + 分类 + 搜索 + 排序）
 │   │
 │   ├── utils/                  # 工具函数
-│   │   └── markdown.ts         # stripMarkdown / truncateText
+│   │   ├── markdown.ts         # stripMarkdown / truncateText
+│   │   ├── storage.ts          # 存储适配层（Tauri fs / localStorage 降级）
+│   │   └── shortcuts.ts        # 全局快捷键注册（Tauri 环境）
 │   │
 │   └── router/                 # 路由配置
 │       └── index.ts            # 路由表 + 页面标题同步
@@ -60,6 +62,7 @@ omega-v2/
     │   ├── main.rs             # 桌面应用入口
     │   └── lib.rs              # Rust 库入口
     ├── capabilities/           # Tauri 权限能力配置
+    │   └── default.json        # 默认权限（fs + global-shortcut）
     └── icons/                  # 应用图标（各尺寸）
 ```
 
@@ -81,8 +84,8 @@ omega-v2/
 | `AppHeader.vue` | 毛玻璃顶栏。侧边栏切换、主题切换（太阳/月亮旋转过渡） | Props: `sidebarCollapsed` / Emits: `toggleSidebar` |
 | `AppSidebar.vue` | 左侧导航。路由链接高亮，仅移动端导航后自动收起 | Props: `collapsed` / Emits: `collapse` |
 | `MilkdownEditor.vue` | 编辑器外壳。提供 `MilkdownProvider` inject 上下文 | Props: `modelValue`, `readonly` / Emits: `update:modelValue` |
-| `MilkdownEditorCore.vue` | 编辑器核心。注册 commonmark/GFM/history/indent/clipboard 插件，监听 `markdownUpdated` | Props: `modelValue` / Emits: `update:modelValue` |
-| `MarkdownRenderer.vue` | 只读渲染。用 markdown-it + highlight.js 将 Markdown 渲染为 HTML | Props: `content` |
+| `MilkdownEditorCore.vue` | 编辑器核心。注册 commonmark/GFM/history/indent/clipboard/**math** 插件，监听 `markdownUpdated` | Props: `modelValue` / Emits: `update:modelValue` |
+| `MarkdownRenderer.vue` | 只读渲染。用 markdown-it + highlight.js + **markdown-it-texmath (KaTeX)** 将 Markdown 渲染为 HTML | Props: `content` |
 
 **编辑器架构说明**：`MilkdownEditor` 和 `MilkdownEditorCore` 必须拆分为两个组件，因为 `useEditor()` 需要在 `MilkdownProvider` 的 inject 上下文内调用。如果合并为一个组件会导致 `Symbol(editorInfoCtxKey) not found` 错误。
 
@@ -101,13 +104,19 @@ omega-v2/
 |---|---|---|
 | `markdown.ts` | `stripMarkdown(text)` | 剥离 Markdown 标记，返回纯文本 |
 | | `truncateText(text, max)` | 剥离标记 + 截断，用于卡片预览 |
+| `storage.ts` | `loadAllNotes()` | 从存储加载全部笔记（Tauri → .md 文件 / 浏览器 → localStorage） |
+| | `saveNote(note)` | 保存单条笔记 |
+| | `deleteNoteFile(id)` | 删除笔记文件 |
+| | `migrateFromLocalStorage()` | 将旧 localStorage 数据迁移到文件系统 |
+| | `isTauri()` | 检测当前是否在 Tauri 桌面环境中运行 |
+| `shortcuts.ts` | `registerGlobalShortcuts(router)` | 注册系统级全局快捷键（仅 Tauri 环境） |
 
 ### 状态层 (`src/stores/`)
 
 | Store | 状态 | Actions | 持久化 |
 |---|---|---|---|
 | `theme.ts` | `theme: 'dark' \| 'light'` | `toggle()` | localStorage `omega-theme` |
-| `notes.ts` | `notes[]`, `currentCategory`, `searchQuery` | `addNote`, `updateNote`, `deleteNote`, `togglePin`, `getNoteById` | localStorage `omega-notes` |
+| `notes.ts` | `notes[]`, `currentCategory`, `searchQuery`, `isLoading` | `init`, `addNote`, `updateNote`, `deleteNote`, `togglePin`, `getNoteById`（均为 async） | 委托 `storage.ts`（Tauri → AppData .md 文件 / 浏览器 → localStorage） |
 
 ### 路由层 (`src/router/`)
 
@@ -137,11 +146,11 @@ omega-v2/
   ↓
 Vue 组件 (views/)
   ↓ 调用
-Pinia Store (stores/)
-  ↓ 读写
-localStorage (WebView2 持久化)
-  ↓ 未来替换为
-Tauri fs 插件 → 本地 .md 文件
+Pinia Store (stores/notes.ts)    ← async API
+  ↓ 委托
+storage.ts 存储适配层
+  ├── Tauri 环境 → @tauri-apps/plugin-fs → AppData/notes/*.md
+  └── 浏览器环境 → localStorage (自动降级)
 ```
 
 ## 命名约定
