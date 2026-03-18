@@ -2,18 +2,25 @@
 /**
  * MarkdownRenderer — Markdown → HTML 渲染
  * 用于笔记详情的阅读模式 + 分屏实时预览
+ * 支持 [[title]] 双向链接语法
  */
-import { computed } from 'vue'
+import { computed, onMounted, onUpdated, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import MarkdownIt from 'markdown-it'
 import highlightjs from 'markdown-it-highlightjs'
 import texmath from 'markdown-it-texmath'
 import taskLists from 'markdown-it-task-lists'
 import katex from 'katex'
+import { useNotesStore } from '../stores/notes'
 import 'highlight.js/styles/github-dark.min.css'
 
 const props = defineProps<{
   content: string
 }>()
+
+const router = useRouter()
+const notesStore = useNotesStore()
+const containerRef = ref<HTMLElement | null>(null)
 
 const md = new MarkdownIt({
   html: true,
@@ -39,11 +46,45 @@ function cleanContent(raw: string): string {
   return s.trim()
 }
 
-const rendered = computed(() => md.render(cleanContent(props.content)))
+/** 将 [[title]] 或 \[\[title\]\]（Milkdown 转义）转为维基链接 HTML */
+function renderWikiLinks(html: string): string {
+  return html.replace(
+    /\\?\[\\?\[([^\]]+?)\\?\]\\?\]/g,
+    (_match, title) => {
+      const escapedTitle = title.replace(/"/g, '&quot;')
+      return `<a class="wiki-link" data-wiki-title="${escapedTitle}">${title}</a>`
+    }
+  )
+}
+
+const rendered = computed(() => renderWikiLinks(md.render(cleanContent(props.content))))
+
+/** 点击 wiki-link 导航到对应笔记 */
+function handleClick(e: Event) {
+  const target = e.target as HTMLElement
+  if (!target.classList.contains('wiki-link')) return
+
+  e.preventDefault()
+  const title = target.getAttribute('data-wiki-title')
+  if (!title) return
+
+  const note = notesStore.findNoteByTitle(title)
+  if (note) {
+    notesStore.recordOpen(note.id)
+    router.push(`/note/${note.id}`)
+  }
+}
+
+function bindClickHandler() {
+  containerRef.value?.addEventListener('click', handleClick)
+}
+
+onMounted(bindClickHandler)
+onUpdated(bindClickHandler)
 </script>
 
 <template>
-  <div class="md-rendered" v-html="rendered" />
+  <div ref="containerRef" class="md-rendered" v-html="rendered" />
 </template>
 
 <style scoped>
@@ -216,5 +257,23 @@ const rendered = computed(() => md.render(cleanContent(props.content)))
 .md-rendered :deep(.katex-display) {
   margin: var(--space-4) 0;
   overflow-x: auto;
+}
+
+/* ─── 双向链接 ─── */
+.md-rendered :deep(.wiki-link) {
+  color: var(--color-accent);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--color-accent);
+  padding-bottom: 1px;
+  cursor: pointer;
+  transition: opacity var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .md-rendered :deep(.wiki-link:hover) {
+    opacity: 0.8;
+    border-bottom-style: solid;
+  }
 }
 </style>

@@ -7,6 +7,7 @@ const notesStore = useNotesStore()
 const stats = computed(() => ({
   total: notesStore.totalCount,
   pinned: notesStore.pinnedCount,
+  favorites: notesStore.favoriteCount,
   categories: notesStore.categories.length,
 }))
 
@@ -44,6 +45,10 @@ function formatTime(dateStr: string): string {
       <div class="stat-card">
         <div class="stat-value">{{ stats.categories }}</div>
         <div class="stat-label">分类</div>
+      </div>
+      <div class="stat-card accent">
+        <div class="stat-value">{{ stats.favorites }}</div>
+        <div class="stat-label">已收藏</div>
       </div>
       <div class="stat-card accent">
         <div class="stat-value">{{ stats.pinned }}</div>
@@ -117,7 +122,7 @@ function formatTime(dateStr: string): string {
 /* ─── 统计 ─── */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-4);
   margin-bottom: var(--space-8);
 }

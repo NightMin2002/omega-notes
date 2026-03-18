@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useNotesStore } from '../stores/notes'
 import { useRouter } from 'vue-router'
 import MilkdownEditor from '../components/MilkdownEditor.vue'
 import MarkdownRenderer from '../components/MarkdownRenderer.vue'
 import { templates, type NoteTemplate } from '../utils/templates'
+import { clipboardHasImage, processClipboardImages } from '../utils/images'
 
 const notesStore = useNotesStore()
 const router = useRouter()
@@ -57,31 +58,25 @@ async function handleSubmit() {
 }
 
 /**
- * 粘贴处理 — 只拦截真正的图片 blob（截图 Ctrl+V）
+ * 粘贴处理 — 支持截图 blob + QQ/微信 file:// 路径
  */
 function handlePaste(e: ClipboardEvent) {
-  if (!e.clipboardData?.items) return
-
-  let imageFile: File | null = null
-  for (let i = 0; i < e.clipboardData.items.length; i++) {
-    const item = e.clipboardData.items[i]!
-    if (item.type.startsWith('image/') && item.kind === 'file') {
-      imageFile = item.getAsFile()
-      break
-    }
-  }
-
-  if (!imageFile) return
+  if (!e.clipboardData || !clipboardHasImage(e.clipboardData)) return
 
   e.preventDefault()
 
-  const file = imageFile
-  const reader = new FileReader()
-  reader.onload = () => {
-    const dataUrl = reader.result as string
-    content.value += `\n![${file.name || '图片'}](${dataUrl})\n`
-  }
-  reader.readAsDataURL(file)
+  const cd = e.clipboardData
+  ;(async () => {
+    try {
+      const results = await processClipboardImages(cd)
+      for (const md of results) {
+        content.value += `\n${md}\n`
+      }
+      editorKey.value++
+    } catch (err) {
+      console.error('图片粘贴失败:', err)
+    }
+  })()
 }
 
 /** 通过文件选择对话框插入图片，自动切到分屏以便立即看到 */
@@ -106,6 +101,29 @@ function insertImageFromFile() {
     }
   }
   input.click()
+}
+
+/* ─── 插入链接（双向链接）─── */
+const showLinkPicker = ref(false)
+const linkSearch = ref('')
+
+const linkCandidates = computed(() => {
+  const q = linkSearch.value.toLowerCase()
+  return notesStore.notes
+    .filter(n => q === '' || n.title.toLowerCase().includes(q))
+    .slice(0, 10)
+})
+
+function insertWikiLink(noteTitle: string) {
+  content.value += `[[${noteTitle}]]`
+  showLinkPicker.value = false
+  linkSearch.value = ''
+  editorKey.value++
+}
+
+function toggleLinkPicker() {
+  showLinkPicker.value = !showLinkPicker.value
+  linkSearch.value = ''
 }
 </script>
 
@@ -207,6 +225,33 @@ function insertImageFromFile() {
             </svg>
             <span>插入图片</span>
           </button>
+          <div class="link-picker-wrapper">
+            <button type="button" class="pane-action" @click="toggleLinkPicker">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+              </svg>
+              <span>插入链接</span>
+            </button>
+            <div v-if="showLinkPicker" class="link-picker-dropdown">
+              <input
+                v-model="linkSearch"
+                type="text"
+                class="link-search-input"
+                placeholder="搜索笔记标题…"
+                autofocus
+              >
+              <ul v-if="linkCandidates.length > 0" class="link-candidates">
+                <li v-for="c in linkCandidates" :key="c.id">
+                  <button type="button" class="link-candidate" @click="insertWikiLink(c.title)">
+                    <span class="lc-title">{{ c.title }}</span>
+                    <span class="lc-category">{{ c.category }}</span>
+                  </button>
+                </li>
+              </ul>
+              <p v-else class="link-empty">无匹配笔记</p>
+            </div>
+          </div>
         </div>
         <MilkdownEditor :key="editorKey" v-model="content" />
       </template>
@@ -216,12 +261,41 @@ function insertImageFromFile() {
         <div class="split-pane source-pane">
           <div class="pane-header">
             <span class="pane-label">Markdown 源码</span>
-            <button type="button" class="pane-action" @click="insertImageFromFile">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
-              </svg>
-              <span>插入图片</span>
-            </button>
+            <div class="pane-actions">
+              <button type="button" class="pane-action" @click="insertImageFromFile">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+                </svg>
+                <span>插入图片</span>
+              </button>
+              <div class="link-picker-wrapper">
+                <button type="button" class="pane-action" @click="toggleLinkPicker">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                  </svg>
+                  <span>插入链接</span>
+                </button>
+                <div v-if="showLinkPicker" class="link-picker-dropdown">
+                  <input
+                    v-model="linkSearch"
+                    type="text"
+                    class="link-search-input"
+                    placeholder="搜索笔记标题…"
+                    autofocus
+                  >
+                  <ul v-if="linkCandidates.length > 0" class="link-candidates">
+                    <li v-for="c in linkCandidates" :key="c.id">
+                      <button type="button" class="link-candidate" @click="insertWikiLink(c.title)">
+                        <span class="lc-title">{{ c.title }}</span>
+                        <span class="lc-category">{{ c.category }}</span>
+                      </button>
+                    </li>
+                  </ul>
+                  <p v-else class="link-empty">无匹配笔记</p>
+                </div>
+              </div>
+            </div>
           </div>
           <textarea
             v-model="content"
@@ -440,6 +514,8 @@ function insertImageFromFile() {
   background: var(--color-bg-tertiary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
+  position: relative;
+  z-index: var(--z-dropdown);
 }
 
 /* ─── 分屏编辑器 ─── */
@@ -529,6 +605,100 @@ function insertImageFromFile() {
 .preview-empty {
   color: var(--color-text-tertiary);
   font-style: italic;
+}
+
+/* ─── 链接选择器 ─── */
+.link-picker-wrapper {
+  position: relative;
+}
+
+.pane-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.link-picker-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: var(--space-2);
+  width: 280px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0,0,0,0.25));
+  z-index: var(--z-overlay);
+  padding: var(--space-2);
+}
+
+.link-search-input {
+  width: 100%;
+  appearance: none;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.82rem;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.link-search-input:focus {
+  border-color: var(--color-accent);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-accent-muted);
+}
+
+.link-candidates {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.link-candidate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .link-candidate:hover {
+    background: var(--color-bg-hover);
+  }
+}
+
+.link-candidate:active { transform: scale(0.98); }
+
+.lc-title {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lc-category {
+  font-size: 0.68rem;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+  margin-left: var(--space-2);
+}
+
+.link-empty {
+  font-size: 0.78rem;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  padding: var(--space-3);
 }
 
 /* ─── 元信息 ─── */

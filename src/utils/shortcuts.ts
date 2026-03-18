@@ -11,8 +11,11 @@ export async function registerGlobalShortcuts(router: Router): Promise<void> {
   if (!isTauri()) return
 
   try {
-    const { register } = await import('@tauri-apps/plugin-global-shortcut')
+    const { register, unregisterAll } = await import('@tauri-apps/plugin-global-shortcut')
     const { getCurrentWindow } = await import('@tauri-apps/api/window')
+
+    /* 先清除所有已注册的快捷键（防止 HMR 热更新导致重复注册） */
+    await unregisterAll()
 
     // Ctrl+Shift+N — 新建笔记
     await register('CommandOrControl+Shift+N', async (event) => {

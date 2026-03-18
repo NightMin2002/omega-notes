@@ -41,8 +41,8 @@ omega-v2/
 │   ├── views/                  # 路由页面组件
 │   │   ├── HomeView.vue        # 主页（统计 + 快捷入口 + 最近更新）
 │   │   ├── NotesView.vue       # 知识库（搜索 + 分类筛选 + 卡片网格）
-│   │   ├── WriteView.vue       # 新建笔记（模板选择 + 编辑器 + 图片插入）
-│   │   └── NoteDetailView.vue  # 笔记详情（阅读/编辑/分屏三模式）
+│   │   ├── WriteView.vue       # 新建笔记（模板 + 编辑器 + 图片/链接插入）
+│   │   └── NoteDetailView.vue  # 笔记详情（阅读/编辑/分屏 + 反向链接）
 │   │
 │   ├── stores/                 # Pinia 状态仓库
 │   │   ├── theme.ts            # 主题管理（暗色/亮色 + 持久化）
@@ -53,7 +53,8 @@ omega-v2/
 │   │   ├── storage.ts          # 存储适配层（Tauri fs / localStorage 降级）
 │   │   ├── shortcuts.ts        # 全局快捷键注册（Tauri 环境）
 │   │   ├── templates.ts        # 笔记模板定义（6 种预设）
-│   │   └── images.ts           # 图片粘贴处理（base64 转换）
+│   │   ├── images.ts           # 图片粘贴处理（base64 转换）
+│   │   └── dataio.ts           # 数据导入/导出（JSON + .md 支持）
 │   │
 │   └── router/                 # 路由配置
 │       └── index.ts            # 路由表 + 页面标题同步
@@ -66,7 +67,7 @@ omega-v2/
     │   ├── main.rs             # 桌面应用入口
     │   └── lib.rs              # Rust 库入口
     ├── capabilities/           # Tauri 权限能力配置
-│   ├── default.json        # 默认权限（fs AppData 读写 + global-shortcut）
+│   ├── default.json        # 默认权限（fs + global-shortcut + dialog）
 │   └── desktop.json        # 桌面平台专用权限
 └── icons/                  # 应用图标（各尺寸）
 ```
@@ -97,10 +98,10 @@ docs/
 | 组件 | 职责 | Props / Events |
 |---|---|---|
 | `AppHeader.vue` | 毛玻璃顶栏。侧边栏切换、主题切换、搜索入口（Ctrl+K）、快速笔记入口（Ctrl+Q） | Props: `sidebarCollapsed` / Emits: `toggleSidebar`, `openSearch`, `openQuickNote` |
-| `AppSidebar.vue` | 左侧导航。路由链接高亮、收件箱入口（带数字徽标）、快捷键展开面板 | Props: `collapsed` / Emits: `collapse` |
+| `AppSidebar.vue` | 左侧导航。路由链接高亮、⭐ 收藏夹、🕐 最近打开、收件箱、📁 文件夹树（无限嵌套 + 展开/折叠）、导入/导出、快捷键面板 | Props: `collapsed` / Emits: `collapse` |
 | `MilkdownEditor.vue` | 编辑器外壳。提供 `MilkdownProvider` inject 上下文 | Props: `modelValue`, `readonly` / Emits: `update:modelValue` |
-| `MilkdownEditorCore.vue` | 编辑器核心。注册 commonmark/GFM/history/indent/clipboard/**math** 插件，监听 `markdownUpdated` | Props: `modelValue` / Emits: `update:modelValue` |
-| `MarkdownRenderer.vue` | 只读渲染。markdown-it + highlight.js + **texmath (KaTeX)** + **task-lists**。自动清理粘贴的代码围栏 | Props: `content` |
+| `MilkdownEditorCore.vue` | 编辑器核心。注册 commonmark/GFM/history/indent/clipboard/**math**/smartPaste 插件，监听 `markdownUpdated`。**智能粘贴**：DOM 层拦截粘贴事件，图片自动转 base64 image 节点，Markdown 文本自动解析为富文本 | Props: `modelValue` / Emits: `update:modelValue` |
+| `MarkdownRenderer.vue` | 只读渲染。markdown-it + highlight.js + **texmath (KaTeX)** + **task-lists**。支持 `[[title]]` 双向链接语法（渲染为可点击链接 + 跳转导航） | Props: `content` |
 | `QuickNote.vue` | 快速笔记弹窗。`<dialog>` 模态框，Markdown 输入 + Ctrl+Enter 保存到收件箱 | Props: `visible` / Emits: `close` |
 | `SearchDialog.vue` | 全局搜索弹窗。全文搜索 + 关键词高亮 + 键盘导航（↑↓ Enter） | Props: `visible` / Emits: `close` |
 
@@ -110,10 +111,10 @@ docs/
 
 | 页面 | 路由 | 依赖的 Store | 功能 |
 |---|---|---|---|
-| `HomeView.vue` | `/` | `notes` | 统计卡片（总笔记/分类/已置顶）、快捷入口、最近更新列表 |
-| `NotesView.vue` | `/notes` | `notes` | 搜索框、分类药丸筛选（支持 URL query 参数）、笔记卡片网格、空状态引导 |
-| `WriteView.vue` | `/write` | `notes` | 模板选择器 → WYSIWYG/分屏编辑 + 图片插入 + 标题/分类/标签表单，保存后跳转详情 |
-| `NoteDetailView.vue` | `/note/:id` | `notes` | 阅读模式（MarkdownRenderer） ↔ 编辑模式（WYSIWYG/分屏 + 图片插入），置顶/删除 |
+| `HomeView.vue` | `/` | `notes` | 统计卡片（总笔记/分类/已收藏/已置顶）、快捷入口、最近更新列表 |
+| `NotesView.vue` | `/notes` | `notes` | 搜索框、分类药丸、面包屑（嵌套分类时）、标签云筛选（`?tag=`）、收藏夹/最近视图（`?view=`）、笔记卡片网格 |
+| `WriteView.vue` | `/write` | `notes` | 模板选择器 → WYSIWYG/分屏编辑 + 图片插入 + `[[title]]` 链接插入 + 标题/分类/标签表单 |
+| `NoteDetailView.vue` | `/note/:id` | `notes` | 阅读模式 ↔ 编辑模式，收藏/置顶/删除，`[[title]]` 链接插入，自动记录到最近列表，反向链接面板 |
 
 ### 工具层 (`src/utils/`)
 
@@ -126,17 +127,20 @@ docs/
 | | `deleteNoteFile(id)` | 删除笔记文件 |
 | | `migrateFromLocalStorage()` | 将旧 localStorage 数据迁移到文件系统 |
 | | `isTauri()` | 检测当前是否在 Tauri 桌面环境中运行 |
-| `shortcuts.ts` | `registerGlobalShortcuts(router)` | 注册系统级全局快捷键（仅 Tauri 环境） |
+| `shortcuts.ts` | `registerGlobalShortcuts(router)` | 注册系统级全局快捷键（仅 Tauri），启动时先 `unregisterAll` 防止 HMR 重复注册 |
 | `templates.ts` | `templates[]` | 6 种笔记模板定义（空白/会议/读书/日记/学习/待办） |
 | `images.ts` | `clipboardHasImage()` | 同步检测剪贴板是否含图片 |
 | | `processClipboardImages()` | 异步处理粘贴图片，返回 base64 Markdown 语法 |
+| `dataio.ts` | `exportNotesAsJson(notes)` | 导出全部笔记为 JSON（Tauri: save dialog / 浏览器: Blob） |
+| | `importNotesFromFiles()` | 弹出文件选择器，解析 .json / .md 文件返回 Note 数据 |
 
 ### 状态层 (`src/stores/`)
 
 | Store | 状态 | Actions | 持久化 |
 |---|---|---|---|
 | `theme.ts` | `theme: 'dark' \| 'light'` | `toggle()` | localStorage `omega-theme` |
-| `notes.ts` | `notes[]`, `currentCategory`, `searchQuery`, `isLoading` | `init`, `addNote`, `updateNote`, `deleteNote`, `togglePin`, `getNoteById`（均为 async） | 委托 `storage.ts`（Tauri → AppData .md 文件 / 浏览器 → localStorage） |
+| `notes.ts` | `notes[]`, `currentCategory`, `searchQuery`, `isLoading`, `recentIds` | `init`, `addNote`, `updateNote`, `deleteNote`, `togglePin`, `toggleFavorite`, `recordOpen`, `importBatch`, `getNoteById`, `findNoteByTitle`, `getBacklinks` | 委托 `storage.ts` + localStorage |
+| | 计算属性: `filteredNotes`, `categories`, `categoryTree`, `allTags`, `favoriteNotes`, `recentNotes`, `totalCount`, `pinnedCount`, `favoriteCount` | | |
 
 ### 路由层 (`src/router/`)
 
@@ -156,8 +160,8 @@ docs/
 | `tauri.conf.json` | 应用配置（窗口大小、标识、构建命令、安全策略） |
 | `Cargo.toml` | Rust 依赖声明 |
 | `src/main.rs` | Windows 下隐藏控制台窗口，调用 `lib.rs` |
-| `src/lib.rs` | Tauri 应用初始化（未来可在此添加 Rust 命令） |
-| `capabilities/` | 权限能力声明（控制前端可调用哪些 Tauri API） |
+| `src/lib.rs` | Tauri 应用初始化：注册 fs/dialog/global-shortcut/log 插件，系统托盘 |
+| `capabilities/` | 权限能力声明（fs + global-shortcut + dialog） |
 
 ## 数据流向
 

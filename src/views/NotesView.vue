@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch } from 'vue'
+import { computed, watch } from 'vue'
 import { useNotesStore } from '../stores/notes'
 import { useRouter, useRoute } from 'vue-router'
 import { truncateText } from '../utils/markdown'
@@ -8,6 +8,41 @@ const notesStore = useNotesStore()
 const router = useRouter()
 const route = useRoute()
 
+/** 当前特殊视图：favorites / recent / null（普通模式） */
+const activeView = computed(() => {
+  const v = route.query.view
+  if (v === 'favorites' || v === 'recent') return v
+  return null
+})
+
+const pageTitle = computed(() => {
+  if (activeView.value === 'favorites') return '收藏夹'
+  if (activeView.value === 'recent') return '最近打开'
+  if (activeTag.value) return `标签：${activeTag.value}`
+  return '知识库'
+})
+
+/** 面包屑（当分类路径为嵌套时显示） */
+const breadcrumbs = computed(() => {
+  if (notesStore.currentCategory === 'all') return []
+  const parts = notesStore.currentCategory.split('/')
+  return parts.map((name, i) => ({
+    name,
+    path: parts.slice(0, i + 1).join('/'),
+  }))
+})
+
+function navigateCrumb(path: string) {
+  notesStore.currentCategory = path
+  router.replace({ query: { category: path } })
+}
+
+/** 当前筛选标签（来自 URL query.tag） */
+const activeTag = computed(() => {
+  const t = route.query.tag
+  return typeof t === 'string' ? t : null
+})
+
 /* 根据 URL query 自动切换分类 */
 watch(() => route.query.category, (cat) => {
   if (typeof cat === 'string' && cat) {
@@ -15,15 +50,35 @@ watch(() => route.query.category, (cat) => {
   }
 }, { immediate: true })
 
+/** 当前展示的笔记列表 */
+const displayedNotes = computed(() => {
+  if (activeView.value === 'favorites') return notesStore.favoriteNotes
+  if (activeView.value === 'recent') return notesStore.recentNotes
+  let result = notesStore.filteredNotes
+  if (activeTag.value) {
+    result = result.filter(n => n.tags.includes(activeTag.value!))
+  }
+  return result
+})
+
+function selectTag(tag: string | null) {
+  if (tag) {
+    router.replace({ query: { tag } })
+  } else {
+    router.replace({ query: {} })
+  }
+}
+
 function selectCategory(cat: string) {
   notesStore.currentCategory = cat
-  /* 清除 URL 中的 category 参数 */
-  if (route.query.category) {
+  /* 清除 URL 中的 query 参数 */
+  if (route.query.category || route.query.view) {
     router.replace({ query: {} })
   }
 }
 
 function openNote(id: string) {
+  notesStore.recordOpen(id)
   router.push(`/note/${id}`)
 }
 
@@ -38,7 +93,7 @@ function formatDate(dateStr: string): string {
 <template>
   <div class="notes-page">
     <div class="notes-header">
-      <h2 class="page-title">知识库</h2>
+      <h2 class="page-title">{{ pageTitle }}</h2>
       <div class="search-box">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8" />
@@ -53,8 +108,23 @@ function formatDate(dateStr: string): string {
       </div>
     </div>
 
-    <!-- 分类药丸 -->
-    <div class="category-bar">
+    <!-- 面包屑（嵌套分类时显示） -->
+    <nav v-if="breadcrumbs.length > 1 && !activeView" class="breadcrumbs">
+      <button class="crumb" @click="selectCategory('all')">全部</button>
+      <template v-for="(crumb, i) in breadcrumbs" :key="crumb.path">
+        <span class="crumb-sep">/</span>
+        <button
+          class="crumb"
+          :class="{ current: i === breadcrumbs.length - 1 }"
+          @click="navigateCrumb(crumb.path)"
+        >
+          {{ crumb.name }}
+        </button>
+      </template>
+    </nav>
+
+    <!-- 分类药丸（收藏夹/最近视图时隐藏） -->
+    <div v-if="!activeView" class="category-bar">
       <button
         class="category-pill"
         :class="{ active: notesStore.currentCategory === 'all' }"
@@ -73,17 +143,41 @@ function formatDate(dateStr: string): string {
       </button>
     </div>
 
-    <!-- 笔记网格 -->
-    <div v-if="notesStore.filteredNotes.length > 0" class="notes-grid">
+    <!-- 标签云（普通模式 + 有标签时显示） -->
+    <div v-if="!activeView && notesStore.allTags.length > 0" class="tag-cloud">
       <button
-        v-for="note in notesStore.filteredNotes"
+        class="tag-pill"
+        :class="{ active: !activeTag }"
+        @click="selectTag(null)"
+      >
+        全部标签
+      </button>
+      <button
+        v-for="t in notesStore.allTags"
+        :key="t.name"
+        class="tag-pill"
+        :class="{ active: activeTag === t.name }"
+        @click="selectTag(t.name)"
+      >
+        {{ t.name }}
+        <span class="tag-count">{{ t.count }}</span>
+      </button>
+    </div>
+
+    <!-- 笔记网格 -->
+    <div v-if="displayedNotes.length > 0" class="notes-grid">
+      <button
+        v-for="note in displayedNotes"
         :key="note.id"
         class="note-card"
         :class="{ pinned: note.isPinned }"
         @click="openNote(note.id)"
       >
-        <div v-if="note.isPinned" class="pin-badge">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <div class="card-badges">
+          <svg v-if="note.isFavorite" class="fav-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+          <svg v-if="note.isPinned" class="pin-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
             <circle cx="12" cy="10" r="3" />
           </svg>
@@ -162,13 +256,91 @@ function formatDate(dateStr: string): string {
   border-color: transparent;
 }
 
+/* ─── 面包屑 ─── */
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.8rem;
+  margin-bottom: var(--space-3);
+  color: var(--color-text-tertiary);
+}
+
+.crumb {
+  color: var(--color-text-tertiary);
+  padding: var(--space-1) var(--space-1);
+  border-radius: var(--radius-sm);
+  transition: color var(--duration-fast) var(--ease-out),
+              background-color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .crumb:hover {
+    color: var(--color-text-primary);
+    background: var(--color-bg-hover);
+  }
+}
+
+.crumb.current {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.crumb-sep {
+  opacity: 0.4;
+}
+
 /* ─── 分类药丸 ─── */
 .category-bar {
   display: flex;
   gap: var(--space-2);
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-4);
   overflow-x: auto;
   padding-bottom: var(--space-2);
+}
+
+/* ─── 标签云 ─── */
+.tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.tag-pill {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .tag-pill:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+  }
+}
+
+.tag-pill.active {
+  background: var(--color-info-muted, rgba(99, 179, 237, 0.15));
+  color: var(--color-info, #63b3ed);
+  border-color: var(--color-info, #63b3ed);
+}
+
+.tag-count {
+  font-size: 0.65rem;
+  font-weight: 600;
+  opacity: 0.6;
 }
 
 .category-pill {
@@ -232,10 +404,19 @@ function formatDate(dateStr: string): string {
   border-color: var(--color-accent-muted);
 }
 
-.pin-badge {
+.card-badges {
   position: absolute;
   top: var(--space-3);
   right: var(--space-3);
+  display: flex;
+  gap: var(--space-1);
+}
+
+.fav-icon {
+  color: var(--color-warning, #e6a817);
+}
+
+.pin-icon {
   color: var(--color-accent);
 }
 

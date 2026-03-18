@@ -23,6 +23,12 @@ const note = computed(() => {
   return notesStore.getNoteById(id)
 })
 
+/* 记录打开 */
+{
+  const id = route.params.id as string
+  if (id) notesStore.recordOpen(id)
+}
+
 function startEdit() {
   if (!note.value) return
   editTitle.value = note.value.title
@@ -59,9 +65,20 @@ function togglePin() {
   notesStore.togglePin(note.value.id)
 }
 
+function toggleFavorite() {
+  if (!note.value) return
+  notesStore.toggleFavorite(note.value.id)
+}
+
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleString('zh-CN')
 }
+
+/** 反向链接 */
+const backlinks = computed(() => {
+  const id = route.params.id as string
+  return id ? notesStore.getBacklinks(id) : []
+})
 
 function handlePaste(e: ClipboardEvent) {
   if (!e.clipboardData) return
@@ -120,6 +137,29 @@ function insertImageFromFile() {
   }
   input.click()
 }
+
+/* ─── 插入链接（双向链接）─── */
+const showLinkPicker = ref(false)
+const linkSearch = ref('')
+
+const linkCandidates = computed(() => {
+  const currentId = route.params.id as string
+  const q = linkSearch.value.toLowerCase()
+  return notesStore.notes
+    .filter(n => n.id !== currentId && (q === '' || n.title.toLowerCase().includes(q)))
+    .slice(0, 10)
+})
+
+function insertWikiLink(title: string) {
+  editContent.value += `[[${title}]]`
+  showLinkPicker.value = false
+  linkSearch.value = ''
+}
+
+function toggleLinkPicker() {
+  showLinkPicker.value = !showLinkPicker.value
+  linkSearch.value = ''
+}
 </script>
 
 <template>
@@ -162,6 +202,12 @@ function insertImageFromFile() {
             </div>
           </template>
 
+          <button class="toolbar-btn" :class="{ active: note.isFavorite }" @click="toggleFavorite">
+            <svg width="16" height="16" viewBox="0 0 24 24" :fill="note.isFavorite ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+            <span>{{ note.isFavorite ? '取消收藏' : '收藏' }}</span>
+          </button>
           <button class="toolbar-btn" :class="{ active: note.isPinned }" @click="togglePin">
             <svg width="16" height="16" viewBox="0 0 24 24" :fill="note.isPinned ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
@@ -200,6 +246,33 @@ function insertImageFromFile() {
                 </svg>
                 <span>插入图片</span>
               </button>
+              <div class="link-picker-wrapper">
+                <button type="button" class="pane-action" @click="toggleLinkPicker">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                  </svg>
+                  <span>插入链接</span>
+                </button>
+                <div v-if="showLinkPicker" class="link-picker-dropdown">
+                  <input
+                    v-model="linkSearch"
+                    type="text"
+                    class="link-search-input"
+                    placeholder="搜索笔记标题…"
+                    autofocus
+                  >
+                  <ul v-if="linkCandidates.length > 0" class="link-candidates">
+                    <li v-for="c in linkCandidates" :key="c.id">
+                      <button type="button" class="link-candidate" @click="insertWikiLink(c.title)">
+                        <span class="lc-title">{{ c.title }}</span>
+                        <span class="lc-category">{{ c.category }}</span>
+                      </button>
+                    </li>
+                  </ul>
+                  <p v-else class="link-empty">无匹配笔记</p>
+                </div>
+              </div>
             </div>
             <MilkdownEditor v-model="editContent" />
           </template>
@@ -209,12 +282,41 @@ function insertImageFromFile() {
             <div class="split-pane source-pane">
               <div class="pane-header">
                 <span class="pane-label">Markdown 源码</span>
-                <button type="button" class="pane-action" @click="insertImageFromFile">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
-                  </svg>
-                  <span>插入图片</span>
-                </button>
+                <div class="pane-actions">
+                  <button type="button" class="pane-action" @click="insertImageFromFile">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+                    </svg>
+                    <span>插入图片</span>
+                  </button>
+                  <div class="link-picker-wrapper">
+                    <button type="button" class="pane-action" @click="toggleLinkPicker">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                      </svg>
+                      <span>插入链接</span>
+                    </button>
+                    <div v-if="showLinkPicker" class="link-picker-dropdown">
+                      <input
+                        v-model="linkSearch"
+                        type="text"
+                        class="link-search-input"
+                        placeholder="搜索笔记标题…"
+                        autofocus
+                      >
+                      <ul v-if="linkCandidates.length > 0" class="link-candidates">
+                        <li v-for="c in linkCandidates" :key="c.id">
+                          <button type="button" class="link-candidate" @click="insertWikiLink(c.title)">
+                            <span class="lc-title">{{ c.title }}</span>
+                            <span class="lc-category">{{ c.category }}</span>
+                          </button>
+                        </li>
+                      </ul>
+                      <p v-else class="link-empty">无匹配笔记</p>
+                    </div>
+                  </div>
+                </div>
               </div>
               <textarea
                 v-model="editContent"
@@ -266,6 +368,26 @@ function insertImageFromFile() {
           </div>
 
           <MarkdownRenderer :content="note.content" />
+
+          <!-- 反向链接 -->
+          <section v-if="backlinks.length > 0" class="backlinks-panel">
+            <h3 class="backlinks-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+              </svg>
+              反向链接
+              <span class="backlinks-count">{{ backlinks.length }}</span>
+            </h3>
+            <ul class="backlinks-list">
+              <li v-for="bl in backlinks" :key="bl.id">
+                <RouterLink :to="`/note/${bl.id}`" class="backlink-item">
+                  <span class="backlink-title">{{ bl.title }}</span>
+                  <span class="backlink-meta">{{ bl.category }}</span>
+                </RouterLink>
+              </li>
+            </ul>
+          </section>
         </article>
       </template>
     </template>
@@ -368,6 +490,8 @@ function insertImageFromFile() {
   background: var(--color-bg-tertiary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
+  position: relative;
+  z-index: var(--z-dropdown);
 }
 
 .pane-header {
@@ -460,6 +584,100 @@ function insertImageFromFile() {
 .preview-empty {
   color: var(--color-text-tertiary);
   font-style: italic;
+}
+
+/* ─── 链接选择器 ─── */
+.link-picker-wrapper {
+  position: relative;
+}
+
+.pane-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.link-picker-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: var(--space-2);
+  width: 280px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0,0,0,0.25));
+  z-index: var(--z-overlay);
+  padding: var(--space-2);
+}
+
+.link-search-input {
+  width: 100%;
+  appearance: none;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.82rem;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.link-search-input:focus {
+  border-color: var(--color-accent);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-accent-muted);
+}
+
+.link-candidates {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.link-candidate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-2) var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .link-candidate:hover {
+    background: var(--color-bg-hover);
+  }
+}
+
+.link-candidate:active { transform: scale(0.98); }
+
+.lc-title {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lc-category {
+  font-size: 0.68rem;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+  margin-left: var(--space-2);
+}
+
+.link-empty {
+  font-size: 0.78rem;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  padding: var(--space-3);
 }
 
 /* ─── 阅读模式 ─── */
@@ -587,5 +805,76 @@ function insertImageFromFile() {
     width: auto;
     height: 1px;
   }
+}
+
+/* ─── 反向链接面板 ─── */
+.backlinks-panel {
+  margin-top: var(--space-8);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-divider);
+}
+
+.backlinks-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-4);
+}
+
+.backlinks-count {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text-inverse);
+  background: var(--color-accent);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.backlinks-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.backlink-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  text-decoration: none;
+  transition: background-color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .backlink-item:hover {
+    background: var(--color-bg-hover);
+    border-color: var(--color-accent);
+  }
+}
+
+.backlink-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.backlink-meta {
+  font-size: 0.72rem;
+  color: var(--color-text-tertiary);
 }
 </style>

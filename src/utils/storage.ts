@@ -27,6 +27,7 @@ function noteToMarkdown(note: Note): string {
   lines.push(`category: ${escapeYaml(note.category)}`)
   lines.push(`tags: [${note.tags.map(t => escapeYaml(t)).join(', ')}]`)
   lines.push(`pinned: ${note.isPinned}`)
+  lines.push(`favorite: ${note.isFavorite}`)
   lines.push(`createdAt: ${note.createdAt}`)
   lines.push(`updatedAt: ${note.updatedAt}`)
   lines.push('---')
@@ -83,6 +84,7 @@ function markdownToNote(filename: string, raw: string): Note {
     category: meta['category'] || '未分类',
     tags: parseTags(meta['tags'] || ''),
     isPinned: meta['pinned'] === 'true',
+    isFavorite: meta['favorite'] === 'true',
     createdAt: meta['createdAt'] || new Date().toISOString(),
     updatedAt: meta['updatedAt'] || new Date().toISOString(),
   }

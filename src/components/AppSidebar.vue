@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useNotesStore } from '../stores/notes'
+import { exportNotesAsJson, importNotesFromFiles } from '../utils/dataio'
 
 defineProps<{
   collapsed: boolean
@@ -19,10 +20,83 @@ const inboxCount = computed(() =>
   notesStore.notes.filter(n => n.category === '收件箱').length
 )
 
+const favoriteCount = computed(() => notesStore.favoriteCount)
+const recentCount = computed(() => notesStore.recentNotes.length)
+
 function collapseIfMobile() {
   if (window.innerWidth <= 768) {
     emit('collapse')
   }
+}
+
+async function handleExport() {
+  await exportNotesAsJson(notesStore.notes)
+}
+
+async function handleImport() {
+  const items = await importNotesFromFiles()
+  if (items.length === 0) return
+  const count = await notesStore.importBatch(items)
+  if (count > 0) {
+    importMessage.value = `已导入 ${count} 条笔记`
+    setTimeout(() => { importMessage.value = '' }, 3000)
+  }
+}
+
+const importMessage = ref('')
+
+/* 文件夹展开状态 */
+const expandedFolders = ref(new Set<string>())
+const showFolders = ref(true)
+
+function toggleFolder(path: string) {
+  const s = expandedFolders.value
+  if (s.has(path)) {
+    s.delete(path)
+  } else {
+    s.add(path)
+  }
+}
+
+interface FlatFolder {
+  name: string
+  fullPath: string
+  depth: number
+  count: number
+  totalCount: number
+  hasChildren: boolean
+  expanded: boolean
+}
+
+/** 将树展平为带缩进的数组（仅展开节点的子级可见） */
+const flatFolders = computed<FlatFolder[]>(() => {
+  const result: FlatFolder[] = []
+  function walk(nodes: any[], depth: number) {
+    for (const node of nodes) {
+      const expanded = expandedFolders.value.has(node.fullPath)
+      result.push({
+        name: node.name,
+        fullPath: node.fullPath,
+        depth,
+        count: node.count,
+        totalCount: node.totalCount,
+        hasChildren: node.children.length > 0,
+        expanded,
+      })
+      if (expanded && node.children.length > 0) {
+        walk(node.children, depth + 1)
+      }
+    }
+  }
+  walk(notesStore.categoryTree, 0)
+  return result
+})
+
+function navigateFolder(path: string) {
+  const encodedCat = encodeURIComponent(path)
+  collapseIfMobile()
+  /* 用 window.location 避免 router 重复导航限制 */
+  window.location.hash = `#/notes?category=${encodedCat}`
 }
 </script>
 
@@ -72,9 +146,36 @@ function collapseIfMobile() {
           <span class="nav-label">新建笔记</span>
         </RouterLink>
 
-        <!-- 收件箱 -->
+        <!-- 收藏与收集 -->
         <div class="nav-divider" />
-        <div class="nav-section-label">快速收集</div>
+        <div class="nav-section-label">收藏与收集</div>
+
+        <RouterLink
+          to="/notes?view=favorites"
+          class="nav-item"
+          :class="{ active: route.fullPath.includes('view=favorites') }"
+          @click="collapseIfMobile"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+          <span class="nav-label">收藏夹</span>
+          <span v-if="favoriteCount > 0" class="nav-badge fav">{{ favoriteCount }}</span>
+        </RouterLink>
+
+        <RouterLink
+          to="/notes?view=recent"
+          class="nav-item"
+          :class="{ active: route.fullPath.includes('view=recent') }"
+          @click="collapseIfMobile"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          <span class="nav-label">最近打开</span>
+          <span v-if="recentCount > 0" class="nav-badge subtle">{{ recentCount }}</span>
+        </RouterLink>
 
         <RouterLink
           to="/notes?category=收件箱"
@@ -89,10 +190,77 @@ function collapseIfMobile() {
           <span class="nav-label">收件箱</span>
           <span v-if="inboxCount > 0" class="nav-badge">{{ inboxCount }}</span>
         </RouterLink>
+
+        <!-- 文件夹树 -->
+        <template v-if="flatFolders.length > 0">
+          <div class="nav-divider" />
+          <button class="nav-section-label folder-toggle" @click="showFolders = !showFolders">
+            文件夹
+            <svg
+              class="chevron-sm"
+              :class="{ expanded: showFolders }"
+              width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+
+          <template v-if="showFolders">
+            <button
+              v-for="f in flatFolders"
+              :key="f.fullPath"
+              class="folder-item"
+              :class="{ active: route.query.category === f.fullPath }"
+              :style="{ paddingLeft: `calc(var(--space-3) + ${f.depth * 16}px)` }"
+              @click="navigateFolder(f.fullPath)"
+            >
+              <button
+                v-if="f.hasChildren"
+                class="folder-chevron"
+                @click.stop="toggleFolder(f.fullPath)"
+              >
+                <svg
+                  :class="{ expanded: f.expanded }"
+                  width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                >
+                  <polyline points="9 6 15 12 9 18" />
+                </svg>
+              </button>
+              <svg v-else class="folder-icon-spacer" width="12" height="12" />
+              <svg class="folder-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              </svg>
+              <span class="folder-name">{{ f.name }}</span>
+              <span class="folder-count">{{ f.totalCount }}</span>
+            </button>
+          </template>
+        </template>
       </nav>
 
-      <!-- 底部：快捷键 + 版本 -->
+      <!-- 底部 -->
       <div class="sidebar-footer">
+        <!-- 导入/导出 -->
+        <div class="io-row">
+          <button class="io-btn" @click="handleExport">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span>导出</span>
+          </button>
+          <button class="io-btn" @click="handleImport">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <span>导入</span>
+          </button>
+        </div>
+        <Transition name="shortcuts-slide">
+          <div v-if="importMessage" class="import-msg">{{ importMessage }}</div>
+        </Transition>
         <button class="shortcuts-toggle" @click="showShortcuts = !showShortcuts">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="2" y="4" width="20" height="16" rx="2" />
@@ -184,6 +352,99 @@ function collapseIfMobile() {
   margin: var(--space-2) var(--space-3);
 }
 
+/* ─── 文件夹树 ─── */
+.folder-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .folder-toggle:hover { color: var(--color-text-secondary); }
+}
+
+.chevron-sm {
+  margin-left: auto;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.chevron-sm.expanded { transform: rotate(180deg); }
+
+.folder-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+  text-align: left;
+  min-height: 28px;
+}
+
+@media (hover: hover) {
+  .folder-item:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+  }
+}
+
+.folder-item.active {
+  background: var(--color-accent-muted);
+  color: var(--color-accent);
+}
+
+.folder-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  flex-shrink: 0;
+  color: var(--color-text-tertiary);
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .folder-chevron:hover { color: var(--color-text-primary); }
+}
+
+.folder-chevron svg {
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.folder-chevron svg.expanded {
+  transform: rotate(90deg);
+}
+
+.folder-icon-spacer {
+  flex-shrink: 0;
+  width: 14px;
+}
+
+.folder-icon {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.folder-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.folder-count {
+  font-size: 0.65rem;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
 /* ─── 导航项 ─── */
 .nav-item {
   display: flex;
@@ -231,6 +492,14 @@ function collapseIfMobile() {
   line-height: 1;
 }
 
+.nav-badge.fav {
+  background: var(--color-warning, #e6a817);
+}
+
+.nav-badge.subtle {
+  background: var(--color-text-tertiary);
+}
+
 /* ─── 底部 ─── */
 .sidebar-footer {
   padding: var(--space-3) var(--space-4);
@@ -243,6 +512,47 @@ function collapseIfMobile() {
 .sidebar-version {
   font-size: 0.7rem;
   color: var(--color-text-tertiary);
+}
+
+/* ─── 导入/导出 ─── */
+.io-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.io-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-2);
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .io-btn:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-secondary);
+  }
+}
+
+.io-btn:active {
+  transform: scale(0.98);
+}
+
+.import-msg {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--color-success, #48bb78);
+  padding: var(--space-1) 0;
 }
 
 /* ─── 快捷键折叠 ─── */
