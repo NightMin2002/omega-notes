@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useNotesStore } from '../stores/notes'
 import { useRouter } from 'vue-router'
 import MilkdownEditor from '../components/MilkdownEditor.vue'
+import MarkdownRenderer from '../components/MarkdownRenderer.vue'
 
 const notesStore = useNotesStore()
 const router = useRouter()
@@ -12,6 +13,9 @@ const content = ref('')
 const category = ref('')
 const tags = ref('')
 const isSaving = ref(false)
+
+type EditorMode = 'wysiwyg' | 'split'
+const editorMode = ref<EditorMode>('wysiwyg')
 
 async function handleSubmit() {
   if (!content.value.trim()) return
@@ -33,7 +37,31 @@ async function handleSubmit() {
 
 <template>
   <div class="write-page">
-    <h2 class="page-title">新建笔记</h2>
+    <div class="page-header">
+      <h2 class="page-title">新建笔记</h2>
+      <div class="mode-switcher">
+        <button
+          class="mode-btn"
+          :class="{ active: editorMode === 'wysiwyg' }"
+          @click="editorMode = 'wysiwyg'"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+          </svg>
+          <span>编辑</span>
+        </button>
+        <button
+          class="mode-btn"
+          :class="{ active: editorMode === 'split' }"
+          @click="editorMode = 'split'"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" /><line x1="12" y1="3" x2="12" y2="21" />
+          </svg>
+          <span>分屏</span>
+        </button>
+      </div>
+    </div>
 
     <form class="write-form" @submit.prevent="handleSubmit" novalidate>
       <input
@@ -43,7 +71,35 @@ async function handleSubmit() {
         placeholder="笔记标题（可选）"
       >
 
-      <MilkdownEditor v-model="content" />
+      <!-- WYSIWYG 模式 -->
+      <MilkdownEditor
+        v-if="editorMode === 'wysiwyg'"
+        v-model="content"
+      />
+
+      <!-- 分屏模式：左源码 + 右预览 -->
+      <div v-else class="split-editor">
+        <div class="split-pane source-pane">
+          <div class="pane-label">Markdown 源码</div>
+          <textarea
+            v-model="content"
+            class="source-textarea"
+            placeholder="在此输入或粘贴 Markdown 内容…"
+            spellcheck="false"
+          />
+        </div>
+        <div class="split-divider" />
+        <div class="split-pane preview-pane">
+          <div class="pane-label">实时预览</div>
+          <div class="preview-scroll">
+            <MarkdownRenderer
+              v-if="content.trim()"
+              :content="content"
+            />
+            <p v-else class="preview-empty">预览区域</p>
+          </div>
+        </div>
+      </div>
 
       <div class="write-meta">
         <div class="meta-field">
@@ -89,17 +145,58 @@ async function handleSubmit() {
 
 <style scoped>
 .write-page {
-  max-width: 720px;
+  max-width: 960px;
   margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-6);
 }
 
 .page-title {
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  margin-bottom: var(--space-6);
 }
 
+/* ─── 模式切换 ─── */
+.mode-switcher {
+  display: flex;
+  gap: var(--space-1);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: var(--space-1);
+}
+
+.mode-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.mode-btn.active {
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  box-shadow: 0 1px 3px var(--color-shadow);
+}
+
+@media (hover: hover) {
+  .mode-btn:not(.active):hover {
+    color: var(--color-text-secondary);
+  }
+}
+
+/* ─── 表单 ─── */
 .write-form {
   display: flex;
   flex-direction: column;
@@ -115,6 +212,70 @@ async function handleSubmit() {
   border-radius: var(--radius-lg);
 }
 
+/* ─── 分屏编辑器 ─── */
+.split-editor {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0;
+  min-height: 400px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-bg-secondary);
+}
+
+.split-divider {
+  width: 1px;
+  background: var(--color-border);
+}
+
+.split-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pane-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-tertiary);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-tertiary);
+}
+
+.source-textarea {
+  flex: 1;
+  resize: none;
+  padding: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  line-height: 1.7;
+  color: var(--color-text-primary);
+  background: transparent;
+  border: none;
+  outline: none;
+  tab-size: 2;
+}
+
+.source-textarea:focus {
+  background: var(--color-bg-primary);
+}
+
+.preview-scroll {
+  flex: 1;
+  padding: var(--space-4);
+  overflow-y: auto;
+}
+
+.preview-empty {
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+/* ─── 元信息 ─── */
 .write-meta {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -140,6 +301,7 @@ async function handleSubmit() {
   font-size: 0.9rem;
 }
 
+/* ─── 按钮 ─── */
 .write-actions {
   display: flex;
   justify-content: flex-end;
@@ -192,5 +354,13 @@ async function handleSubmit() {
 
 @media (max-width: 640px) {
   .write-meta { grid-template-columns: 1fr; }
+  .split-editor {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto 1fr;
+  }
+  .split-divider {
+    width: auto;
+    height: 1px;
+  }
 }
 </style>

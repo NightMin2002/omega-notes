@@ -15,6 +15,9 @@ const editContent = ref('')
 const editCategory = ref('')
 const editTags = ref('')
 
+type EditorMode = 'wysiwyg' | 'split'
+const editorMode = ref<EditorMode>('wysiwyg')
+
 const note = computed(() => {
   const id = route.params.id as string
   return notesStore.getNoteById(id)
@@ -26,6 +29,7 @@ function startEdit() {
   editContent.value = note.value.content
   editCategory.value = note.value.category
   editTags.value = note.value.tags.join(' ')
+  editorMode.value = 'wysiwyg'
   isEditing.value = true
 }
 
@@ -74,6 +78,32 @@ function formatDate(dateStr: string): string {
         </button>
 
         <div class="toolbar-actions">
+          <!-- 编辑时：模式切换 -->
+          <template v-if="isEditing">
+            <div class="mode-switcher">
+              <button
+                class="mode-btn"
+                :class="{ active: editorMode === 'wysiwyg' }"
+                @click="editorMode = 'wysiwyg'"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                </svg>
+                <span>编辑</span>
+              </button>
+              <button
+                class="mode-btn"
+                :class="{ active: editorMode === 'split' }"
+                @click="editorMode = 'split'"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" /><line x1="12" y1="3" x2="12" y2="21" />
+                </svg>
+                <span>分屏</span>
+              </button>
+            </div>
+          </template>
+
           <button class="toolbar-btn" :class="{ active: note.isPinned }" @click="togglePin">
             <svg width="16" height="16" viewBox="0 0 24 24" :fill="note.isPinned ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
@@ -103,7 +133,35 @@ function formatDate(dateStr: string): string {
         <form class="edit-form" @submit.prevent="saveEdit" novalidate>
           <input v-model="editTitle" type="text" class="edit-title" placeholder="笔记标题">
 
-          <MilkdownEditor v-model="editContent" />
+          <!-- WYSIWYG 模式 -->
+          <MilkdownEditor
+            v-if="editorMode === 'wysiwyg'"
+            v-model="editContent"
+          />
+
+          <!-- 分屏模式 -->
+          <div v-else class="split-editor">
+            <div class="split-pane source-pane">
+              <div class="pane-label">Markdown 源码</div>
+              <textarea
+                v-model="editContent"
+                class="source-textarea"
+                placeholder="在此输入或粘贴 Markdown 内容…"
+                spellcheck="false"
+              />
+            </div>
+            <div class="split-divider" />
+            <div class="split-pane preview-pane">
+              <div class="pane-label">实时预览</div>
+              <div class="preview-scroll">
+                <MarkdownRenderer
+                  v-if="editContent.trim()"
+                  :content="editContent"
+                />
+                <p v-else class="preview-empty">预览区域</p>
+              </div>
+            </div>
+          </div>
 
           <div class="edit-meta-row">
             <input v-model="editCategory" type="text" class="edit-input" placeholder="分类">
@@ -148,7 +206,7 @@ function formatDate(dateStr: string): string {
 
 <style scoped>
 .detail-page {
-  max-width: 780px;
+  max-width: 960px;
   margin: 0 auto;
 }
 
@@ -163,6 +221,7 @@ function formatDate(dateStr: string): string {
 
 .toolbar-actions {
   display: flex;
+  align-items: center;
   gap: var(--space-2);
 }
 
@@ -192,6 +251,105 @@ function formatDate(dateStr: string): string {
 
 .toolbar-btn.active { color: var(--color-accent); }
 
+/* ─── 模式切换 ─── */
+.mode-switcher {
+  display: flex;
+  gap: var(--space-1);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: var(--space-1);
+  margin-right: var(--space-2);
+}
+
+.mode-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.mode-btn.active {
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  box-shadow: 0 1px 3px var(--color-shadow);
+}
+
+@media (hover: hover) {
+  .mode-btn:not(.active):hover {
+    color: var(--color-text-secondary);
+  }
+}
+
+/* ─── 分屏编辑器 ─── */
+.split-editor {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0;
+  min-height: 400px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-bg-secondary);
+}
+
+.split-divider {
+  width: 1px;
+  background: var(--color-border);
+}
+
+.split-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pane-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-tertiary);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-tertiary);
+}
+
+.source-textarea {
+  flex: 1;
+  resize: none;
+  padding: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  line-height: 1.7;
+  color: var(--color-text-primary);
+  background: transparent;
+  border: none;
+  outline: none;
+  tab-size: 2;
+}
+
+.source-textarea:focus {
+  background: var(--color-bg-primary);
+}
+
+.preview-scroll {
+  flex: 1;
+  padding: var(--space-4);
+  overflow-y: auto;
+}
+
+.preview-empty {
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+/* ─── 阅读模式 ─── */
 .note-article { padding-bottom: var(--space-12); }
 
 .note-title {
@@ -239,6 +397,7 @@ function formatDate(dateStr: string): string {
   border-radius: var(--radius-full);
 }
 
+/* ─── 编辑表单 ─── */
 .edit-form {
   display: flex;
   flex-direction: column;
@@ -304,4 +463,16 @@ function formatDate(dateStr: string): string {
 }
 
 .back-link { color: var(--color-accent); }
+
+@media (max-width: 640px) {
+  .edit-meta-row { grid-template-columns: 1fr; }
+  .split-editor {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto 1fr;
+  }
+  .split-divider {
+    width: auto;
+    height: 1px;
+  }
+}
 </style>
