@@ -15,9 +15,11 @@ const category = ref('')
 const tags = ref('')
 const isSaving = ref(false)
 const showTemplates = ref(true)
+const hasSubmitted = ref(false)
 
 type EditorMode = 'wysiwyg' | 'split'
 const editorMode = ref<EditorMode>('wysiwyg')
+const editorKey = ref(0)
 
 function applyTemplate(tpl: NoteTemplate) {
   title.value = tpl.title
@@ -30,33 +32,80 @@ function applyTemplate(tpl: NoteTemplate) {
 }
 
 async function handleSubmit() {
-  if (!content.value.trim()) return
+  if (!content.value.trim() || isSaving.value || hasSubmitted.value) return
 
   isSaving.value = true
-  await new Promise(resolve => setTimeout(resolve, 200))
+  hasSubmitted.value = true
 
-  const note = await notesStore.addNote({
-    title: title.value.trim(),
-    content: content.value.trim(),
-    category: category.value.trim() || '未分类',
-    tags: tags.value.trim() ? tags.value.trim().split(/\s+/) : [],
-  })
+  try {
+    const note = await notesStore.addNote({
+      title: title.value.trim(),
+      content: content.value.trim(),
+      category: category.value.trim() || '未分类',
+      tags: tags.value.trim() ? tags.value.trim().split(/\s+/) : [],
+    })
 
-  isSaving.value = false
-  router.push(`/note/${note.id}`)
+    console.log('笔记已保存, id:', note.id)
+
+    /* 用 replace 而不是 push，避免返回到已清空的 write 页 */
+    await router.replace(`/note/${note.id}`)
+  } catch (err) {
+    console.error('保存或跳转失败:', err)
+    hasSubmitted.value = false
+    isSaving.value = false
+  }
 }
 
-/** 处理分屏 textarea 的图片粘贴 */
-async function handlePaste(e: ClipboardEvent) {
-  if (!e.clipboardData) return
-  const { handleImagePaste } = await import('../utils/images')
-  const results = await handleImagePaste(e.clipboardData)
-  if (results.length === 0) return
+/**
+ * 粘贴处理 — 只拦截真正的图片 blob（截图 Ctrl+V）
+ */
+function handlePaste(e: ClipboardEvent) {
+  if (!e.clipboardData?.items) return
+
+  let imageFile: File | null = null
+  for (let i = 0; i < e.clipboardData.items.length; i++) {
+    const item = e.clipboardData.items[i]!
+    if (item.type.startsWith('image/') && item.kind === 'file') {
+      imageFile = item.getAsFile()
+      break
+    }
+  }
+
+  if (!imageFile) return
 
   e.preventDefault()
-  for (const md of results) {
-    content.value += `\n${md}\n`
+
+  const file = imageFile
+  const reader = new FileReader()
+  reader.onload = () => {
+    const dataUrl = reader.result as string
+    content.value += `\n![${file.name || '图片'}](${dataUrl})\n`
   }
+  reader.readAsDataURL(file)
+}
+
+/** 通过文件选择对话框插入图片，自动切到分屏以便立即看到 */
+function insertImageFromFile() {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = 'image/*'
+  input.multiple = true
+  input.onchange = () => {
+    if (!input.files) return
+    let pending = input.files.length
+    for (let i = 0; i < input.files.length; i++) {
+      const file = input.files[i]!
+      const reader = new FileReader()
+      reader.onload = () => {
+        const dataUrl = reader.result as string
+        content.value += `\n![${file.name}](${dataUrl})\n`
+        pending--
+        if (pending === 0) editorKey.value++
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+  input.click()
 }
 </script>
 
@@ -150,19 +199,34 @@ async function handlePaste(e: ClipboardEvent) {
       >
 
       <!-- WYSIWYG 模式 -->
-      <MilkdownEditor
-        v-if="editorMode === 'wysiwyg'"
-        v-model="content"
-      />
+      <template v-if="editorMode === 'wysiwyg'">
+        <div class="editor-toolbar">
+          <button type="button" class="pane-action" @click="insertImageFromFile">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+            </svg>
+            <span>插入图片</span>
+          </button>
+        </div>
+        <MilkdownEditor :key="editorKey" v-model="content" />
+      </template>
 
       <!-- 分屏模式：左源码 + 右预览 -->
       <div v-else class="split-editor">
         <div class="split-pane source-pane">
-          <div class="pane-label">Markdown 源码</div>
+          <div class="pane-header">
+            <span class="pane-label">Markdown 源码</span>
+            <button type="button" class="pane-action" @click="insertImageFromFile">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+              </svg>
+              <span>插入图片</span>
+            </button>
+          </div>
           <textarea
             v-model="content"
             class="source-textarea"
-            placeholder="在此输入或粘贴 Markdown 内容…&#10;&#10;支持粘贴图片（Ctrl+V）"
+            placeholder="在此输入或粘贴 Markdown 内容…&#10;&#10;截图可直接 Ctrl+V 粘贴&#10;QQ/微信图片请用上方「插入图片」按钮"
             spellcheck="false"
             @paste="handlePaste"
           />
@@ -212,9 +276,10 @@ async function handlePaste(e: ClipboardEvent) {
           type="submit"
           class="btn-primary"
           :class="{ 'is-loading': isSaving }"
-          :disabled="!content.trim() || isSaving"
+          :disabled="!content.trim() || isSaving || hasSubmitted"
         >
-          <span v-if="!isSaving">保存笔记</span>
+          <span v-if="hasSubmitted && !isSaving">已保存 ✓</span>
+          <span v-else-if="!isSaving">保存笔记</span>
           <span v-else class="spinner" />
         </button>
       </div>
@@ -367,6 +432,16 @@ async function handlePaste(e: ClipboardEvent) {
   border-radius: var(--radius-lg);
 }
 
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
 /* ─── 分屏编辑器 ─── */
 .split-editor {
   display: grid;
@@ -390,15 +465,41 @@ async function handlePaste(e: ClipboardEvent) {
   min-width: 0;
 }
 
+.pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-tertiary);
+}
+
 .pane-label {
   font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--color-text-tertiary);
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-bg-tertiary);
+}
+
+.pane-action {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .pane-action:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-accent);
+  }
 }
 
 .source-textarea {

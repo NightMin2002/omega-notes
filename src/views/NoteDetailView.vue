@@ -62,6 +62,64 @@ function togglePin() {
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleString('zh-CN')
 }
+
+function handlePaste(e: ClipboardEvent) {
+  if (!e.clipboardData) return
+
+  let hasImage = false
+  if (e.clipboardData.items) {
+    for (let i = 0; i < e.clipboardData.items.length; i++) {
+      if (e.clipboardData.items[i]!.type.startsWith('image/')) {
+        hasImage = true
+        break
+      }
+    }
+  }
+  if (!hasImage) {
+    const html = e.clipboardData.getData('text/html')
+    if (html && /<img[^>]+src=["']file:\/\/\//i.test(html)) {
+      hasImage = true
+    }
+  }
+
+  if (!hasImage) return
+
+  e.preventDefault()
+
+  const cd = e.clipboardData
+  ;(async () => {
+    try {
+      const { processClipboardImages } = await import('../utils/images')
+      const results = await processClipboardImages(cd)
+      for (const md of results) {
+        editContent.value += `\n${md}\n`
+      }
+    } catch (err) {
+      console.error('图片粘贴失败:', err)
+    }
+  })()
+}
+
+/** 通过文件选择对话框插入图片 */
+function insertImageFromFile() {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = 'image/*'
+  input.multiple = true
+  input.onchange = () => {
+    if (!input.files) return
+    for (let i = 0; i < input.files.length; i++) {
+      const file = input.files[i]!
+      const reader = new FileReader()
+      reader.onload = () => {
+        const dataUrl = reader.result as string
+        editContent.value += `\n![${file.name}](${dataUrl})\n`
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+  input.click()
+}
 </script>
 
 <template>
@@ -134,20 +192,36 @@ function formatDate(dateStr: string): string {
           <input v-model="editTitle" type="text" class="edit-title" placeholder="笔记标题">
 
           <!-- WYSIWYG 模式 -->
-          <MilkdownEditor
-            v-if="editorMode === 'wysiwyg'"
-            v-model="editContent"
-          />
+          <template v-if="editorMode === 'wysiwyg'">
+            <div class="editor-toolbar">
+              <button type="button" class="pane-action" @click="insertImageFromFile">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+                </svg>
+                <span>插入图片</span>
+              </button>
+            </div>
+            <MilkdownEditor v-model="editContent" />
+          </template>
 
           <!-- 分屏模式 -->
           <div v-else class="split-editor">
             <div class="split-pane source-pane">
-              <div class="pane-label">Markdown 源码</div>
+              <div class="pane-header">
+                <span class="pane-label">Markdown 源码</span>
+                <button type="button" class="pane-action" @click="insertImageFromFile">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+                  </svg>
+                  <span>插入图片</span>
+                </button>
+              </div>
               <textarea
                 v-model="editContent"
                 class="source-textarea"
-                placeholder="在此输入或粘贴 Markdown 内容…"
+                placeholder="在此输入或粘贴 Markdown 内容…&#10;&#10;截图可直接 Ctrl+V 粘贴"
                 spellcheck="false"
+                @paste="handlePaste"
               />
             </div>
             <div class="split-divider" />
@@ -283,6 +357,45 @@ function formatDate(dateStr: string): string {
 @media (hover: hover) {
   .mode-btn:not(.active):hover {
     color: var(--color-text-secondary);
+  }
+}
+/* ─── 编辑器工具条 ─── */
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-tertiary);
+}
+
+.pane-action {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .pane-action:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-accent);
   }
 }
 

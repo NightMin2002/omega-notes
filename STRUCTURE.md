@@ -30,17 +30,19 @@ omega-v2/
 │   │       └── reset.css       # 浏览器默认样式重置
 │   │
 │   ├── components/             # 全局/共享组件
-│   │   ├── AppHeader.vue       # 顶部导航栏
-│   │   ├── AppSidebar.vue      # 侧边栏导航
+│   │   ├── AppHeader.vue       # 顶部导航栏（含搜索/快速笔记入口）
+│   │   ├── AppSidebar.vue      # 侧边栏导航（含收件箱徽标 + 快捷键面板）
 │   │   ├── MilkdownEditor.vue  # Markdown 编辑器外壳（提供 Provider）
 │   │   ├── MilkdownEditorCore.vue # 编辑器核心（Milkdown 插件注册）
-│   │   └── MarkdownRenderer.vue # Markdown → HTML 渲染（阅读模式）
+│   │   ├── MarkdownRenderer.vue # Markdown → HTML 渲染（阅读模式）
+│   │   ├── QuickNote.vue       # Ctrl+Q 快速笔记弹窗
+│   │   └── SearchDialog.vue    # Ctrl+K 全局搜索弹窗
 │   │
 │   ├── views/                  # 路由页面组件
 │   │   ├── HomeView.vue        # 主页（统计 + 快捷入口 + 最近更新）
 │   │   ├── NotesView.vue       # 知识库（搜索 + 分类筛选 + 卡片网格）
-│   │   ├── WriteView.vue       # 新建笔记（Milkdown 编辑器）
-│   │   └── NoteDetailView.vue  # 笔记详情（阅读/编辑双模式）
+│   │   ├── WriteView.vue       # 新建笔记（模板选择 + 编辑器 + 图片插入）
+│   │   └── NoteDetailView.vue  # 笔记详情（阅读/编辑/分屏三模式）
 │   │
 │   ├── stores/                 # Pinia 状态仓库
 │   │   ├── theme.ts            # 主题管理（暗色/亮色 + 持久化）
@@ -49,7 +51,9 @@ omega-v2/
 │   ├── utils/                  # 工具函数
 │   │   ├── markdown.ts         # stripMarkdown / truncateText
 │   │   ├── storage.ts          # 存储适配层（Tauri fs / localStorage 降级）
-│   │   └── shortcuts.ts        # 全局快捷键注册（Tauri 环境）
+│   │   ├── shortcuts.ts        # 全局快捷键注册（Tauri 环境）
+│   │   ├── templates.ts        # 笔记模板定义（6 种预设）
+│   │   └── images.ts           # 图片粘贴处理（base64 转换）
 │   │
 │   └── router/                 # 路由配置
 │       └── index.ts            # 路由表 + 页面标题同步
@@ -62,8 +66,19 @@ omega-v2/
     │   ├── main.rs             # 桌面应用入口
     │   └── lib.rs              # Rust 库入口
     ├── capabilities/           # Tauri 权限能力配置
-    │   └── default.json        # 默认权限（fs + global-shortcut）
-    └── icons/                  # 应用图标（各尺寸）
+│   ├── default.json        # 默认权限（fs AppData 读写 + global-shortcut）
+│   └── desktop.json        # 桌面平台专用权限
+└── icons/                  # 应用图标（各尺寸）
+```
+
+### 文档目录 (`docs/`)
+
+```
+docs/
+├── 01-项目是怎么建起来的.md    # 项目搭建过程学习笔记
+├── 02-V1和V2的对比与反思.md    # 架构对比分析
+├── 03-数据存储机制详解.md      # Tauri fs + YAML frontmatter 存储方案
+└── 04-功能方向规划.md          # 功能路线图与优先级
 ```
 
 ## 模块职责说明
@@ -81,11 +96,13 @@ omega-v2/
 
 | 组件 | 职责 | Props / Events |
 |---|---|---|
-| `AppHeader.vue` | 毛玻璃顶栏。侧边栏切换、主题切换（太阳/月亮旋转过渡） | Props: `sidebarCollapsed` / Emits: `toggleSidebar` |
-| `AppSidebar.vue` | 左侧导航。路由链接高亮，仅移动端导航后自动收起 | Props: `collapsed` / Emits: `collapse` |
+| `AppHeader.vue` | 毛玻璃顶栏。侧边栏切换、主题切换、搜索入口（Ctrl+K）、快速笔记入口（Ctrl+Q） | Props: `sidebarCollapsed` / Emits: `toggleSidebar`, `openSearch`, `openQuickNote` |
+| `AppSidebar.vue` | 左侧导航。路由链接高亮、收件箱入口（带数字徽标）、快捷键展开面板 | Props: `collapsed` / Emits: `collapse` |
 | `MilkdownEditor.vue` | 编辑器外壳。提供 `MilkdownProvider` inject 上下文 | Props: `modelValue`, `readonly` / Emits: `update:modelValue` |
 | `MilkdownEditorCore.vue` | 编辑器核心。注册 commonmark/GFM/history/indent/clipboard/**math** 插件，监听 `markdownUpdated` | Props: `modelValue` / Emits: `update:modelValue` |
-| `MarkdownRenderer.vue` | 只读渲染。用 markdown-it + highlight.js + **markdown-it-texmath (KaTeX)** 将 Markdown 渲染为 HTML | Props: `content` |
+| `MarkdownRenderer.vue` | 只读渲染。markdown-it + highlight.js + **texmath (KaTeX)** + **task-lists**。自动清理粘贴的代码围栏 | Props: `content` |
+| `QuickNote.vue` | 快速笔记弹窗。`<dialog>` 模态框，Markdown 输入 + Ctrl+Enter 保存到收件箱 | Props: `visible` / Emits: `close` |
+| `SearchDialog.vue` | 全局搜索弹窗。全文搜索 + 关键词高亮 + 键盘导航（↑↓ Enter） | Props: `visible` / Emits: `close` |
 
 **编辑器架构说明**：`MilkdownEditor` 和 `MilkdownEditorCore` 必须拆分为两个组件，因为 `useEditor()` 需要在 `MilkdownProvider` 的 inject 上下文内调用。如果合并为一个组件会导致 `Symbol(editorInfoCtxKey) not found` 错误。
 
@@ -94,9 +111,9 @@ omega-v2/
 | 页面 | 路由 | 依赖的 Store | 功能 |
 |---|---|---|---|
 | `HomeView.vue` | `/` | `notes` | 统计卡片（总笔记/分类/已置顶）、快捷入口、最近更新列表 |
-| `NotesView.vue` | `/notes` | `notes` | 搜索框、分类药丸筛选、笔记卡片网格（纯文本摘要）、空状态引导 |
-| `WriteView.vue` | `/write` | `notes` | Milkdown 编辑器 + 标题/分类/标签表单，保存后跳转详情 |
-| `NoteDetailView.vue` | `/note/:id` | `notes` | 阅读模式（MarkdownRenderer） ↔ 编辑模式（MilkdownEditor），置顶/删除 |
+| `NotesView.vue` | `/notes` | `notes` | 搜索框、分类药丸筛选（支持 URL query 参数）、笔记卡片网格、空状态引导 |
+| `WriteView.vue` | `/write` | `notes` | 模板选择器 → WYSIWYG/分屏编辑 + 图片插入 + 标题/分类/标签表单，保存后跳转详情 |
+| `NoteDetailView.vue` | `/note/:id` | `notes` | 阅读模式（MarkdownRenderer） ↔ 编辑模式（WYSIWYG/分屏 + 图片插入），置顶/删除 |
 
 ### 工具层 (`src/utils/`)
 
@@ -110,6 +127,9 @@ omega-v2/
 | | `migrateFromLocalStorage()` | 将旧 localStorage 数据迁移到文件系统 |
 | | `isTauri()` | 检测当前是否在 Tauri 桌面环境中运行 |
 | `shortcuts.ts` | `registerGlobalShortcuts(router)` | 注册系统级全局快捷键（仅 Tauri 环境） |
+| `templates.ts` | `templates[]` | 6 种笔记模板定义（空白/会议/读书/日记/学习/待办） |
+| `images.ts` | `clipboardHasImage()` | 同步检测剪贴板是否含图片 |
+| | `processClipboardImages()` | 异步处理粘贴图片，返回 base64 Markdown 语法 |
 
 ### 状态层 (`src/stores/`)
 

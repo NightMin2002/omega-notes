@@ -35,7 +35,7 @@ V1 的 CSS 设计系统和架构思路值得肯定，但 1200 行的 `ui.js` 手
 | 桌面壳 | Tauri 2 | ^2.10 |
 | 编辑器 | Milkdown (ProseMirror) | ^7.19 |
 | 数学公式 | KaTeX + @milkdown/plugin-math | ^0.16 / ^4.16 |
-| 渲染 | markdown-it + highlight.js + markdown-it-texmath | ^14.1 / ^11.11 |
+| 渲染 | markdown-it + highlight.js + markdown-it-texmath + markdown-it-task-lists | ^14.1 / ^11.11 |
 
 ## 🚀 快速开始
 
@@ -87,18 +87,32 @@ npm run tauri build
 - [x] 全局快捷键（Ctrl+Shift+N 新建 / Ctrl+Shift+O 呼出窗口）
 - [x] 系统托盘常驻（显示窗口 / 退出菜单）
 
-### Phase 4 — 功能恢复
-- [ ] 分类树组件（递归 `<TreeNode />`）
-- [ ] 学习计划模块
-- [ ] AI 对话解析器
+### Phase 4 ✅ 功能增强
+- [x] 快速笔记（Ctrl+Q 弹窗，自动归类收件箱）
+- [x] 全局搜索（Ctrl+K，全文搜索+高亮+键盘导航）
+- [x] 收件箱系统（侧边栏入口 + 数字徽标）
+- [x] 笔记模板（6 种预设：空白/会议/读书/日记/学习/待办）
+- [x] 图片支持（截图粘贴 + 文件选择器，base64 嵌入）
+- [x] 分屏编辑（Markdown 源码 + 实时预览）
+- [x] Markdown 增强（表格斑马纹、任务列表、删除线）
+- [x] 快捷键面板（侧边栏可展开）
+- [x] Tauri fs 权限配置（AppData 完整读写权限）
+
+### Phase 5 — 组织与发现
+- [ ] 文件夹无限嵌套
+- [ ] 标签云 + 点击筛选
+- [ ] 收藏夹 + 最近打开
+- [ ] 双向链接
 - [ ] 数据导入/导出
 
 ## 🔑 全局快捷键
 
 | 快捷键 | 功能 |
 |---|---|
-| `Ctrl + Shift + N` | 新建笔记（呼出窗口并跳转到新建页） |
-| `Ctrl + Shift + O` | 显示/聚焦窗口 |
+| `Ctrl + K` | 全局搜索 |
+| `Ctrl + Q` | 快速笔记 |
+| `Ctrl + Shift + N` | 新建笔记（桌面模式：呼出窗口并跳转新建页） |
+| `Ctrl + Shift + O` | 显示/聚焦窗口（桌面模式） |
 
 ## 📝 笔记存储格式
 
