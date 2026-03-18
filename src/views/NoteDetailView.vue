@@ -2,6 +2,8 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useNotesStore } from '../stores/notes'
+import MilkdownEditor from '../components/MilkdownEditor.vue'
+import MarkdownRenderer from '../components/MarkdownRenderer.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -100,7 +102,9 @@ function formatDate(dateStr: string): string {
       <template v-if="isEditing">
         <form class="edit-form" @submit.prevent="saveEdit" novalidate>
           <input v-model="editTitle" type="text" class="edit-title" placeholder="笔记标题">
-          <textarea v-model="editContent" class="edit-content" rows="15" />
+
+          <MilkdownEditor v-model="editContent" />
+
           <div class="edit-meta-row">
             <input v-model="editCategory" type="text" class="edit-input" placeholder="分类">
             <input v-model="editTags" type="text" class="edit-input" placeholder="标签（空格分隔）">
@@ -129,9 +133,7 @@ function formatDate(dateStr: string): string {
             <span v-for="tag in note.tags" :key="tag" class="tag">{{ tag }}</span>
           </div>
 
-          <div class="note-body">
-            {{ note.content }}
-          </div>
+          <MarkdownRenderer :content="note.content" />
         </article>
       </template>
     </template>
@@ -150,7 +152,6 @@ function formatDate(dateStr: string): string {
   margin: 0 auto;
 }
 
-/* ─── 工具栏 ─── */
 .detail-toolbar {
   display: flex;
   align-items: center;
@@ -183,21 +184,15 @@ function formatDate(dateStr: string): string {
     background: var(--color-bg-hover);
     color: var(--color-text-primary);
   }
-
   .toolbar-btn.danger:hover {
     background: var(--color-danger-muted);
     color: var(--color-danger);
   }
 }
 
-.toolbar-btn.active {
-  color: var(--color-accent);
-}
+.toolbar-btn.active { color: var(--color-accent); }
 
-/* ─── 文章阅读 ─── */
-.note-article {
-  padding-bottom: var(--space-12);
-}
+.note-article { padding-bottom: var(--space-12); }
 
 .note-title {
   font-size: clamp(1.5rem, 4vw, 2rem);
@@ -244,14 +239,6 @@ function formatDate(dateStr: string): string {
   border-radius: var(--radius-full);
 }
 
-.note-body {
-  line-height: 1.8;
-  white-space: pre-wrap;
-  word-break: break-word;
-  color: var(--color-text-primary);
-}
-
-/* ─── 编辑表单 ─── */
 .edit-form {
   display: flex;
   flex-direction: column;
@@ -264,23 +251,13 @@ function formatDate(dateStr: string): string {
   padding: var(--space-3) var(--space-4);
 }
 
-.edit-content {
-  padding: var(--space-4);
-  min-height: 300px;
-  resize: vertical;
-  line-height: 1.7;
-  font-family: var(--font-sans);
-}
-
 .edit-meta-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-4);
 }
 
-.edit-input {
-  padding: var(--space-2) var(--space-3);
-}
+.edit-input { padding: var(--space-2) var(--space-3); }
 
 .edit-actions {
   display: flex;
@@ -304,18 +281,11 @@ function formatDate(dateStr: string): string {
   color: var(--color-text-inverse);
 }
 
-.btn-save:disabled {
-  opacity: 0.5;
-}
+.btn-save:disabled { opacity: 0.5; }
 
 @media (hover: hover) {
-  .btn-save:hover:not(:disabled) {
-    background: var(--color-accent-hover);
-  }
-
-  .btn-cancel:hover {
-    background: var(--color-bg-hover);
-  }
+  .btn-save:hover:not(:disabled) { background: var(--color-accent-hover); }
+  .btn-cancel:hover { background: var(--color-bg-hover); }
 }
 
 .btn-cancel {
@@ -324,7 +294,6 @@ function formatDate(dateStr: string): string {
   border: 1px solid var(--color-border);
 }
 
-/* ─── 404 ─── */
 .not-found {
   display: flex;
   flex-direction: column;
@@ -334,7 +303,5 @@ function formatDate(dateStr: string): string {
   color: var(--color-text-tertiary);
 }
 
-.back-link {
-  color: var(--color-accent);
-}
+.back-link { color: var(--color-accent); }
 </style>

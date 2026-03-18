@@ -11,6 +11,11 @@
     "type-check": "vue-tsc --build"
   },
   "dependencies": {
+    "@milkdown/kit": "^7.19.0",
+    "@milkdown/plugin-listener": "^7.19.0",
+    "@milkdown/theme-nord": "^7.19.0",
+    "@milkdown/vue": "^7.19.0",
+    "markdown-it": "^14.1.1",
     "pinia": "^3.0.4",
     "vue": "^3.5.29",
     "vue-router": "^5.0.3"

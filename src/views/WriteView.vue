@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useNotesStore } from '../stores/notes'
 import { useRouter } from 'vue-router'
+import MilkdownEditor from '../components/MilkdownEditor.vue'
 
 const notesStore = useNotesStore()
 const router = useRouter()
@@ -16,8 +17,6 @@ async function handleSubmit() {
   if (!content.value.trim()) return
 
   isSaving.value = true
-
-  // 模拟一小段延迟，让按钮的 loading 态可见
   await new Promise(resolve => setTimeout(resolve, 200))
 
   const note = notesStore.addNote({
@@ -28,8 +27,6 @@ async function handleSubmit() {
   })
 
   isSaving.value = false
-
-  // 跳转到新创建的笔记
   router.push(`/note/${note.id}`)
 }
 </script>
@@ -46,12 +43,7 @@ async function handleSubmit() {
         placeholder="笔记标题（可选）"
       >
 
-      <textarea
-        v-model="content"
-        class="write-content"
-        placeholder="开始记录…"
-        rows="12"
-      />
+      <MilkdownEditor v-model="content" />
 
       <div class="write-meta">
         <div class="meta-field">
@@ -123,17 +115,6 @@ async function handleSubmit() {
   border-radius: var(--radius-lg);
 }
 
-.write-content {
-  padding: var(--space-4);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  min-height: 300px;
-  resize: vertical;
-  line-height: 1.7;
-  font-family: var(--font-sans);
-}
-
 .write-meta {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -183,22 +164,12 @@ async function handleSubmit() {
   color: var(--color-text-inverse);
 }
 
-.btn-primary:disabled {
-  opacity: 0.5;
-}
-
-.btn-primary.is-loading {
-  pointer-events: none;
-}
+.btn-primary:disabled { opacity: 0.5; }
+.btn-primary.is-loading { pointer-events: none; }
 
 @media (hover: hover) {
-  .btn-primary:hover:not(:disabled) {
-    background: var(--color-accent-hover);
-  }
-
-  .btn-secondary:hover {
-    background: var(--color-bg-hover);
-  }
+  .btn-primary:hover:not(:disabled) { background: var(--color-accent-hover); }
+  .btn-secondary:hover { background: var(--color-bg-hover); }
 }
 
 .btn-secondary {
@@ -207,7 +178,6 @@ async function handleSubmit() {
   border: 1px solid var(--color-border);
 }
 
-/* ─── Spinner ─── */
 .spinner {
   display: inline-block;
   width: 16px;
@@ -218,13 +188,9 @@ async function handleSubmit() {
   animation: spin 0.6s linear infinite;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 640px) {
-  .write-meta {
-    grid-template-columns: 1fr;
-  }
+  .write-meta { grid-template-columns: 1fr; }
 }
 </style>
