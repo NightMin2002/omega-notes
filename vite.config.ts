@@ -15,4 +15,11 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  // Tauri: clearScreen false 避免 Tauri 误判 dev server 退出
+  clearScreen: false,
+  server: {
+    host: '0.0.0.0',
+    port: 8080,
+    strictPort: true,
+  },
 })

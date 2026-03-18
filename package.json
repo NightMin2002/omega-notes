@@ -8,13 +8,17 @@
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
-    "type-check": "vue-tsc --build"
+    "type-check": "vue-tsc --build",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "dependencies": {
     "@milkdown/kit": "^7.19.0",
     "@milkdown/plugin-listener": "^7.19.0",
     "@milkdown/theme-nord": "^7.19.0",
     "@milkdown/vue": "^7.19.0",
+    "@tauri-apps/api": "^2.10.1",
     "highlight.js": "^11.11.1",
     "markdown-it": "^14.1.1",
     "markdown-it-highlightjs": "^4.3.0",
@@ -23,6 +27,7 @@
     "vue-router": "^5.0.3"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.10.1",
     "@tsconfig/node24": "^24.0.4",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^24.11.0",
