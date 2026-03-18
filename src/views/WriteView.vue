@@ -49,13 +49,12 @@ async function handleSubmit() {
 /** 处理分屏 textarea 的图片粘贴 */
 async function handlePaste(e: ClipboardEvent) {
   if (!e.clipboardData) return
-  const { getImageFiles, saveImage } = await import('../utils/images')
-  const images = getImageFiles(e.clipboardData)
-  if (images.length === 0) return
+  const { handleImagePaste } = await import('../utils/images')
+  const results = await handleImagePaste(e.clipboardData)
+  if (results.length === 0) return
 
   e.preventDefault()
-  for (const img of images) {
-    const md = await saveImage(img)
+  for (const md of results) {
     content.value += `\n${md}\n`
   }
 }
