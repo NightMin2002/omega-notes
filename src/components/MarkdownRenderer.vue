@@ -1,12 +1,13 @@
 <script setup lang="ts">
 /**
  * MarkdownRenderer — Markdown → HTML 渲染
- * 用于笔记详情的阅读模式
+ * 用于笔记详情的阅读模式 + 分屏实时预览
  */
 import { computed } from 'vue'
 import MarkdownIt from 'markdown-it'
 import highlightjs from 'markdown-it-highlightjs'
 import texmath from 'markdown-it-texmath'
+import taskLists from 'markdown-it-task-lists'
 import katex from 'katex'
 import 'highlight.js/styles/github-dark.min.css'
 
@@ -23,8 +24,22 @@ const md = new MarkdownIt({
 
 md.use(highlightjs)
 md.use(texmath, { engine: katex, delimiters: 'dollars' })
+md.use(taskLists, { enabled: true })
 
-const rendered = computed(() => md.render(props.content))
+/** 清理粘贴内容中常见的代码围栏包裹 */
+function cleanContent(raw: string): string {
+  let s = raw.trim()
+  const fenceRe = /^```\w*\s*\n/
+  if (fenceRe.test(s)) {
+    s = s.replace(fenceRe, '')
+    if (s.endsWith('```')) {
+      s = s.slice(0, -3)
+    }
+  }
+  return s.trim()
+}
+
+const rendered = computed(() => md.render(cleanContent(props.content)))
 </script>
 
 <template>
@@ -38,6 +53,7 @@ const rendered = computed(() => md.render(props.content))
   word-break: break-word;
 }
 
+/* ─── 标题 ─── */
 .md-rendered :deep(h1),
 .md-rendered :deep(h2),
 .md-rendered :deep(h3),
@@ -47,12 +63,15 @@ const rendered = computed(() => md.render(props.content))
   letter-spacing: -0.02em;
   margin-top: var(--space-6);
   margin-bottom: var(--space-3);
+  line-height: 1.3;
 }
 
-.md-rendered :deep(h1) { font-size: 1.75rem; }
-.md-rendered :deep(h2) { font-size: 1.4rem; }
+.md-rendered :deep(h1) { font-size: 1.75rem; border-bottom: 1px solid var(--color-divider); padding-bottom: var(--space-3); }
+.md-rendered :deep(h2) { font-size: 1.4rem; border-bottom: 1px solid var(--color-divider); padding-bottom: var(--space-2); }
 .md-rendered :deep(h3) { font-size: 1.15rem; }
+.md-rendered :deep(h4) { font-size: 1rem; }
 
+/* ─── 段落 / 文本 ─── */
 .md-rendered :deep(p) {
   margin-bottom: var(--space-3);
 }
@@ -66,6 +85,12 @@ const rendered = computed(() => md.render(props.content))
   font-style: italic;
 }
 
+.md-rendered :deep(del) {
+  text-decoration: line-through;
+  color: var(--color-text-tertiary);
+}
+
+/* ─── 行内代码 ─── */
 .md-rendered :deep(code) {
   font-family: var(--font-mono);
   background: var(--color-bg-tertiary);
@@ -75,6 +100,7 @@ const rendered = computed(() => md.render(props.content))
   font-size: 0.88em;
 }
 
+/* ─── 代码块 ─── */
 .md-rendered :deep(pre) {
   background: var(--color-bg-tertiary);
   border: 1px solid var(--color-border);
@@ -92,6 +118,7 @@ const rendered = computed(() => md.render(props.content))
   line-height: 1.6;
 }
 
+/* ─── 引用 ─── */
 .md-rendered :deep(blockquote) {
   border-left: 3px solid var(--color-accent);
   padding-left: var(--space-4);
@@ -100,12 +127,18 @@ const rendered = computed(() => md.render(props.content))
   font-style: italic;
 }
 
+.md-rendered :deep(blockquote p:last-child) {
+  margin-bottom: 0;
+}
+
+/* ─── 链接 ─── */
 .md-rendered :deep(a) {
   color: var(--color-accent-text);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
+/* ─── 列表 ─── */
 .md-rendered :deep(ul),
 .md-rendered :deep(ol) {
   padding-left: var(--space-6);
@@ -119,16 +152,35 @@ const rendered = computed(() => md.render(props.content))
   margin-bottom: var(--space-1);
 }
 
+.md-rendered :deep(li > p) {
+  margin-bottom: var(--space-1);
+}
+
+/* ─── 任务列表 ─── */
+.md-rendered :deep(.task-list-item) {
+  list-style: none;
+  position: relative;
+  padding-left: var(--space-2);
+}
+
+.md-rendered :deep(.task-list-item input[type="checkbox"]) {
+  margin-right: var(--space-2);
+  accent-color: var(--color-accent);
+}
+
+/* ─── 分割线 ─── */
 .md-rendered :deep(hr) {
   border: none;
   border-top: 1px solid var(--color-divider);
   margin: var(--space-6) 0;
 }
 
+/* ─── 表格 ─── */
 .md-rendered :deep(table) {
   width: 100%;
   border-collapse: collapse;
   margin: var(--space-4) 0;
+  font-size: 0.9rem;
 }
 
 .md-rendered :deep(th),
@@ -143,14 +195,26 @@ const rendered = computed(() => md.render(props.content))
   font-weight: 600;
 }
 
+.md-rendered :deep(tr:nth-child(even)) {
+  background: var(--color-bg-secondary);
+}
+
+/* ─── 图片 ─── */
 .md-rendered :deep(img) {
   max-width: 100%;
   border-radius: var(--radius-md);
+  margin: var(--space-3) 0;
 }
 
-/* ─── highlight.js 暗色覆盖 ─── */
+/* ─── highlight.js 覆盖 ─── */
 .md-rendered :deep(.hljs) {
   background: var(--color-bg-tertiary) !important;
   color: var(--color-text-primary) !important;
+}
+
+/* ─── KaTeX 公式 ─── */
+.md-rendered :deep(.katex-display) {
+  margin: var(--space-4) 0;
+  overflow-x: auto;
 }
 </style>
