@@ -16,7 +16,7 @@
 | 路由 | 自定义 `showPage()` 无 URL 映射 | **Vue Router** Hash 模式 |
 | 类型安全 | 无 | **TypeScript** |
 | 数据持久化 | IndexedDB（清缓存即丢失） | localStorage → **本地 .md 文件**（规划中） |
-| 运行形态 | 必须打开浏览器 | **Tauri 桌面应用**（规划中） |
+| 运行形态 | 必须打开浏览器 | **Tauri 2 桌面应用** |
 
 ### 为什么重写而非迁移？
 
@@ -31,8 +31,9 @@ V1 的 CSS 设计系统和架构思路值得肯定，但 1200 行的 `ui.js` 手
 | 路由 | Vue Router | ^5.0 |
 | 状态 | Pinia | ^3.0 |
 | 语言 | TypeScript | ~5.9 |
-| 桌面壳 | Tauri 2 | 规划中 |
-| 编辑器 | Milkdown / Tiptap | 规划中 |
+| 桌面壳 | Tauri 2 | ^2.10 |
+| 编辑器 | Milkdown (ProseMirror) | ^7.19 |
+| 渲染 | markdown-it + highlight.js | ^14.1 / ^11.11 |
 
 ## 🚀 快速开始
 
@@ -63,14 +64,14 @@ npm run build
 - [x] 主题 Store（暗色/亮色切换 + 持久化）
 - [x] 页面切换过渡动画
 
-### Phase 2 — 编辑器升级
-- [ ] 接入 Markdown 编辑器引擎（Milkdown / Tiptap）
-- [ ] Markdown 实时预览
-- [ ] 代码高亮（Shiki / Highlight.js）
+### Phase 2 ✅ 编辑器升级
+- [x] 接入 Markdown 编辑器引擎（Milkdown v7）
+- [x] Markdown 阅读渲染（markdown-it）
+- [x] 代码高亮（highlight.js）
 - [ ] 数学公式支持（KaTeX）
 
-### Phase 3 — 桌面化
-- [ ] 安装 Rust + Tauri 2
+### Phase 3 — 桌面化（部分完成）
+- [x] 安装 Rust + Tauri 2
 - [ ] 本地文件系统读写（.md 文件）
 - [ ] 全局快捷键唤起
 - [ ] 系统托盘常驻

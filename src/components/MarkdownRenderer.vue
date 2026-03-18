@@ -6,6 +6,8 @@
 import { computed } from 'vue'
 import MarkdownIt from 'markdown-it'
 import highlightjs from 'markdown-it-highlightjs'
+import texmath from 'markdown-it-texmath'
+import katex from 'katex'
 import 'highlight.js/styles/github-dark.min.css'
 
 const props = defineProps<{
@@ -20,6 +22,7 @@ const md = new MarkdownIt({
 })
 
 md.use(highlightjs)
+md.use(texmath, { engine: katex, delimiters: 'dollars' })
 
 const rendered = computed(() => md.render(props.content))
 </script>

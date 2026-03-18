@@ -19,7 +19,7 @@ async function handleSubmit() {
   isSaving.value = true
   await new Promise(resolve => setTimeout(resolve, 200))
 
-  const note = notesStore.addNote({
+  const note = await notesStore.addNote({
     title: title.value.trim(),
     content: content.value.trim(),
     category: category.value.trim() || '未分类',

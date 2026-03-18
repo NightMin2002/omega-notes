@@ -1,9 +1,12 @@
 /**
  * Ω Notes V2 — 笔记 Store
- * 管理笔记的 CRUD 和分类，使用 localStorage 暂存（后续可替换为文件系统）
+ * 管理笔记的 CRUD 和分类
+ * Tauri 环境：文件系统持久化（AppData/notes/*.md）
+ * 浏览器环境：localStorage 降级
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { loadAllNotes, saveNote, deleteNoteFile, migrateFromLocalStorage } from '@/utils/storage'
 
 export interface Note {
   id: string
@@ -16,29 +19,31 @@ export interface Note {
   isPinned: boolean
 }
 
-const STORAGE_KEY = 'omega-notes'
-
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 }
 
-function loadFromStorage(): Note[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
-  } catch {
-    return []
-  }
-}
-
-function saveToStorage(notes: Note[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(notes))
-}
-
 export const useNotesStore = defineStore('notes', () => {
-  const notes = ref<Note[]>(loadFromStorage())
+  const notes = ref<Note[]>([])
   const currentCategory = ref<string>('all')
   const searchQuery = ref<string>('')
+  const isLoading = ref(true)
+
+  // ─── 初始化：从存储加载 ───
+  async function init() {
+    isLoading.value = true
+    try {
+      // 先尝试迁移旧 localStorage 数据
+      await migrateFromLocalStorage()
+      // 然后从存储加载
+      notes.value = await loadAllNotes()
+    } catch (e) {
+      console.error('加载笔记失败', e)
+      notes.value = []
+    } finally {
+      isLoading.value = false
+    }
+  }
 
   // ─── 计算属性 ───
   const categories = computed<string[]>(() => {
@@ -81,11 +86,7 @@ export const useNotesStore = defineStore('notes', () => {
   const pinnedCount = computed(() => notes.value.filter(n => n.isPinned).length)
 
   // ─── Actions ───
-  function persist() {
-    saveToStorage(notes.value)
-  }
-
-  function addNote(data: Partial<Note>): Note {
+  async function addNote(data: Partial<Note>): Promise<Note> {
     const now = new Date().toISOString()
     const note: Note = {
       id: generateId(),
@@ -98,31 +99,34 @@ export const useNotesStore = defineStore('notes', () => {
       isPinned: false,
     }
     notes.value.unshift(note)
-    persist()
+    await saveNote(note)
     return note
   }
 
-  function updateNote(id: string, updates: Partial<Note>) {
+  async function updateNote(id: string, updates: Partial<Note>) {
     const idx = notes.value.findIndex(n => n.id === id)
     if (idx === -1) return
-    notes.value[idx] = {
-      ...notes.value[idx],
+    const existing = notes.value[idx]!
+    const updated: Note = {
+      ...existing,
       ...updates,
+      id: existing.id,
       updatedAt: new Date().toISOString(),
     }
-    persist()
+    notes.value[idx] = updated
+    await saveNote(updated)
   }
 
-  function deleteNote(id: string) {
+  async function deleteNote(id: string) {
     notes.value = notes.value.filter(n => n.id !== id)
-    persist()
+    await deleteNoteFile(id)
   }
 
-  function togglePin(id: string) {
+  async function togglePin(id: string) {
     const note = notes.value.find(n => n.id === id)
     if (note) {
       note.isPinned = !note.isPinned
-      persist()
+      await saveNote(note)
     }
   }
 
@@ -134,10 +138,12 @@ export const useNotesStore = defineStore('notes', () => {
     notes,
     currentCategory,
     searchQuery,
+    isLoading,
     categories,
     filteredNotes,
     totalCount,
     pinnedCount,
+    init,
     addNote,
     updateNote,
     deleteNote,

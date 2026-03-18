@@ -16,6 +16,7 @@ import { clipboard } from '@milkdown/kit/plugin/clipboard'
 import { Milkdown, useEditor } from '@milkdown/vue'
 import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
 import { nord } from '@milkdown/theme-nord'
+import { math } from '@milkdown/plugin-math'
 
 const props = defineProps<{
   modelValue: string
@@ -43,6 +44,7 @@ useEditor((root) => {
     .use(trailing)
     .use(clipboard)
     .use(listener)
+    .use(math)
 })
 </script>
 
