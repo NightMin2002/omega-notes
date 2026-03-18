@@ -1,0 +1,186 @@
+/*
+ * Ω Notes V2 — 全局重置 + 基础样式
+ * 消灭所有浏览器默认样式
+ */
+
+/* ─── 加载 Inter 字体 ─── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ─── 全局重置 ─── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ─── 文本选中 ─── */
+::selection {
+  background: var(--selection-bg);
+  color: var(--selection-text);
+}
+
+/* ─── 焦点样式 ─── */
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-accent-muted), 0 0 0 4px var(--color-accent);
+  border-radius: var(--radius-sm);
+}
+
+/* ─── 自定义滚动条 ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: var(--radius-full);
+}
+
+@media (hover: hover) {
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+}
+
+/* Firefox 滚动条 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* ─── 链接 ─── */
+a {
+  color: var(--color-accent-text);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  a:hover {
+    color: var(--color-accent-hover);
+  }
+}
+
+/* ─── 图片 ─── */
+img, svg {
+  display: block;
+  max-width: 100%;
+}
+
+/* ─── 列表 ─── */
+ul, ol {
+  list-style: none;
+}
+
+/* ─── 按钮重置 ─── */
+button {
+  appearance: none;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ─── 表单元素重置 ─── */
+input,
+textarea,
+select {
+  appearance: none;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  font: inherit;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  transition: border-color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out),
+              background-color var(--duration-fast) var(--ease-out);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-muted);
+  background: var(--color-bg-elevated);
+}
+
+@media (hover: hover) {
+  input:hover:not(:focus):not(:disabled),
+  textarea:hover:not(:focus):not(:disabled),
+  select:hover:not(:focus):not(:disabled) {
+    border-color: var(--color-border-strong);
+  }
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+/* ─── 减弱动效偏好 ─── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─── #app 容器 ─── */
+#app {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
