@@ -30,6 +30,18 @@ const router = createRouter({
       component: () => import('../views/WriteView.vue'),
       meta: { title: '新建笔记' },
     },
+    {
+      path: '/trash',
+      name: 'trash',
+      component: () => import('../views/TrashView.vue'),
+      meta: { title: '回收站' },
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: () => import('../views/SettingsView.vue'),
+      meta: { title: '设置' },
+    },
   ],
 })
 

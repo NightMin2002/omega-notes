@@ -4,7 +4,7 @@
  * Tauri 环境下使用 AppData 目录存储 .md 文件（YAML frontmatter + 正文）
  * 浏览器环境下降级为 localStorage
  */
-import type { Note } from '@/stores/notes'
+import type { Note } from '@/types'
 
 // ─── 环境检测 ───
 export function isTauri(): boolean {
@@ -30,6 +30,10 @@ function noteToMarkdown(note: Note): string {
   lines.push(`favorite: ${note.isFavorite}`)
   lines.push(`createdAt: ${note.createdAt}`)
   lines.push(`updatedAt: ${note.updatedAt}`)
+  if (note.isDeleted) {
+    lines.push(`deleted: true`)
+    lines.push(`deletedAt: ${note.deletedAt || ''}`)
+  }
   lines.push('---')
   lines.push('')
   lines.push(note.content)
@@ -77,7 +81,7 @@ function parseTags(raw: string): string[] {
 
 function markdownToNote(filename: string, raw: string): Note {
   const { meta, content } = parseFrontmatter(raw)
-  return {
+  const note: Note = {
     id: meta['id'] || filename.replace(/\.md$/, ''),
     title: meta['title'] || '无标题',
     content,
@@ -88,6 +92,11 @@ function markdownToNote(filename: string, raw: string): Note {
     createdAt: meta['createdAt'] || new Date().toISOString(),
     updatedAt: meta['updatedAt'] || new Date().toISOString(),
   }
+  if (meta['deleted'] === 'true') {
+    note.isDeleted = true
+    note.deletedAt = meta['deletedAt'] || ''
+  }
+  return note
 }
 
 // ─── Tauri 文件系统操作 ───

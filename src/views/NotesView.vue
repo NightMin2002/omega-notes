@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useNotesStore } from '../stores/notes'
 import { useRouter, useRoute } from 'vue-router'
 import { truncateText } from '../utils/markdown'
@@ -7,6 +7,17 @@ import { truncateText } from '../utils/markdown'
 const notesStore = useNotesStore()
 const router = useRouter()
 const route = useRoute()
+
+/* ─── 搜索防抖 ─── */
+const localSearch = ref(notesStore.searchQuery)
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(localSearch, (val) => {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    notesStore.searchQuery = val
+  }, 200)
+})
 
 /** 当前特殊视图：favorites / recent / null（普通模式） */
 const activeView = computed(() => {
@@ -88,6 +99,86 @@ function formatDate(dateStr: string): string {
     day: 'numeric',
   })
 }
+
+/* ─── 拖拽排序（pointer events 实现）─── */
+const draggedNoteId = ref<string | null>(null)
+const dropTargetId = ref<string | null>(null)
+const isDragging = ref(false)
+
+let dragStartX = 0
+let dragStartY = 0
+const DRAG_THRESHOLD = 5
+let pendingDragId: string | null = null
+
+function onCardPointerDown(e: PointerEvent, noteId: string) {
+  /* 仅主键 */
+  if (e.button !== 0) return
+  e.preventDefault()
+
+  /* 释放按钮的隐式指针捕获，否则 elementFromPoint 无法检测其他元素 */
+  const target = e.target as HTMLElement
+  try { target.releasePointerCapture(e.pointerId) } catch { /* 忽略 */ }
+
+  pendingDragId = noteId
+  dragStartX = e.clientX
+  dragStartY = e.clientY
+
+  document.addEventListener('pointermove', onDocPointerMove)
+  document.addEventListener('pointerup', onDocPointerUp)
+}
+
+function onDocPointerMove(e: PointerEvent) {
+  if (!pendingDragId) return
+  const dx = e.clientX - dragStartX
+  const dy = e.clientY - dragStartY
+
+  /* 超过阈值 → 开始拖拽 */
+  if (!isDragging.value && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
+    isDragging.value = true
+    draggedNoteId.value = pendingDragId
+  }
+
+  if (!isDragging.value) return
+
+  /* 检测当前悬停在哪个卡片上 */
+  const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null
+  const card = el?.closest('.note-card') as HTMLElement | null
+  if (card) {
+    const targetId = card.dataset.noteId ?? null
+    dropTargetId.value = targetId && targetId !== draggedNoteId.value ? targetId : null
+  } else {
+    dropTargetId.value = null
+  }
+}
+
+function onDocPointerUp() {
+  document.removeEventListener('pointermove', onDocPointerMove)
+  document.removeEventListener('pointerup', onDocPointerUp)
+
+  if (isDragging.value && draggedNoteId.value && dropTargetId.value) {
+    const ids = displayedNotes.value.map(n => n.id)
+    const fromIdx = ids.indexOf(draggedNoteId.value)
+    const toIdx = ids.indexOf(dropTargetId.value)
+    if (fromIdx !== -1 && toIdx !== -1) {
+      ids.splice(fromIdx, 1)
+      ids.splice(toIdx, 0, draggedNoteId.value)
+      notesStore.reorderNotes(ids)
+    }
+  }
+
+  /* 如果没有拖拽（只是点击），触发导航 */
+  const wasClick = !isDragging.value && pendingDragId
+  const clickedId = pendingDragId
+
+  draggedNoteId.value = null
+  dropTargetId.value = null
+  isDragging.value = false
+  pendingDragId = null
+
+  if (wasClick && clickedId) {
+    openNote(clickedId)
+  }
+}
 </script>
 
 <template>
@@ -100,7 +191,7 @@ function formatDate(dateStr: string): string {
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
         <input
-          v-model="notesStore.searchQuery"
+          v-model="localSearch"
           type="text"
           class="search-input"
           placeholder="搜索笔记…"
@@ -165,13 +256,21 @@ function formatDate(dateStr: string): string {
     </div>
 
     <!-- 笔记网格 -->
-    <div v-if="displayedNotes.length > 0" class="notes-grid">
+    <div
+      v-if="displayedNotes.length > 0"
+      class="notes-grid"
+    >
       <button
         v-for="note in displayedNotes"
         :key="note.id"
         class="note-card"
-        :class="{ pinned: note.isPinned }"
-        @click="openNote(note.id)"
+        :class="{
+          pinned: note.isPinned,
+          dragging: draggedNoteId === note.id,
+          'drop-target': dropTargetId === note.id,
+        }"
+        :data-note-id="note.id"
+        @pointerdown="onCardPointerDown($event, note.id)"
       >
         <div class="card-badges">
           <svg v-if="note.isFavorite" class="fav-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -388,8 +487,11 @@ function formatDate(dateStr: string): string {
   border-radius: var(--radius-lg);
   transition: transform var(--duration-fast) var(--ease-out),
               box-shadow var(--duration-fast) var(--ease-out),
-              border-color var(--duration-fast) var(--ease-out);
-  cursor: pointer;
+              border-color var(--duration-fast) var(--ease-out),
+              opacity var(--duration-fast) var(--ease-out);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
 }
 
 @media (hover: hover) {
@@ -398,6 +500,17 @@ function formatDate(dateStr: string): string {
     box-shadow: var(--shadow-md);
     border-color: var(--color-border-strong);
   }
+}
+
+.note-card.dragging {
+  opacity: 0.4;
+  transform: scale(0.98);
+  cursor: grabbing;
+}
+
+.note-card.drop-target {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-muted);
 }
 
 .note-card.pinned {

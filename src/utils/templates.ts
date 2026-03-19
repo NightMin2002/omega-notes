@@ -2,16 +2,8 @@
  * 笔记模板定义
  * 每个模板包含名称、图标、描述和预填充内容
  */
-
-export interface NoteTemplate {
-  id: string
-  name: string
-  icon: string
-  description: string
-  title: string
-  content: string
-  category: string
-}
+import type { NoteTemplate } from '@/types'
+export type { NoteTemplate }
 
 const today = () => new Date().toLocaleDateString('zh-CN')
 

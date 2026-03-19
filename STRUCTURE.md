@@ -16,6 +16,7 @@ omega-v2/
 ├── README.md                   # 项目说明
 ├── STRUCTURE.md                # 本文件 — 结构索引
 ├── SETUP.md                    # 开发环境配置指南（Tauri 依赖说明）
+├── CHANGELOG.md                # 版本变更记录
 │
 ├── public/                     # 静态资源（不经过 Vite 处理）
 │   └── favicon.ico
@@ -36,17 +37,24 @@ omega-v2/
 │   │   ├── MilkdownEditorCore.vue # 编辑器核心（Milkdown 插件注册）
 │   │   ├── MarkdownRenderer.vue # Markdown → HTML 渲染（阅读模式）
 │   │   ├── QuickNote.vue       # Ctrl+Q 快速笔记弹窗
-│   │   └── SearchDialog.vue    # Ctrl+K 全局搜索弹窗
+│   │   ├── SearchDialog.vue    # Ctrl+K 全局搜索弹窗
+│   │   └── EditorToolbar.vue   # Markdown 格式化工具栏（14 按钮，分屏/WYSIWYG 通用）
 │   │
 │   ├── views/                  # 路由页面组件
 │   │   ├── HomeView.vue        # 主页（统计 + 快捷入口 + 最近更新）
 │   │   ├── NotesView.vue       # 知识库（搜索 + 分类筛选 + 卡片网格）
 │   │   ├── WriteView.vue       # 新建笔记（模板 + 编辑器 + 图片/链接插入）
-│   │   └── NoteDetailView.vue  # 笔记详情（阅读/编辑/分屏 + 反向链接）
+│   │   ├── NoteDetailView.vue  # 笔记详情（阅读/编辑/分屏 + 反向链接）
+│   │   ├── TrashView.vue       # 回收站（恢复/永久删除/清空）
+│   │   └── SettingsView.vue    # 设置页（外观/编辑器/数据/关于）
 │   │
 │   ├── stores/                 # Pinia 状态仓库
 │   │   ├── theme.ts            # 主题管理（暗色/亮色 + 持久化）
-│   │   └── notes.ts            # 笔记数据（async CRUD + 分类 + 搜索 + 排序）
+│   │   ├── notes.ts            # 笔记数据（async CRUD + 分类 + 搜索 + 排序 + 回收站）
+│   │   └── settings.ts         # 应用设置（编辑器模式/字体/回收站清理 + localStorage）
+│   │
+│   ├── composables/            # Vue Composable 函数
+│   │   └── useEditorActions.ts # 编辑器共用操作（图片/链接/工具栏/粘贴）
 │   │
 │   ├── utils/                  # 工具函数
 │   │   ├── markdown.ts         # stripMarkdown / truncateText
@@ -55,6 +63,9 @@ omega-v2/
 │   │   ├── templates.ts        # 笔记模板定义（6 种预设）
 │   │   ├── images.ts           # 图片粘贴处理（base64 转换）
 │   │   └── dataio.ts           # 数据导入/导出（JSON + .md 支持）
+│   │
+│   ├── types/                  # 共享类型定义
+│   │   └── index.ts            # Note / NoteTemplate / FolderNode / ExportPayload 等
 │   │
 │   └── router/                 # 路由配置
 │       └── index.ts            # 路由表 + 页面标题同步
@@ -115,6 +126,8 @@ docs/
 | `NotesView.vue` | `/notes` | `notes` | 搜索框、分类药丸、面包屑（嵌套分类时）、标签云筛选（`?tag=`）、收藏夹/最近视图（`?view=`）、笔记卡片网格 |
 | `WriteView.vue` | `/write` | `notes` | 模板选择器 → WYSIWYG/分屏编辑 + 图片插入 + `[[title]]` 链接插入 + 标题/分类/标签表单 |
 | `NoteDetailView.vue` | `/note/:id` | `notes` | 阅读模式 ↔ 编辑模式，收藏/置顶/删除，`[[title]]` 链接插入，自动记录到最近列表，反向链接面板 |
+| `TrashView.vue` | `/trash` | `notes` | 回收站：已删除笔记列表、恢复/永久删除、清空回收站确认 dialog |
+| `SettingsView.vue` | `/settings` | `theme`, `settings`, `notes` | 设置：主题切换、字体选择、默认编辑模式、笔记统计、回收站自动清理、关于信息 |
 
 ### 工具层 (`src/utils/`)
 
@@ -139,8 +152,9 @@ docs/
 | Store | 状态 | Actions | 持久化 |
 |---|---|---|---|
 | `theme.ts` | `theme: 'dark' \| 'light'` | `toggle()` | localStorage `omega-theme` |
-| `notes.ts` | `notes[]`, `currentCategory`, `searchQuery`, `isLoading`, `recentIds` | `init`, `addNote`, `updateNote`, `deleteNote`, `togglePin`, `toggleFavorite`, `recordOpen`, `importBatch`, `getNoteById`, `findNoteByTitle`, `getBacklinks` | 委托 `storage.ts` + localStorage |
-| | 计算属性: `filteredNotes`, `categories`, `categoryTree`, `allTags`, `favoriteNotes`, `recentNotes`, `totalCount`, `pinnedCount`, `favoriteCount` | | |
+| `notes.ts` | `notes[]`, `currentCategory`, `searchQuery`, `isLoading`, `recentIds` | `init`, `addNote`, `updateNote`, `deleteNote`, `restoreNote`, `permanentlyDelete`, `emptyTrash`, `togglePin`, `toggleFavorite`, `recordOpen`, `importBatch`, `reorderNotes`, `moveNoteToCategory`, `getNoteById`, `findNoteByTitle`, `getBacklinks` | 委托 `storage.ts` + localStorage |
+| | 计算属性: `activeNotes`, `filteredNotes`, `categories`, `categoryTree`, `allTags`, `favoriteNotes`, `recentNotes`, `trashNotes`, `totalCount`, `pinnedCount`, `favoriteCount`, `trashCount` | | |
+| `settings.ts` | `defaultEditorMode`, `fontFamily`, `trashAutoCleanDays` | `setDefaultEditorMode`, `setFontFamily`, `setTrashAutoCleanDays`, `init` | localStorage `omega-settings` |
 
 ### 路由层 (`src/router/`)
 
@@ -150,6 +164,8 @@ docs/
 | `/notes` | `notes` | `NotesView` | 知识库 |
 | `/write` | `write` | `WriteView` | 新建笔记 |
 | `/note/:id` | `note-detail` | `NoteDetailView` | 笔记详情 |
+| `/trash` | `trash` | `TrashView` | 回收站 |
+| `/settings` | `settings` | `SettingsView` | 设置 |
 
 路由使用 **Hash 模式** (`createWebHashHistory`)，Tauri 桌面应用中文件协议不支持 History 模式。
 
@@ -198,7 +214,7 @@ storage.ts 存储适配层
 | 新增全局 CSS | `src/assets/styles/` + 在 `main.ts` 引入 |
 | 新增页面级样式 | 对应 `.vue` 文件的 `<style scoped>` |
 | 新增工具函数 | `src/utils/` |
-| 新增类型定义 | `src/types/`（待创建） |
+| 新增类型定义 | `src/types/` |
 | 新增 Rust 命令 | `src-tauri/src/lib.rs` + 在 `capabilities/` 声明权限 |
 
 ---

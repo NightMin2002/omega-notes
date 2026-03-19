@@ -7,18 +7,10 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { loadAllNotes, saveNote, deleteNoteFile, migrateFromLocalStorage } from '@/utils/storage'
+import type { Note, FolderNode } from '@/types'
 
-export interface Note {
-  id: string
-  title: string
-  content: string
-  category: string
-  tags: string[]
-  createdAt: string
-  updatedAt: string
-  isPinned: boolean
-  isFavorite: boolean
-}
+// re-export 保持向后兼容（已有 import { Note } from '@/stores/notes' 的文件无需改动）
+export type { Note, FolderNode }
 
 const RECENT_KEY = 'omega-recent-notes'
 const RECENT_MAX = 20
@@ -50,6 +42,9 @@ export const useNotesStore = defineStore('notes', () => {
       await migrateFromLocalStorage()
       // 然后从存储加载
       notes.value = await loadAllNotes()
+
+      // 回收站自动清理
+      await autoCleanTrash()
     } catch (e) {
       console.error('加载笔记失败', e)
       notes.value = []
@@ -58,29 +53,52 @@ export const useNotesStore = defineStore('notes', () => {
     }
   }
 
+  /** 根据设置自动清理过期的已删除笔记 */
+  async function autoCleanTrash() {
+    try {
+      const raw = localStorage.getItem('omega-settings')
+      const days = raw ? (JSON.parse(raw).trashAutoCleanDays ?? 30) : 30
+      if (days <= 0) return // 0 = 不自动清理
+
+      const cutoff = Date.now() - days * 86400000
+      const expired = notes.value.filter(n =>
+        n.isDeleted && n.deletedAt && new Date(n.deletedAt).getTime() < cutoff
+      )
+
+      if (expired.length === 0) return
+
+      for (const note of expired) {
+        await deleteNoteFile(note.id)
+      }
+      notes.value = notes.value.filter(n =>
+        !(n.isDeleted && n.deletedAt && new Date(n.deletedAt).getTime() < cutoff)
+      )
+      console.log(`回收站自动清理：删除 ${expired.length} 条过期笔记`)
+    } catch (e) {
+      console.warn('回收站自动清理失败', e)
+    }
+  }
+
   // ─── 计算属性 ───
+
+  /** 未删除的活跃笔记 */
+  const activeNotes = computed<Note[]>(() =>
+    notes.value.filter(n => !n.isDeleted)
+  )
+
   const categories = computed<string[]>(() => {
     const set = new Set<string>()
-    for (const note of notes.value) {
-      if (note.category) set.add(note.category)
+    for (const note of activeNotes.value) {
+      if (note.category && note.category !== '回收站') set.add(note.category)
     }
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))
   })
-
-  /** 文件夹树节点 */
-  interface FolderNode {
-    name: string       // 当前层级名（如 "项目A"）
-    fullPath: string   // 完整路径（如 "工作/项目A"）
-    count: number      // 该路径下的直接笔记数
-    totalCount: number // 包含所有子文件夹的总笔记数
-    children: FolderNode[]
-  }
 
   /** 从分类路径构建文件夹树 */
   const categoryTree = computed<FolderNode[]>(() => {
     /* 统计每个精确路径的直接笔记数 */
     const countMap = new Map<string, number>()
-    for (const note of notes.value) {
+    for (const note of activeNotes.value) {
       const cat = note.category || '未分类'
       countMap.set(cat, (countMap.get(cat) || 0) + 1)
     }
@@ -125,7 +143,7 @@ export const useNotesStore = defineStore('notes', () => {
   })
 
   const filteredNotes = computed<Note[]>(() => {
-    let result = notes.value
+    let result = activeNotes.value
 
     // 按分类过滤
     if (currentCategory.value !== 'all') {
@@ -145,21 +163,33 @@ export const useNotesStore = defineStore('notes', () => {
       )
     }
 
-    // 排序：置顶 > 时间倒序
-    return result.sort((a, b) => {
+    // 排序：置顶 > sortOrder > 时间倒序（用新数组以触发 computed 响应性）
+    return [...result].sort((a, b) => {
       if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1
+      const sa = a.sortOrder ?? Infinity
+      const sb = b.sortOrder ?? Infinity
+      if (sa !== sb) return sa - sb
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     })
   })
 
-  const totalCount = computed(() => notes.value.length)
-  const pinnedCount = computed(() => notes.value.filter(n => n.isPinned).length)
-  const favoriteCount = computed(() => notes.value.filter(n => n.isFavorite).length)
+  const totalCount = computed(() => activeNotes.value.length)
+  const pinnedCount = computed(() => activeNotes.value.filter(n => n.isPinned).length)
+  const favoriteCount = computed(() => activeNotes.value.filter(n => n.isFavorite).length)
+
+  /** 回收站笔记（按删除时间倒序） */
+  const trashNotes = computed<Note[]>(() =>
+    notes.value
+      .filter(n => n.isDeleted)
+      .sort((a, b) => new Date(b.deletedAt || 0).getTime() - new Date(a.deletedAt || 0).getTime())
+  )
+
+  const trashCount = computed(() => trashNotes.value.length)
 
   /** 全部标签（按使用频率降序） */
   const allTags = computed<{ name: string; count: number }[]>(() => {
     const map = new Map<string, number>()
-    for (const note of notes.value) {
+    for (const note of activeNotes.value) {
       for (const tag of note.tags) {
         map.set(tag, (map.get(tag) || 0) + 1)
       }
@@ -170,7 +200,7 @@ export const useNotesStore = defineStore('notes', () => {
   })
 
   const favoriteNotes = computed<Note[]>(() =>
-    notes.value
+    activeNotes.value
       .filter(n => n.isFavorite)
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
   )
@@ -217,12 +247,40 @@ export const useNotesStore = defineStore('notes', () => {
     await saveNote(updated)
   }
 
+  /** 软删除笔记（移入回收站） */
   async function deleteNote(id: string) {
-    notes.value = notes.value.filter(n => n.id !== id)
-    await deleteNoteFile(id)
+    const note = notes.value.find(n => n.id === id)
+    if (!note) return
+    note.isDeleted = true
+    note.deletedAt = new Date().toISOString()
+    await saveNote(note)
     // 同时从最近打开中移除
     recentIds.value = recentIds.value.filter(rid => rid !== id)
     localStorage.setItem(RECENT_KEY, JSON.stringify(recentIds.value))
+  }
+
+  /** 从回收站恢复笔记 */
+  async function restoreNote(id: string) {
+    const note = notes.value.find(n => n.id === id)
+    if (!note) return
+    note.isDeleted = false
+    note.deletedAt = undefined
+    await saveNote(note)
+  }
+
+  /** 永久删除笔记（物理删除文件） */
+  async function permanentlyDelete(id: string) {
+    notes.value = notes.value.filter(n => n.id !== id)
+    await deleteNoteFile(id)
+  }
+
+  /** 清空回收站 */
+  async function emptyTrash() {
+    const trashIds = notes.value.filter(n => n.isDeleted).map(n => n.id)
+    notes.value = notes.value.filter(n => !n.isDeleted)
+    for (const id of trashIds) {
+      await deleteNoteFile(id)
+    }
   }
 
   async function togglePin(id: string) {
@@ -298,8 +356,36 @@ export const useNotesStore = defineStore('notes', () => {
     return imported
   }
 
+  /**
+   * 拖拽排序：按传入的 ID 顺序重新分配 sortOrder 并持久化
+   * @param orderedIds 排好序的笔记 ID 数组
+   */
+  async function reorderNotes(orderedIds: string[]) {
+    for (let i = 0; i < orderedIds.length; i++) {
+      const note = notes.value.find(n => n.id === orderedIds[i])
+      if (note) {
+        note.sortOrder = i
+        await saveNote(note)
+      }
+    }
+    /* 触发响应性更新：替换数组引用确保 computed 重新求值 */
+    notes.value = [...notes.value]
+  }
+
+  /**
+   * 拖拽改分类：将笔记移入新分类
+   */
+  async function moveNoteToCategory(noteId: string, newCategory: string) {
+    const note = notes.value.find(n => n.id === noteId)
+    if (!note || note.category === newCategory) return
+    note.category = newCategory
+    note.updatedAt = new Date().toISOString()
+    await saveNote(note)
+  }
+
   return {
     notes,
+    activeNotes,
     currentCategory,
     searchQuery,
     isLoading,
@@ -309,6 +395,8 @@ export const useNotesStore = defineStore('notes', () => {
     totalCount,
     pinnedCount,
     favoriteCount,
+    trashNotes,
+    trashCount,
     allTags,
     favoriteNotes,
     recentNotes,
@@ -317,6 +405,9 @@ export const useNotesStore = defineStore('notes', () => {
     addNote,
     updateNote,
     deleteNote,
+    restoreNote,
+    permanentlyDelete,
+    emptyTrash,
     togglePin,
     toggleFavorite,
     recordOpen,
@@ -324,5 +415,7 @@ export const useNotesStore = defineStore('notes', () => {
     findNoteByTitle,
     getBacklinks,
     importBatch,
+    reorderNotes,
+    moveNoteToCategory,
   }
 })

@@ -95,7 +95,6 @@ const flatFolders = computed<FlatFolder[]>(() => {
 function navigateFolder(path: string) {
   const encodedCat = encodeURIComponent(path)
   collapseIfMobile()
-  /* 用 window.location 避免 router 重复导航限制 */
   window.location.hash = `#/notes?category=${encodedCat}`
 }
 </script>
@@ -191,6 +190,20 @@ function navigateFolder(path: string) {
           <span v-if="inboxCount > 0" class="nav-badge">{{ inboxCount }}</span>
         </RouterLink>
 
+        <RouterLink
+          to="/trash"
+          class="nav-item"
+          :class="{ active: route.path === '/trash' }"
+          @click="collapseIfMobile"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          </svg>
+          <span class="nav-label">回收站</span>
+          <span v-if="notesStore.trashCount > 0" class="nav-badge subtle">{{ notesStore.trashCount }}</span>
+        </RouterLink>
+
         <!-- 文件夹树 -->
         <template v-if="flatFolders.length > 0">
           <div class="nav-divider" />
@@ -239,6 +252,18 @@ function navigateFolder(path: string) {
 
       <!-- 底部 -->
       <div class="sidebar-footer">
+        <RouterLink
+          to="/settings"
+          class="nav-item settings-link"
+          :class="{ active: route.path === '/settings' }"
+          @click="collapseIfMobile"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+          <span class="nav-label">设置</span>
+        </RouterLink>
         <!-- 导入/导出 -->
         <div class="io-row">
           <button class="io-btn" @click="handleExport">
@@ -398,6 +423,13 @@ function navigateFolder(path: string) {
   color: var(--color-accent);
 }
 
+.folder-item.folder-drop-target {
+  background: var(--color-accent-muted);
+  color: var(--color-accent);
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
 .folder-chevron {
   display: flex;
   align-items: center;
@@ -507,6 +539,12 @@ function navigateFolder(path: string) {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+.settings-link {
+  font-size: 0.82rem;
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-1);
 }
 
 .sidebar-version {

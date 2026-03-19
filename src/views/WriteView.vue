@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useNotesStore } from '../stores/notes'
+import { useSettingsStore } from '../stores/settings'
 import { useRouter } from 'vue-router'
 import MilkdownEditor from '../components/MilkdownEditor.vue'
 import MarkdownRenderer from '../components/MarkdownRenderer.vue'
+import EditorToolbar from '../components/EditorToolbar.vue'
 import { templates, type NoteTemplate } from '../utils/templates'
 import { clipboardHasImage, processClipboardImages } from '../utils/images'
+import { useEditorActions } from '../composables/useEditorActions'
+import type { EditorMode } from '../types'
 
 const notesStore = useNotesStore()
+const settingsStore = useSettingsStore()
 const router = useRouter()
 
 const title = ref('')
@@ -18,9 +23,26 @@ const isSaving = ref(false)
 const showTemplates = ref(true)
 const hasSubmitted = ref(false)
 
-type EditorMode = 'wysiwyg' | 'split'
-const editorMode = ref<EditorMode>('wysiwyg')
+const editorMode = ref<EditorMode>(settingsStore.defaultEditorMode)
 const editorKey = ref(0)
+const sourceTextareaRef = ref<HTMLTextAreaElement | null>(null)
+
+const {
+  insertImageFromFile,
+  showLinkPicker,
+  linkSearch,
+  linkCandidates,
+  insertWikiLink,
+  toggleLinkPicker,
+  showFormatToolbar,
+  handleToolbarInsert,
+  handleToolbarWrap,
+} = useEditorActions({
+  content,
+  editorMode,
+  editorKey,
+  textareaRef: sourceTextareaRef,
+})
 
 function applyTemplate(tpl: NoteTemplate) {
   title.value = tpl.title
@@ -79,52 +101,6 @@ function handlePaste(e: ClipboardEvent) {
   })()
 }
 
-/** 通过文件选择对话框插入图片，自动切到分屏以便立即看到 */
-function insertImageFromFile() {
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = 'image/*'
-  input.multiple = true
-  input.onchange = () => {
-    if (!input.files) return
-    let pending = input.files.length
-    for (let i = 0; i < input.files.length; i++) {
-      const file = input.files[i]!
-      const reader = new FileReader()
-      reader.onload = () => {
-        const dataUrl = reader.result as string
-        content.value += `\n![${file.name}](${dataUrl})\n`
-        pending--
-        if (pending === 0) editorKey.value++
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-  input.click()
-}
-
-/* ─── 插入链接（双向链接）─── */
-const showLinkPicker = ref(false)
-const linkSearch = ref('')
-
-const linkCandidates = computed(() => {
-  const q = linkSearch.value.toLowerCase()
-  return notesStore.notes
-    .filter(n => q === '' || n.title.toLowerCase().includes(q))
-    .slice(0, 10)
-})
-
-function insertWikiLink(noteTitle: string) {
-  content.value += `[[${noteTitle}]]`
-  showLinkPicker.value = false
-  linkSearch.value = ''
-  editorKey.value++
-}
-
-function toggleLinkPicker() {
-  showLinkPicker.value = !showLinkPicker.value
-  linkSearch.value = ''
-}
 </script>
 
 <template>
@@ -252,7 +228,18 @@ function toggleLinkPicker() {
               <p v-else class="link-empty">无匹配笔记</p>
             </div>
           </div>
+          <button type="button" class="pane-action" :class="{ active: showFormatToolbar }" @click="showFormatToolbar = !showFormatToolbar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 7V4h16v3" /><path d="M9 20h6" /><path d="M12 4v16" />
+            </svg>
+            <span>格式</span>
+          </button>
         </div>
+        <EditorToolbar
+          v-if="showFormatToolbar"
+          @insert="handleToolbarInsert"
+          @wrap="handleToolbarWrap"
+        />
         <MilkdownEditor :key="editorKey" v-model="content" />
       </template>
 
@@ -297,7 +284,12 @@ function toggleLinkPicker() {
               </div>
             </div>
           </div>
+          <EditorToolbar
+            @insert="handleToolbarInsert"
+            @wrap="handleToolbarWrap"
+          />
           <textarea
+            ref="sourceTextareaRef"
             v-model="content"
             class="source-textarea"
             placeholder="在此输入或粘贴 Markdown 内容…&#10;&#10;截图可直接 Ctrl+V 粘贴&#10;QQ/微信图片请用上方「插入图片」按钮"

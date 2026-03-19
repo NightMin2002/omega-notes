@@ -6,15 +6,8 @@
  *   - 浏览器环境：Blob URL 触发下载
  * 导入：支持 JSON（本应用格式）和 .md 文件（YAML frontmatter）
  */
-import type { Note } from '@/stores/notes'
+import type { Note, ExportPayload } from '@/types'
 import { isTauri } from '@/utils/storage'
-
-interface ExportPayload {
-  version: number
-  exportedAt: string
-  noteCount: number
-  notes: Note[]
-}
 
 /** 浏览器环境下载文本文件 */
 function browserDownload(filename: string, content: string, mime = 'application/json') {

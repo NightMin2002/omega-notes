@@ -61,50 +61,19 @@ npm run tauri build
 
 请参阅 [STRUCTURE.md](./STRUCTURE.md) 查看完整的目录结构说明和各模块职责。
 
-## 🗺️ 路线图
+## 🗺️ 开发进度
 
-### Phase 1 ✅ 骨架搭建
-- [x] Vue 3 + Vite + TypeScript 项目初始化
-- [x] Design Token 体系（暗色/亮色双主题）
-- [x] 全局样式重置（消灭浏览器默认）
-- [x] Header + Sidebar 布局组件
-- [x] 路由配置（主页 / 知识库 / 新建 / 详情）
-- [x] 笔记 Store（CRUD + 分类 + 搜索 + 排序）
-- [x] 主题 Store（暗色/亮色切换 + 持久化）
-- [x] 页面切换过渡动画
+| 阶段 | 主题 | 状态 |
+|---|---|---|
+| Phase 1 | 骨架搭建 — Vue 3 + Design Token + 路由 + Store | ✅ 完成 |
+| Phase 2 | 编辑器升级 — Milkdown + markdown-it + KaTeX | ✅ 完成 |
+| Phase 3 | 桌面化 — Tauri 2 + .md 文件存储 + 全局快捷键 + 托盘 | ✅ 完成 |
+| Phase 4 | 功能增强 — 快速笔记 + 全局搜索 + 模板 + 图片 + 分屏 | ✅ 完成 |
+| Phase 5 | 组织与发现 — 收藏 + 标签云 + 文件夹嵌套 + 双向链接 + 导入导出 | ✅ 完成 |
+| Phase 6 | 体验打磨 — 设置面板 + 回收站 + 拖拽排序 + 组件拆分 | ✅ 完成 |
+| Phase 7+ | 知识管理 / 智能化 / 平台化 | 📋 规划中 |
 
-### Phase 2 ✅ 编辑器升级
-- [x] 接入 Markdown 编辑器引擎（Milkdown v7）
-- [x] Markdown 阅读渲染（markdown-it）
-- [x] 代码高亮（highlight.js）
-- [x] 数学公式支持（KaTeX）— 编辑器 + 阅读模式双端渲染
-
-### Phase 3 ✅ 桌面化
-- [x] 安装 Rust + Tauri 2
-- [x] 本地文件系统读写（AppData/notes/*.md，YAML frontmatter 元数据）
-- [x] 浏览器环境 localStorage 自动降级
-- [x] 旧 localStorage 数据自动迁移到文件系统
-- [x] 全局快捷键（Ctrl+Shift+N 新建 / Ctrl+Shift+O 呼出窗口）
-- [x] 系统托盘常驻（显示窗口 / 退出菜单）
-
-### Phase 4 ✅ 功能增强
-- [x] 快速笔记（Ctrl+Q 弹窗，自动归类收件箱）
-- [x] 全局搜索（Ctrl+K，全文搜索+高亮+键盘导航）
-- [x] 收件箱系统（侧边栏入口 + 数字徽标）
-- [x] 笔记模板（6 种预设：空白/会议/读书/日记/学习/待办）
-- [x] 图片支持（截图粘贴 + 文件选择器 + QQ/微信图片，base64 嵌入，WYSIWYG/分屏双模式）
-- [x] 智能粘贴（Markdown 文本粘贴到 WYSIWYG 自动解析为富文本，ProseMirror DOM 层拦截）
-- [x] 分屏编辑（Markdown 源码 + 实时预览）
-- [x] Markdown 增强（表格斑马纹、任务列表、删除线）
-- [x] 快捷键面板（侧边栏可展开）
-- [x] Tauri fs 权限配置（AppData 完整读写权限）
-
-### Phase 5 ✅ 组织与发现
-- [x] 收藏夹 + 最近打开（侧边栏入口 + 笔记详情收藏按钮 + 最近打开自动记录）
-- [x] 标签云 + 点击筛选（知识库页标签药丸 + URL 参数 `?tag=` 筛选 + 频率计数）
-- [x] 文件夹无限嵌套（`/` 分隔符路径 + 侧边栏可展开树形导航 + 面包屑）
-- [x] 双向链接（`[[title]]` 语法 + 点击跳转 + 反向链接面板）
-- [x] 数据导入/导出（JSON 格式导出 + 支持 .json/.md 文件导入，侧边栏一键操作）
+详细功能规划与优先级排序请参阅 [功能方向规划](./docs/04-功能方向规划.md)。
 
 ## 🔑 全局快捷键
 
@@ -178,4 +147,4 @@ updatedAt: 2026-03-18T12:30:00.000Z
 
 ---
 
-*Created by Code Agent Ω — 2026.03.18 | Last updated: 2026.03.18*
+*Created by Code Agent Ω — 2026.03.18 | Last updated: 2026.03.19 Phase 6 完成*
