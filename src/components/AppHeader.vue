@@ -18,17 +18,10 @@ const themeStore = useThemeStore()
   <header class="app-header">
     <div class="header-left">
       <button class="header-btn" aria-label="切换导航侧栏" @click="emit('toggleSidebar')">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <template v-if="sidebarCollapsed">
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </template>
-          <template v-else>
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </template>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-toggle-icon" :class="{ collapsed: sidebarCollapsed }">
+          <line class="bar bar-top" x1="3" y1="6" x2="21" y2="6" />
+          <line class="bar bar-mid" x1="3" y1="12" x2="21" y2="12" />
+          <line class="bar bar-bot" x1="3" y1="18" x2="21" y2="18" />
         </svg>
       </button>
       <h1 class="app-title">
@@ -183,5 +176,23 @@ const themeStore = useThemeStore()
 .icon-swap-leave-to {
   opacity: 0;
   transform: rotate(90deg) scale(0.8);
+}
+/* ─── 侧边栏切换图标动画（☰ ↔ ×） ─── */
+.sidebar-toggle-icon .bar {
+  transform-origin: center;
+  transition: transform var(--duration-normal) var(--ease-out),
+              opacity var(--duration-fast) var(--ease-out);
+}
+
+.sidebar-toggle-icon:not(.collapsed) .bar-top {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.sidebar-toggle-icon:not(.collapsed) .bar-mid {
+  opacity: 0;
+}
+
+.sidebar-toggle-icon:not(.collapsed) .bar-bot {
+  transform: translateY(-6px) rotate(-45deg);
 }
 </style>
