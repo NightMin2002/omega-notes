@@ -12,8 +12,10 @@ const notesStore = useNotesStore()
 
 const isTauriEnv = isTauri()
 const storagePath = ref('')
+const autoStartEnabled = ref(false)
+const autoStartLoading = ref(false)
 
-/* 加载实际存储路径 */
+/* 加载实际存储路径 + 自启状态 */
 onMounted(async () => {
   if (isTauriEnv) {
     try {
@@ -21,8 +23,32 @@ onMounted(async () => {
       const dir = await appDataDir()
       storagePath.value = await join(dir, 'notes')
     } catch { /* 浏览器环境忽略 */ }
+
+    try {
+      const { isEnabled } = await import('@tauri-apps/plugin-autostart')
+      autoStartEnabled.value = await isEnabled()
+    } catch { /* 浏览器环境忽略 */ }
   }
 })
+
+/** 切换开机自启 */
+async function toggleAutoStart() {
+  if (!isTauriEnv || autoStartLoading.value) return
+  autoStartLoading.value = true
+  try {
+    const { enable, disable, isEnabled } = await import('@tauri-apps/plugin-autostart')
+    if (autoStartEnabled.value) {
+      await disable()
+    } else {
+      await enable()
+    }
+    autoStartEnabled.value = await isEnabled()
+  } catch (e) {
+    console.warn('自启设置失败:', e)
+  } finally {
+    autoStartLoading.value = false
+  }
+}
 
 /** 打开存储目录（调用系统文件管理器） */
 async function openStorageFolder() {
@@ -291,6 +317,34 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside, true
             </div>
           </Transition>
         </div>
+      </div>
+    </section>
+
+    <!-- ═══ 系统（仅桌面） ═══ -->
+    <section v-if="isTauriEnv" class="settings-section">
+      <h3 class="section-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" />
+        </svg>
+        系统
+      </h3>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <span class="setting-label">开机自启动</span>
+          <span class="setting-desc">系统启动时自动运行 Ω Notes（最小化到托盘）</span>
+        </div>
+        <button
+          class="toggle-switch"
+          :class="{ active: autoStartEnabled, loading: autoStartLoading }"
+          :disabled="autoStartLoading"
+          role="switch"
+          :aria-checked="autoStartEnabled"
+          aria-label="开机自启动"
+          @click="toggleAutoStart"
+        >
+          <span class="toggle-thumb" />
+        </button>
       </div>
     </section>
 
@@ -798,6 +852,55 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside, true
   .stat-chip {
     flex: 1;
   }
+}
+
+/* ═══ Toggle 开关 ═══ */
+.toggle-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color var(--duration-normal) var(--ease-out),
+              border-color var(--duration-normal) var(--ease-out);
+}
+
+.toggle-switch.active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.toggle-switch.loading {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.toggle-switch:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-accent-muted);
+}
+
+.toggle-switch:active:not(.loading) {
+  transform: scale(0.98);
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  background: var(--color-text-inverse, #fff);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.15));
+  transition: transform var(--duration-normal) var(--ease-out);
+}
+
+.toggle-switch.active .toggle-thumb {
+  transform: translateX(20px);
 
   .storage-actions {
     width: 100%;

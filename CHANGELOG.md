@@ -6,6 +6,28 @@
 
 ---
 
+## [2.1.1] — 2026-03-28
+
+> 桌面体验增强：单实例防多开、关闭最小化到托盘、开机自启。
+
+### 新增
+
+- `tauri-plugin-single-instance` — 防止应用多开，第二个进程启动时自动聚焦已有窗口
+- 关闭按钮最小化到托盘（拦截 `CloseRequested`，隐藏窗口而非退出）
+- 托盘图标左键点击恢复窗口 + `tooltip("Ω Notes")`
+- 开机自启功能（`tauri-plugin-autostart` + 设置面板 Toggle 开关）
+- 设置面板新增「系统」分区（仅桌面环境显示，含开机自启 Toggle）
+- `docs/05-构建与安装指南.md` — 构建、打包、安装流程与常见问题文档
+
+### 变更
+
+- `src-tauri/src/lib.rs` — 重构为包含单实例/自启/托盘恢复/关闭最小化完整逻辑
+- `src-tauri/Cargo.toml` — 新增 `tauri-plugin-single-instance` + `tauri-plugin-autostart` 依赖
+- `src-tauri/capabilities/default.json` — 新增 `autostart:allow-enable/disable/is-enabled` 权限
+- `package.json` — 新增 `@tauri-apps/plugin-autostart` 前端依赖
+
+---
+
 ## [2.1.0] — 2026-03-28
 
 > 架构重构：消灭代码重复，提升可维护性。净减 616 行代码。

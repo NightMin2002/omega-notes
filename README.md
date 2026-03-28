@@ -17,7 +17,7 @@
 | 类型安全 | 无 | **TypeScript** |
 | 数据持久化 | IndexedDB（清缓存即丢失） | **本地 .md 文件**（Tauri 环境）/ localStorage（浏览器降级） |
 | 数学公式 | 无 | **KaTeX** 行内/块级公式渲染 |
-| 运行形态 | 必须打开浏览器 | **Tauri 2 桌面应用**（系统托盘 + 全局快捷键） |
+| 运行形态 | 必须打开浏览器 | **Tauri 2 桌面应用**（系统托盘 + 全局快捷键 + 单实例 + 开机自启） |
 
 ### 为什么重写而非迁移？
 
@@ -56,6 +56,8 @@ npm run tauri build
 构建后会在 `src-tauri/target/release/bundle/` 下生成：
 - **NSIS 安装包**：`Omega Notes_2.0.0_x64-setup.exe`
 - **MSI 安装包**：`Omega Notes_2.0.0_x64_en-US.msi`
+
+详细的环境配置、构建选项与常见问题排查请参阅 [构建与安装指南](./docs/05-构建与安装指南.md)。
 
 ## 📂 项目结构
 
@@ -147,4 +149,4 @@ updatedAt: 2026-03-18T12:30:00.000Z
 
 ---
 
-*Created by Code Agent Ω — 2026.03.18 | Last updated: 2026.03.28 v2.1.0 架构重构*
+*Created by Code Agent Ω — 2026.03.18 | Last updated: 2026.03.28 v2.1.1 桌面体验增强*

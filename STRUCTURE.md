@@ -93,7 +93,8 @@ docs/
 ├── 01-项目是怎么建起来的.md    # 项目搭建过程学习笔记
 ├── 02-V1和V2的对比与反思.md    # 架构对比分析
 ├── 03-数据存储机制详解.md      # Tauri fs + YAML frontmatter 存储方案
-└── 04-功能方向规划.md          # 功能路线图与优先级
+├── 04-功能方向规划.md          # 功能路线图与优先级
+└── 05-构建与安装指南.md        # 构建、打包、安装与常见问题
 ```
 
 ## 模块职责说明
@@ -134,7 +135,7 @@ docs/
 | `WriteView.vue` | `/write` | `notes` | 模板选择器 → WYSIWYG/分屏编辑 + 图片插入 + `[[title]]` 链接插入 + 标题/分类/标签表单 |
 | `NoteDetailView.vue` | `/note/:id` | `notes` | 阅读模式 ↔ 编辑模式，收藏/置顶/删除，`[[title]]` 链接插入，自动记录到最近列表，反向链接面板 |
 | `TrashView.vue` | `/trash` | `notes` | 回收站：已删除笔记列表、恢复/永久删除、清空回收站确认 dialog |
-| `SettingsView.vue` | `/settings` | `theme`, `settings`, `notes` | 设置：主题切换、字体选择、默认编辑模式、笔记统计、回收站自动清理、关于信息 |
+| `SettingsView.vue` | `/settings` | `theme`, `settings`, `notes` | 设置：外观（主题/字体）、编辑器（默认模式）、数据（存储位置/统计/回收站清理）、系统（开机自启）、关于 |
 
 ### 工具层 (`src/utils/`)
 
@@ -186,8 +187,8 @@ docs/
 | `tauri.conf.json` | 应用配置（窗口大小、标识、构建命令、安全策略） |
 | `Cargo.toml` | Rust 依赖声明 |
 | `src/main.rs` | Windows 下隐藏控制台窗口，调用 `lib.rs` |
-| `src/lib.rs` | Tauri 应用初始化：注册 fs/dialog/global-shortcut/log 插件，系统托盘 |
-| `capabilities/` | 权限能力声明（fs + global-shortcut + dialog） |
+| `src/lib.rs` | Tauri 应用初始化：注册 fs/dialog/global-shortcut/log/autostart/single-instance 插件，系统托盘（右键菜单 + 左键恢复），关闭按钮最小化到托盘 |
+| `capabilities/` | 权限能力声明（fs + global-shortcut + dialog + autostart） |
 
 ## 数据流向
 
