@@ -40,7 +40,7 @@ function noteToMarkdown(note: Note): string {
   return lines.join('\n')
 }
 
-function parseFrontmatter(raw: string): { meta: Record<string, string>; content: string } {
+export function parseFrontmatter(raw: string): { meta: Record<string, string>; content: string } {
   const meta: Record<string, string> = {}
   if (!raw.startsWith('---')) {
     return { meta, content: raw }
@@ -67,7 +67,7 @@ function parseFrontmatter(raw: string): { meta: Record<string, string>; content:
   return { meta, content }
 }
 
-function parseTags(raw: string): string[] {
+export function parseTags(raw: string): string[] {
   const trimmed = raw.replace(/^\[/, '').replace(/\]$/, '').trim()
   if (!trimmed) return []
   return trimmed.split(',').map(t => {

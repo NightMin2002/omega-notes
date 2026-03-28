@@ -4,10 +4,10 @@ import { useNotesStore } from '../stores/notes'
 import { useSettingsStore } from '../stores/settings'
 import { useRouter } from 'vue-router'
 import MilkdownEditor from '../components/MilkdownEditor.vue'
-import MarkdownRenderer from '../components/MarkdownRenderer.vue'
 import EditorToolbar from '../components/EditorToolbar.vue'
-import { templates, type NoteTemplate } from '../utils/templates'
-import { clipboardHasImage, processClipboardImages } from '../utils/images'
+import WikiLinkPicker from '../components/WikiLinkPicker.vue'
+import SplitEditor from '../components/SplitEditor.vue'
+import { getTemplates, type NoteTemplate } from '../utils/templates'
 import { useEditorActions } from '../composables/useEditorActions'
 import type { EditorMode } from '../types'
 
@@ -22,6 +22,7 @@ const tags = ref('')
 const isSaving = ref(false)
 const showTemplates = ref(true)
 const hasSubmitted = ref(false)
+const templates = getTemplates()
 
 const editorMode = ref<EditorMode>(settingsStore.defaultEditorMode)
 const editorKey = ref(0)
@@ -37,6 +38,7 @@ const {
   showFormatToolbar,
   handleToolbarInsert,
   handleToolbarWrap,
+  handlePaste,
 } = useEditorActions({
   content,
   editorMode,
@@ -77,28 +79,6 @@ async function handleSubmit() {
     hasSubmitted.value = false
     isSaving.value = false
   }
-}
-
-/**
- * 粘贴处理 — 支持截图 blob + QQ/微信 file:// 路径
- */
-function handlePaste(e: ClipboardEvent) {
-  if (!e.clipboardData || !clipboardHasImage(e.clipboardData)) return
-
-  e.preventDefault()
-
-  const cd = e.clipboardData
-  ;(async () => {
-    try {
-      const results = await processClipboardImages(cd)
-      for (const md of results) {
-        content.value += `\n${md}\n`
-      }
-      editorKey.value++
-    } catch (err) {
-      console.error('图片粘贴失败:', err)
-    }
-  })()
 }
 
 </script>
@@ -201,33 +181,14 @@ function handlePaste(e: ClipboardEvent) {
             </svg>
             <span>插入图片</span>
           </button>
-          <div class="link-picker-wrapper">
-            <button type="button" class="pane-action" @click="toggleLinkPicker">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-              </svg>
-              <span>插入链接</span>
-            </button>
-            <div v-if="showLinkPicker" class="link-picker-dropdown">
-              <input
-                v-model="linkSearch"
-                type="text"
-                class="link-search-input"
-                placeholder="搜索笔记标题…"
-                autofocus
-              >
-              <ul v-if="linkCandidates.length > 0" class="link-candidates">
-                <li v-for="c in linkCandidates" :key="c.id">
-                  <button type="button" class="link-candidate" @click="insertWikiLink(c.title)">
-                    <span class="lc-title">{{ c.title }}</span>
-                    <span class="lc-category">{{ c.category }}</span>
-                  </button>
-                </li>
-              </ul>
-              <p v-else class="link-empty">无匹配笔记</p>
-            </div>
-          </div>
+          <WikiLinkPicker
+            :show="showLinkPicker"
+            :search="linkSearch"
+            :candidates="linkCandidates"
+            @toggle="toggleLinkPicker"
+            @update:search="linkSearch = $event"
+            @select="insertWikiLink"
+          />
           <button type="button" class="pane-action" :class="{ active: showFormatToolbar }" @click="showFormatToolbar = !showFormatToolbar">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M4 7V4h16v3" /><path d="M9 20h6" /><path d="M12 4v16" />
@@ -243,72 +204,22 @@ function handlePaste(e: ClipboardEvent) {
         <MilkdownEditor :key="editorKey" v-model="content" />
       </template>
 
-      <!-- 分屏模式：左源码 + 右预览 -->
-      <div v-else class="split-editor">
-        <div class="split-pane source-pane">
-          <div class="pane-header">
-            <span class="pane-label">Markdown 源码</span>
-            <div class="pane-actions">
-              <button type="button" class="pane-action" @click="insertImageFromFile">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
-                </svg>
-                <span>插入图片</span>
-              </button>
-              <div class="link-picker-wrapper">
-                <button type="button" class="pane-action" @click="toggleLinkPicker">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                  </svg>
-                  <span>插入链接</span>
-                </button>
-                <div v-if="showLinkPicker" class="link-picker-dropdown">
-                  <input
-                    v-model="linkSearch"
-                    type="text"
-                    class="link-search-input"
-                    placeholder="搜索笔记标题…"
-                    autofocus
-                  >
-                  <ul v-if="linkCandidates.length > 0" class="link-candidates">
-                    <li v-for="c in linkCandidates" :key="c.id">
-                      <button type="button" class="link-candidate" @click="insertWikiLink(c.title)">
-                        <span class="lc-title">{{ c.title }}</span>
-                        <span class="lc-category">{{ c.category }}</span>
-                      </button>
-                    </li>
-                  </ul>
-                  <p v-else class="link-empty">无匹配笔记</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <EditorToolbar
-            @insert="handleToolbarInsert"
-            @wrap="handleToolbarWrap"
-          />
-          <textarea
-            ref="sourceTextareaRef"
-            v-model="content"
-            class="source-textarea"
-            placeholder="在此输入或粘贴 Markdown 内容…&#10;&#10;截图可直接 Ctrl+V 粘贴&#10;QQ/微信图片请用上方「插入图片」按钮"
-            spellcheck="false"
-            @paste="handlePaste"
-          />
-        </div>
-        <div class="split-divider" />
-        <div class="split-pane preview-pane">
-          <div class="pane-label">实时预览</div>
-          <div class="preview-scroll">
-            <MarkdownRenderer
-              v-if="content.trim()"
-              :content="content"
-            />
-            <p v-else class="preview-empty">预览区域</p>
-          </div>
-        </div>
-      </div>
+      <!-- 分屏模式 -->
+      <SplitEditor
+        v-else
+        v-model:content="content"
+        v-model:textarea-ref="sourceTextareaRef"
+        :show-link-picker="showLinkPicker"
+        :link-search="linkSearch"
+        :link-candidates="linkCandidates"
+        @insert-image="insertImageFromFile"
+        @toggle-link-picker="toggleLinkPicker"
+        @update:link-search="linkSearch = $event"
+        @select-link="insertWikiLink"
+        @toolbar-insert="handleToolbarInsert"
+        @toolbar-wrap="handleToolbarWrap"
+        @paste="handlePaste"
+      />
 
       <div class="write-meta">
         <div class="meta-field">
@@ -510,46 +421,6 @@ function handlePaste(e: ClipboardEvent) {
   z-index: var(--z-dropdown);
 }
 
-/* ─── 分屏编辑器 ─── */
-.split-editor {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: 0;
-  min-height: 400px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  background: var(--color-bg-secondary);
-}
-
-.split-divider {
-  width: 1px;
-  background: var(--color-border);
-}
-
-.split-pane {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.pane-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-bg-tertiary);
-}
-
-.pane-label {
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-text-tertiary);
-}
-
 .pane-action {
   display: flex;
   align-items: center;
@@ -568,129 +439,6 @@ function handlePaste(e: ClipboardEvent) {
     background: var(--color-bg-hover);
     color: var(--color-accent);
   }
-}
-
-.source-textarea {
-  flex: 1;
-  resize: none;
-  padding: var(--space-4);
-  font-family: var(--font-mono);
-  font-size: 0.88rem;
-  line-height: 1.7;
-  color: var(--color-text-primary);
-  background: transparent;
-  border: none;
-  outline: none;
-  tab-size: 2;
-}
-
-.source-textarea:focus {
-  background: var(--color-bg-primary);
-}
-
-.preview-scroll {
-  flex: 1;
-  padding: var(--space-4);
-  overflow-y: auto;
-}
-
-.preview-empty {
-  color: var(--color-text-tertiary);
-  font-style: italic;
-}
-
-/* ─── 链接选择器 ─── */
-.link-picker-wrapper {
-  position: relative;
-}
-
-.pane-actions {
-  display: flex;
-  gap: var(--space-2);
-}
-
-.link-picker-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  margin-top: var(--space-2);
-  width: 280px;
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0,0,0,0.25));
-  z-index: var(--z-overlay);
-  padding: var(--space-2);
-}
-
-.link-search-input {
-  width: 100%;
-  appearance: none;
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-3);
-  font-size: 0.82rem;
-  color: var(--color-text-primary);
-  margin-bottom: var(--space-2);
-  transition: border-color var(--duration-fast) var(--ease-out);
-}
-
-.link-search-input:focus {
-  border-color: var(--color-accent);
-  outline: none;
-  box-shadow: 0 0 0 2px var(--color-accent-muted);
-}
-
-.link-candidates {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.link-candidate {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  text-align: left;
-  padding: var(--space-2);
-  border-radius: var(--radius-sm);
-  transition: background-color var(--duration-fast) var(--ease-out);
-}
-
-@media (hover: hover) {
-  .link-candidate:hover {
-    background: var(--color-bg-hover);
-  }
-}
-
-.link-candidate:active { transform: scale(0.98); }
-
-.lc-title {
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--color-text-primary);
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.lc-category {
-  font-size: 0.68rem;
-  color: var(--color-text-tertiary);
-  flex-shrink: 0;
-  margin-left: var(--space-2);
-}
-
-.link-empty {
-  font-size: 0.78rem;
-  color: var(--color-text-tertiary);
-  text-align: center;
-  padding: var(--space-3);
 }
 
 /* ─── 元信息 ─── */
@@ -772,13 +520,5 @@ function handlePaste(e: ClipboardEvent) {
 
 @media (max-width: 640px) {
   .write-meta { grid-template-columns: 1fr; }
-  .split-editor {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr auto 1fr;
-  }
-  .split-divider {
-    width: auto;
-    height: 1px;
-  }
 }
 </style>

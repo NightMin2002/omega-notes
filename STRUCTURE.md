@@ -38,7 +38,10 @@ omega-v2/
 │   │   ├── MarkdownRenderer.vue # Markdown → HTML 渲染（阅读模式）
 │   │   ├── QuickNote.vue       # Ctrl+Q 快速笔记弹窗
 │   │   ├── SearchDialog.vue    # Ctrl+K 全局搜索弹窗
-│   │   └── EditorToolbar.vue   # Markdown 格式化工具栏（14 按钮，分屏/WYSIWYG 通用）
+│   │   ├── EditorToolbar.vue   # Markdown 格式化工具栏（14 按钮，分屏/WYSIWYG 通用）
+│   │   ├── WikiLinkPicker.vue  # [[Wiki 链接]] 选择器下拉面板（WriteView/NoteDetailView 共享）
+│   │   ├── SplitEditor.vue     # 分屏 Markdown 编辑器（源码 + 工具栏 + 实时预览，共享）
+│   │   └── BacklinksPanel.vue  # 反向链接面板（展示引用当前笔记的其他笔记）
 │   │
 │   ├── views/                  # 路由页面组件
 │   │   ├── HomeView.vue        # 主页（统计 + 快捷入口 + 最近更新）
@@ -115,6 +118,10 @@ docs/
 | `MarkdownRenderer.vue` | 只读渲染。markdown-it + highlight.js + **texmath (KaTeX)** + **task-lists**。支持 `[[title]]` 双向链接语法（渲染为可点击链接 + 跳转导航） | Props: `content` |
 | `QuickNote.vue` | 快速笔记弹窗。`<dialog>` 模态框，Markdown 输入 + Ctrl+Enter 保存到收件箱 | Props: `visible` / Emits: `close` |
 | `SearchDialog.vue` | 全局搜索弹窗。全文搜索 + 关键词高亮 + 键盘导航（↑↓ Enter） | Props: `visible` / Emits: `close` |
+| `EditorToolbar.vue` | Markdown 格式化工具栏（14 按钮），分屏/WYSIWYG 通用 | Emits: `insert`, `wrap` |
+| `WikiLinkPicker.vue` | `[[Wiki 链接]]` 选择器下拉面板。从 WriteView/NoteDetailView 提取的共享组件 | Props: `show`, `search`, `candidates` / Emits: `toggle`, `update:search`, `select` |
+| `SplitEditor.vue` | 分屏 Markdown 编辑器（源码 + 工具栏 + 实时预览）。从两个 View 的重复代码提取 | v-model: `content`, `textareaRef` / Props: `showLinkPicker`, `linkSearch`, `linkCandidates` / Emits: 多个 |
+| `BacklinksPanel.vue` | 反向链接面板。展示引用当前笔记的其他笔记列表 | Props: `backlinks` |
 
 **编辑器架构说明**：`MilkdownEditor` 和 `MilkdownEditorCore` 必须拆分为两个组件，因为 `useEditor()` 需要在 `MilkdownProvider` 的 inject 上下文内调用。如果合并为一个组件会导致 `Symbol(editorInfoCtxKey) not found` 错误。
 
@@ -140,21 +147,24 @@ docs/
 | | `deleteNoteFile(id)` | 删除笔记文件 |
 | | `migrateFromLocalStorage()` | 将旧 localStorage 数据迁移到文件系统 |
 | | `isTauri()` | 检测当前是否在 Tauri 桌面环境中运行 |
+| | `parseFrontmatter(raw)` | 解析 YAML frontmatter → `{ meta, content }`（供 `dataio.ts` 复用） |
+| | `parseTags(raw)` | 解析标签字符串（`"[a, b]"` → `['a', 'b']`） |
 | `shortcuts.ts` | `registerGlobalShortcuts(router)` | 注册系统级全局快捷键（仅 Tauri），启动时先 `unregisterAll` 防止 HMR 重复注册 |
-| `templates.ts` | `templates[]` | 6 种笔记模板定义（空白/会议/读书/日记/学习/待办） |
+| `templates.ts` | `getTemplates()` | 工厂函数，返回 6 种笔记模板（空白/会议/读书/日记/学习/待办），调用时动态生成当天日期 |
+| | `templates[]` | 向后兼容的静态导出，推荐使用 `getTemplates()` |
 | `images.ts` | `clipboardHasImage()` | 同步检测剪贴板是否含图片 |
 | | `processClipboardImages()` | 异步处理粘贴图片，返回 base64 Markdown 语法 |
 | `dataio.ts` | `exportNotesAsJson(notes)` | 导出全部笔记为 JSON（Tauri: save dialog / 浏览器: Blob） |
-| | `importNotesFromFiles()` | 弹出文件选择器，解析 .json / .md 文件返回 Note 数据 |
+| | `importNotesFromFiles()` | 弹出文件选择器，解析 .json / .md 文件返回 Note 数据（复用 `storage.ts` 的 `parseFrontmatter`） |
 
 ### 状态层 (`src/stores/`)
 
 | Store | 状态 | Actions | 持久化 |
 |---|---|---|---|
 | `theme.ts` | `theme: 'dark' \| 'light'` | `toggle()` | localStorage `omega-theme` |
-| `notes.ts` | `notes[]`, `currentCategory`, `searchQuery`, `isLoading`, `recentIds` | `init`, `addNote`, `updateNote`, `deleteNote`, `restoreNote`, `permanentlyDelete`, `emptyTrash`, `togglePin`, `toggleFavorite`, `recordOpen`, `importBatch`, `reorderNotes`, `moveNoteToCategory`, `getNoteById`, `findNoteByTitle`, `getBacklinks` | 委托 `storage.ts` + localStorage |
+| `notes.ts` | `notes[]`, `currentCategory`, `searchQuery`, `isLoading`, `recentIds`, `noteMap`（computed Map 索引） | `init`, `addNote`, `updateNote`, `deleteNote`, `restoreNote`, `permanentlyDelete`, `emptyTrash`, `togglePin`, `toggleFavorite`, `recordOpen`, `importBatch`, `reorderNotes`, `moveNoteToCategory`, `getNoteById`, `findNoteByTitle`, `getBacklinks` | 委托 `storage.ts` + localStorage |
 | | 计算属性: `activeNotes`, `filteredNotes`, `categories`, `categoryTree`, `allTags`, `favoriteNotes`, `recentNotes`, `trashNotes`, `totalCount`, `pinnedCount`, `favoriteCount`, `trashCount` | | |
-| `settings.ts` | `defaultEditorMode`, `fontFamily`, `trashAutoCleanDays` | `setDefaultEditorMode`, `setFontFamily`, `setTrashAutoCleanDays`, `init` | localStorage `omega-settings` |
+| `settings.ts` | `settings`（单一状态源），computed getters: `defaultEditorMode`, `fontFamily`, `trashAutoCleanDays` | `setDefaultEditorMode`, `setFontFamily`, `setTrashAutoCleanDays`, `init` | localStorage `omega-settings` |
 
 ### 路由层 (`src/router/`)
 

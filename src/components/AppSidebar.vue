@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useNotesStore } from '../stores/notes'
 import { exportNotesAsJson, importNotesFromFiles } from '../utils/dataio'
 
@@ -13,6 +13,7 @@ const emit = defineEmits<{
 }>()
 
 const route = useRoute()
+const router = useRouter()
 const notesStore = useNotesStore()
 const showShortcuts = ref(false)
 
@@ -93,9 +94,8 @@ const flatFolders = computed<FlatFolder[]>(() => {
 })
 
 function navigateFolder(path: string) {
-  const encodedCat = encodeURIComponent(path)
   collapseIfMobile()
-  window.location.hash = `#/notes?category=${encodedCat}`
+  router.push({ path: '/notes', query: { category: path } })
 }
 </script>
 

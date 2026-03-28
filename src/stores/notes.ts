@@ -26,6 +26,13 @@ export const useNotesStore = defineStore('notes', () => {
   const isLoading = ref(true)
   const recentIds = ref<string[]>([])
 
+  /** ID → Note 映射表（O(1) 查找） */
+  const noteMap = computed(() => {
+    const map = new Map<string, Note>()
+    for (const n of notes.value) map.set(n.id, n)
+    return map
+  })
+
   // ─── 初始化：从存储加载 ───
   async function init() {
     isLoading.value = true
@@ -208,7 +215,7 @@ export const useNotesStore = defineStore('notes', () => {
   const recentNotes = computed<Note[]>(() => {
     const result: Note[] = []
     for (const id of recentIds.value) {
-      const note = notes.value.find(n => n.id === id)
+      const note = noteMap.value.get(id)
       if (note) result.push(note)
     }
     return result
@@ -234,7 +241,7 @@ export const useNotesStore = defineStore('notes', () => {
   }
 
   async function updateNote(id: string, updates: Partial<Note>) {
-    const idx = notes.value.findIndex(n => n.id === id)
+    const idx = noteMap.value.has(id) ? notes.value.indexOf(noteMap.value.get(id)!) : -1
     if (idx === -1) return
     const existing = notes.value[idx]!
     const updated: Note = {
@@ -249,7 +256,7 @@ export const useNotesStore = defineStore('notes', () => {
 
   /** 软删除笔记（移入回收站） */
   async function deleteNote(id: string) {
-    const note = notes.value.find(n => n.id === id)
+    const note = noteMap.value.get(id)
     if (!note) return
     note.isDeleted = true
     note.deletedAt = new Date().toISOString()
@@ -261,7 +268,7 @@ export const useNotesStore = defineStore('notes', () => {
 
   /** 从回收站恢复笔记 */
   async function restoreNote(id: string) {
-    const note = notes.value.find(n => n.id === id)
+    const note = noteMap.value.get(id)
     if (!note) return
     note.isDeleted = false
     note.deletedAt = undefined
@@ -284,7 +291,7 @@ export const useNotesStore = defineStore('notes', () => {
   }
 
   async function togglePin(id: string) {
-    const note = notes.value.find(n => n.id === id)
+    const note = noteMap.value.get(id)
     if (note) {
       note.isPinned = !note.isPinned
       await saveNote(note)
@@ -292,7 +299,7 @@ export const useNotesStore = defineStore('notes', () => {
   }
 
   async function toggleFavorite(id: string) {
-    const note = notes.value.find(n => n.id === id)
+    const note = noteMap.value.get(id)
     if (note) {
       note.isFavorite = !note.isFavorite
       await saveNote(note)
@@ -306,7 +313,7 @@ export const useNotesStore = defineStore('notes', () => {
   }
 
   function getNoteById(id: string): Note | undefined {
-    return notes.value.find(n => n.id === id)
+    return noteMap.value.get(id)
   }
 
   /** 按标题查找笔记（精确匹配，不区分大小写） */
@@ -317,7 +324,7 @@ export const useNotesStore = defineStore('notes', () => {
 
   /** 获取引用指定笔记的所有反向链接（兼容 Milkdown 转义括号） */
   function getBacklinks(noteId: string): Note[] {
-    const note = notes.value.find(n => n.id === noteId)
+    const note = noteMap.value.get(noteId)
     if (!note || !note.title) return []
     const title = note.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     /* 匹配 [[title]] 或 \[\[title\]\] */
@@ -362,7 +369,7 @@ export const useNotesStore = defineStore('notes', () => {
    */
   async function reorderNotes(orderedIds: string[]) {
     for (let i = 0; i < orderedIds.length; i++) {
-      const note = notes.value.find(n => n.id === orderedIds[i])
+      const note = noteMap.value.get(orderedIds[i]!)
       if (note) {
         note.sortOrder = i
         await saveNote(note)
@@ -376,7 +383,7 @@ export const useNotesStore = defineStore('notes', () => {
    * 拖拽改分类：将笔记移入新分类
    */
   async function moveNoteToCategory(noteId: string, newCategory: string) {
-    const note = notes.value.find(n => n.id === noteId)
+    const note = noteMap.value.get(noteId)
     if (!note || note.category === newCategory) return
     note.category = newCategory
     note.updatedAt = new Date().toISOString()

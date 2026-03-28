@@ -1,13 +1,5 @@
-/**
- * Ω Notes V2 — 数据导入/导出
- *
- * 导出：所有笔记打包为 JSON 文件下载
- *   - Tauri 环境：弹出保存对话框 → 写入文件
- *   - 浏览器环境：Blob URL 触发下载
- * 导入：支持 JSON（本应用格式）和 .md 文件（YAML frontmatter）
- */
 import type { Note, ExportPayload } from '@/types'
-import { isTauri } from '@/utils/storage'
+import { isTauri, parseFrontmatter, parseTags } from '@/utils/storage'
 
 /** 浏览器环境下载文本文件 */
 function browserDownload(filename: string, content: string, mime = 'application/json') {
@@ -57,54 +49,23 @@ export async function exportNotesAsJson(notes: Note[]) {
   }
 }
 
-/** 解析 YAML frontmatter 的 .md 文件 → Note 对象 */
+/**
+ * 解析 YAML frontmatter 的 .md 文件 → Partial<Note>
+ * 复用 storage.ts 的 parseFrontmatter / parseTags
+ */
 function parseMdFile(filename: string, raw: string): Partial<Note> {
-  const result: Partial<Note> = {}
+  const { meta, content } = parseFrontmatter(raw)
 
-  if (raw.startsWith('---')) {
-    const endIdx = raw.indexOf('\n---', 3)
-    if (endIdx !== -1) {
-      const frontmatter = raw.slice(4, endIdx)
-      const content = raw.slice(endIdx + 4).replace(/^\n/, '')
-      result.content = content
+  const result: Partial<Note> = { content }
 
-      for (const line of frontmatter.split('\n')) {
-        const colonIdx = line.indexOf(':')
-        if (colonIdx === -1) continue
-        const key = line.slice(0, colonIdx).trim()
-        let val = line.slice(colonIdx + 1).trim()
-        /* 去引号 */
-        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-          val = val.slice(1, -1)
-        }
-
-        switch (key) {
-          case 'id': result.id = val; break
-          case 'title': result.title = val; break
-          case 'category': result.category = val; break
-          case 'pinned': result.isPinned = val === 'true'; break
-          case 'favorite': result.isFavorite = val === 'true'; break
-          case 'createdAt': result.createdAt = val; break
-          case 'updatedAt': result.updatedAt = val; break
-          case 'tags': {
-            const trimmed = val.replace(/^\[/, '').replace(/]$/, '').trim()
-            result.tags = trimmed ? trimmed.split(',').map(t => {
-              let s = t.trim()
-              if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
-                s = s.slice(1, -1)
-              }
-              return s
-            }).filter(Boolean) : []
-            break
-          }
-        }
-      }
-    } else {
-      result.content = raw
-    }
-  } else {
-    result.content = raw
-  }
+  if (meta['id']) result.id = meta['id']
+  if (meta['title']) result.title = meta['title']
+  if (meta['category']) result.category = meta['category']
+  if (meta['pinned']) result.isPinned = meta['pinned'] === 'true'
+  if (meta['favorite']) result.isFavorite = meta['favorite'] === 'true'
+  if (meta['createdAt']) result.createdAt = meta['createdAt']
+  if (meta['updatedAt']) result.updatedAt = meta['updatedAt']
+  if (meta['tags']) result.tags = parseTags(meta['tags'])
 
   /* 从文件名推断标题（如果 frontmatter 里没有） */
   if (!result.title) {

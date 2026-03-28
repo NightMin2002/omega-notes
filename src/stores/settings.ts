@@ -3,7 +3,7 @@
  * 管理应用偏好设置，持久化到 localStorage
  */
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref, computed } from 'vue'
 import type { AppSettings, EditorMode, FontFamily } from '@/types'
 
 const STORAGE_KEY = 'omega-settings'
@@ -38,27 +38,24 @@ const fontMap: Record<FontFamily, string> = {
 export const useSettingsStore = defineStore('settings', () => {
   const settings = ref<AppSettings>(loadSettings())
 
-  // ─── Getters ───
-  const defaultEditorMode = ref<EditorMode>(settings.value.defaultEditorMode)
-  const fontFamily = ref<FontFamily>(settings.value.fontFamily)
-  const trashAutoCleanDays = ref<number>(settings.value.trashAutoCleanDays)
+  // ─── Computed Getters（单一状态源） ───
+  const defaultEditorMode = computed(() => settings.value.defaultEditorMode)
+  const fontFamily = computed(() => settings.value.fontFamily)
+  const trashAutoCleanDays = computed(() => settings.value.trashAutoCleanDays)
 
   // ─── Actions ───
   function setDefaultEditorMode(mode: EditorMode) {
-    defaultEditorMode.value = mode
     settings.value.defaultEditorMode = mode
     persist(settings.value)
   }
 
   function setFontFamily(family: FontFamily) {
-    fontFamily.value = family
     settings.value.fontFamily = family
     applyFont(family)
     persist(settings.value)
   }
 
   function setTrashAutoCleanDays(days: number) {
-    trashAutoCleanDays.value = days
     settings.value.trashAutoCleanDays = days
     persist(settings.value)
   }
@@ -69,7 +66,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   /** 初始化时应用已保存的字体 */
   function init() {
-    applyFont(fontFamily.value)
+    applyFont(settings.value.fontFamily)
   }
 
   return {

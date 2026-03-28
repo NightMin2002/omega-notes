@@ -147,4 +147,4 @@ updatedAt: 2026-03-18T12:30:00.000Z
 
 ---
 
-*Created by Code Agent Ω — 2026.03.18 | Last updated: 2026.03.19 Phase 6 完成*
+*Created by Code Agent Ω — 2026.03.18 | Last updated: 2026.03.28 v2.1.0 架构重构*

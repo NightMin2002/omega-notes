@@ -6,6 +6,29 @@
 
 ---
 
+## [2.1.0] — 2026-03-28
+
+> 架构重构：消灭代码重复，提升可维护性。净减 616 行代码。
+
+### 新增
+
+- `WikiLinkPicker.vue` — Wiki 链接选择器共享组件
+- `SplitEditor.vue` — 分屏编辑器共享组件（源码 + 工具栏 + 实时预览）
+- `BacklinksPanel.vue` — 反向链接面板共享组件
+- `storage.ts` 导出 `parseFrontmatter()` / `parseTags()` 供外部复用
+
+### 重构
+
+- **WriteView / NoteDetailView**：提取重复模板为 `WikiLinkPicker`、`SplitEditor`、`BacklinksPanel` 共享组件，两个视图分别瘦身 32% / 47%
+- **dataio.ts**：移除重复 YAML frontmatter 解析器，复用 `storage.ts` 的 `parseFrontmatter` + `parseTags`
+- **settings.ts**：消灭双重状态源（`ref` + `settings.value` 并行维护），改为 `computed` getter 单一状态源
+- **notes.ts**：新增 `noteMap` computed Map 索引，9 处 `.find(n => n.id)` O(n) 查找改为 O(1)
+- **templates.ts**：模板日期从模块加载时固定值改为 `getTemplates()` 工厂函数动态生成
+- **AppSidebar.vue**：`navigateFolder()` 从 `window.location.hash` 改为 `router.push()`
+- **handlePaste**：NoteDetailView 中重复的粘贴处理逻辑统一使用 `useEditorActions` composable
+
+---
+
 ## [2.0.0] — 2026-03-19
 
 > Ω Notes V2 的首个正式版本。从 V1 全面重写，技术栈迁移至 Vue 3 + Vite + TypeScript + Tauri 2。
