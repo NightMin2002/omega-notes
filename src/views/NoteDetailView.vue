@@ -247,21 +247,25 @@ const backlinks = computed(() => {
       <!-- 阅读模式 -->
       <template v-else>
         <article class="note-article">
-          <h1 class="note-title">{{ note.title || '未命名笔记' }}</h1>
+          <header class="note-hero">
+            <h1 class="note-title">{{ note.title || '未命名笔记' }}</h1>
 
-          <div class="note-meta">
-            <span class="meta-category">{{ note.category }}</span>
-            <span class="meta-date">创建于 {{ formatDate(note.createdAt) }}</span>
-            <span v-if="note.createdAt !== note.updatedAt" class="meta-date">
-              · 更新于 {{ formatDate(note.updatedAt) }}
-            </span>
+            <div class="note-meta">
+              <span class="meta-category">{{ note.category }}</span>
+              <span class="meta-date">创建于 {{ formatDate(note.createdAt) }}</span>
+              <span v-if="note.createdAt !== note.updatedAt" class="meta-date">
+                · 更新于 {{ formatDate(note.updatedAt) }}
+              </span>
+            </div>
+
+            <div v-if="note.tags.length > 0" class="note-tags">
+              <span v-for="tag in note.tags" :key="tag" class="tag">{{ tag }}</span>
+            </div>
+          </header>
+
+          <div class="note-body">
+            <MarkdownRenderer :content="note.content" />
           </div>
-
-          <div v-if="note.tags.length > 0" class="note-tags">
-            <span v-for="tag in note.tags" :key="tag" class="tag">{{ tag }}</span>
-          </div>
-
-          <MarkdownRenderer :content="note.content" />
 
           <BacklinksPanel :backlinks="backlinks" />
         </article>
@@ -393,15 +397,69 @@ const backlinks = computed(() => {
   }
 }
 
-/* ─── 阅读模式 ─── */
+/* ─── 阅读模式 — 极光玻璃卡片 ─── */
 .note-article {
-  padding: var(--space-8);
-  padding-bottom: var(--space-12);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  position: relative;
   border-radius: var(--radius-lg);
-  box-shadow: 0 1px 3px var(--color-shadow),
-              inset 0 1px 0 var(--color-glass-border);
+  overflow: hidden;
+  /* 双层边框：外层渐变 + 内层玻璃高光 */
+  padding: 1px; /* 留出渐变边框厚度 */
+  background:
+    linear-gradient(
+      135deg,
+      var(--color-accent) 0%,
+      rgba(99, 102, 241, 0.4) 25%,
+      rgba(168, 85, 247, 0.3) 50%,
+      rgba(59, 130, 246, 0.4) 75%,
+      var(--color-accent) 100%
+    );
+  background-size: 300% 300%;
+  animation: aurora-shift 8s ease-in-out infinite;
+}
+
+@keyframes aurora-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .note-article { animation: none; }
+}
+
+/* Hero 区：标题 + 元信息，独立层级感 */
+.note-hero {
+  background: var(--color-bg-secondary);
+  padding: var(--space-8) var(--space-8) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  position: relative;
+}
+
+/* 底部高光线 */
+.note-hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: var(--space-8);
+  right: var(--space-8);
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-accent) 30%,
+    rgba(168, 85, 247, 0.6) 50%,
+    var(--color-accent) 70%,
+    transparent 100%
+  );
+  opacity: 0.5;
+}
+
+/* 正文区 */
+.note-body {
+  background: var(--color-bg-primary);
+  padding: var(--space-6) var(--space-8) var(--space-12);
+  min-height: 200px;
+  border-bottom-left-radius: calc(var(--radius-lg) - 1px);
+  border-bottom-right-radius: calc(var(--radius-lg) - 1px);
 }
 
 .note-title {
@@ -438,7 +496,6 @@ const backlinks = computed(() => {
   display: flex;
   gap: var(--space-2);
   flex-wrap: wrap;
-  margin-bottom: var(--space-6);
 }
 
 .tag {
@@ -447,6 +504,7 @@ const backlinks = computed(() => {
   padding: var(--space-1) var(--space-2);
   background: var(--color-bg-tertiary);
   border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
 }
 
 /* ─── 编辑表单 ─── */

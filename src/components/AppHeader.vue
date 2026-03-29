@@ -18,7 +18,7 @@ const themeStore = useThemeStore()
   <header class="app-header">
     <div class="header-left">
       <button class="header-btn" aria-label="切换导航侧栏" @click="emit('toggleSidebar')">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-toggle-icon" :class="{ collapsed: sidebarCollapsed }">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-toggle-icon" :class="{ collapsed: sidebarCollapsed }" style="overflow: visible">
           <line class="bar bar-top" x1="3" y1="6" x2="21" y2="6" />
           <line class="bar bar-mid" x1="3" y1="12" x2="21" y2="12" />
           <line class="bar bar-bot" x1="3" y1="18" x2="21" y2="18" />
