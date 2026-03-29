@@ -75,3 +75,57 @@ export interface AppSettings {
   /** 回收站自动清理天数（0 = 不自动清理） */
   trashAutoCleanDays: number
 }
+
+/* ═══════════════════════════════════
+   日常管理系统类型
+   ═══════════════════════════════════ */
+
+/** 每日任务模板（持久化） */
+export interface DailyTask {
+  id: string
+  title: string
+  /** 可选提醒时间，格式 "HH:mm" */
+  reminderTime?: string
+  /** 任务分类（如 "游戏"、"健康"、"学习"） */
+  category?: string
+  /** 是否启用 */
+  enabled: boolean
+  /** 创建时间 */
+  createdAt: string
+  /** 排序权重（越小越靠前） */
+  sortOrder: number
+}
+
+/** 当日完成记录 */
+export interface DailyRecord {
+  /** 日期 key，格式 "YYYY-MM-DD" */
+  date: string
+  /** 已完成的 taskId 集合 */
+  completedIds: string[]
+}
+
+/** 健康提醒配置（持久化） */
+export interface HealthReminder {
+  /** 是否启用 */
+  enabled: boolean
+  /** 间隔分钟数 */
+  intervalMinutes: number
+  /** 提醒消息列表 */
+  messages: string[]
+  /** 静默时段开始，格式 "HH:mm" */
+  quietStart: string
+  /** 静默时段结束，格式 "HH:mm" */
+  quietEnd: string
+}
+
+/** 倒计时状态（运行时，不持久化） */
+export interface CountdownState {
+  /** 是否正在运行 */
+  isRunning: boolean
+  /** 是否暂停 */
+  isPaused: boolean
+  /** 总时长（秒） */
+  totalSeconds: number
+  /** 剩余秒数 */
+  remainingSeconds: number
+}

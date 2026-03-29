@@ -9,7 +9,9 @@ import App from './App.vue'
 import router from './router'
 import { useNotesStore } from './stores/notes'
 import { useSettingsStore } from './stores/settings'
+import { useTasksStore } from './stores/tasks'
 import { registerGlobalShortcuts } from './utils/shortcuts'
+import { startScheduler } from './utils/scheduler'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -26,4 +28,8 @@ notesStore.init()
 const settingsStore = useSettingsStore()
 settingsStore.init()
 
+const tasksStore = useTasksStore()
+tasksStore.init()
+
 registerGlobalShortcuts(router)
+startScheduler()

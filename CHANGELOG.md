@@ -6,6 +6,44 @@
 
 ---
 
+## [2.2.0] — 2026-03-29
+
+> Phase 7 — 日常管理系统：每日任务 + 倒计时 + 健康提醒 + 系统通知。
+
+### 新增
+
+- `TasksView.vue` — 日常管理页面（侧边栏入口）
+  - **每日任务**：添加/编辑/删除/打勾完成，每日自动重置（可自定义重置时间）
+  - **任务分类**：预设 5 分类（游戏/健康/学习/工作/生活），支持自定义增删，分类筛选药丸 + 分组展示
+  - **提醒时间**：每个任务可设置独立提醒时间，到时未完成触发系统弹窗通知
+  - **倒计时器**：预设 25m/45m/60m 快捷按钮 + 自定义分钟输入，环形进度条 + 完成通知
+  - **健康提醒**：可配间隔（30/60/90/120 分钟），随机轮播消息，支持静默时段
+  - **进度条**：实时显示任务完成百分比
+- `TimePicker.vue` — 自定义时间选择器组件（Teleport + fixed 定位，步进器 ▲▼ 选择小时/分钟）
+- `stores/tasks.ts` — 任务 Store（Pinia，任务 CRUD + 倒计时 + 健康提醒 + 配置持久化）
+- `utils/scheduler.ts` — 后台调度器（15 秒巡检任务提醒 + 健康提醒 + Tauri 通知权限管理）
+- 全局 `data-tooltip` 样式 — `::after` 伪元素实现，hover 显示 + 触屏 focus 降级
+- 侧边栏新增「日常管理」导航项（时钟图标）
+- 路由新增 `/tasks` 路径
+
+### 变更
+
+- `src/types/index.ts` — 新增 `DailyTask`、`DailyRecord`、`HealthReminder`、`CountdownState`、`TasksConfig` 类型
+- `src/router/index.ts` — 注册 `/tasks` 路由
+- `src/main.ts` — 启动时初始化调度器 + 注入通知权限
+- `src/components/AppSidebar.vue` — 新增「日常管理」侧边栏入口
+- `src/assets/styles/reset.css` — 新增全局 `[data-tooltip]` 提示框样式
+
+### UI/UX
+
+- 所有时间选择器替换为自定义 `TimePicker` 组件（消灭原生 `<input type="time">`）
+- 分类选择器使用药丸点选按钮组（消灭原生 `<select>`）
+- 倒计时分钟输入使用 `[-] input [+]` 混合步进器（消灭原生 `<input type="number">`）
+- TimePicker 面板使用 `Teleport to="body"` + `position: fixed` 避免容器裁剪
+- 面板水平居中对齐触发按钮，夹紧在视口边界内防溢出
+
+---
+
 ## [2.1.1] — 2026-03-28
 
 > 桌面体验增强：单实例防多开、关闭最小化到托盘、开机自启。

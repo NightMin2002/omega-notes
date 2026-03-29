@@ -41,7 +41,8 @@ omega-v2/
 │   │   ├── EditorToolbar.vue   # Markdown 格式化工具栏（14 按钮，分屏/WYSIWYG 通用）
 │   │   ├── WikiLinkPicker.vue  # [[Wiki 链接]] 选择器下拉面板（WriteView/NoteDetailView 共享）
 │   │   ├── SplitEditor.vue     # 分屏 Markdown 编辑器（源码 + 工具栏 + 实时预览，共享）
-│   │   └── BacklinksPanel.vue  # 反向链接面板（展示引用当前笔记的其他笔记）
+│   │   ├── BacklinksPanel.vue  # 反向链接面板（展示引用当前笔记的其他笔记）
+│   │   └── TimePicker.vue      # 自定义时间选择器（步进器 ▲▼ + Teleport 定位）
 │   │
 │   ├── views/                  # 路由页面组件
 │   │   ├── HomeView.vue        # 主页（统计 + 快捷入口 + 最近更新）
@@ -49,12 +50,14 @@ omega-v2/
 │   │   ├── WriteView.vue       # 新建笔记（模板 + 编辑器 + 图片/链接插入）
 │   │   ├── NoteDetailView.vue  # 笔记详情（阅读/编辑/分屏 + 反向链接）
 │   │   ├── TrashView.vue       # 回收站（恢复/永久删除/清空）
-│   │   └── SettingsView.vue    # 设置页（外观/编辑器/数据/关于）
+│   │   ├── SettingsView.vue    # 设置页（外观/编辑器/数据/关于）
+│   │   └── TasksView.vue       # 日常管理（每日任务 + 倒计时 + 健康提醒）
 │   │
 │   ├── stores/                 # Pinia 状态仓库
 │   │   ├── theme.ts            # 主题管理（暗色/亮色 + 持久化）
 │   │   ├── notes.ts            # 笔记数据（async CRUD + 分类 + 搜索 + 排序 + 回收站）
-│   │   └── settings.ts         # 应用设置（编辑器模式/字体/回收站清理 + localStorage）
+│   │   ├── settings.ts         # 应用设置（编辑器模式/字体/回收站清理 + localStorage）
+│   │   └── tasks.ts            # 日常任务（任务 CRUD + 倒计时 + 健康提醒 + 配置持久化）
 │   │
 │   ├── composables/            # Vue Composable 函数
 │   │   └── useEditorActions.ts # 编辑器共用操作（图片/链接/工具栏/粘贴）
@@ -65,10 +68,11 @@ omega-v2/
 │   │   ├── shortcuts.ts        # 全局快捷键注册（Tauri 环境）
 │   │   ├── templates.ts        # 笔记模板定义（6 种预设）
 │   │   ├── images.ts           # 图片粘贴处理（base64 转换）
-│   │   └── dataio.ts           # 数据导入/导出（JSON + .md 支持）
+│   │   ├── dataio.ts           # 数据导入/导出（JSON + .md 支持）
+│   │   └── scheduler.ts        # 后台调度器（任务提醒 + 健康提醒巡检）
 │   │
 │   ├── types/                  # 共享类型定义
-│   │   └── index.ts            # Note / NoteTemplate / FolderNode / ExportPayload 等
+│   │   └── index.ts            # Note / DailyTask / HealthReminder / CountdownState 等
 │   │
 │   └── router/                 # 路由配置
 │       └── index.ts            # 路由表 + 页面标题同步

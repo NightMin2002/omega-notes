@@ -1,0 +1,375 @@
+/**
+ * Ω Notes V2 — 日常管理 Store
+ * 管理每日任务、健康提醒、倒计时器
+ */
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import type { DailyTask, DailyRecord, HealthReminder, CountdownState } from '@/types'
+import { isTauri } from '@/utils/storage'
+
+/* ─── 存储 Key ─── */
+const TASKS_KEY = 'omega-daily-tasks'
+const RECORDS_KEY = 'omega-daily-records'
+const REMINDER_KEY = 'omega-health-reminder'
+const CONFIG_KEY = 'omega-tasks-config'
+
+/* ─── 任务配置 ─── */
+interface TasksConfig {
+  /** 每日重置时间，格式 "HH:mm"，默认 "04:00" */
+  resetTime: string
+  /** 预设分类列表 */
+  categories: string[]
+}
+
+const defaultConfig: TasksConfig = {
+  resetTime: '04:00',
+  categories: ['游戏', '健康', '学习', '工作', '生活'],
+}
+
+/* ─── 默认值 ─── */
+const defaultReminder: HealthReminder = {
+  enabled: false,
+  intervalMinutes: 60,
+  messages: [
+    '起来走动一下吧，久坐伤身',
+    '记得喝水！',
+    '眼睛看看远处，休息一下',
+    '伸展一下身体吧',
+    '深呼吸，放松肩膀',
+  ],
+  quietStart: '23:00',
+  quietEnd: '08:00',
+}
+
+/* ─── 工具函数 ─── */
+
+/**
+ * 根据自定义重置时间计算「逻辑日期」。
+ * 例如重置时间 04:00，则 03:59 属于昨天，04:00 属于今天。
+ */
+function todayKey(resetTime: string): string {
+  const now = new Date()
+  const [rh, rm] = resetTime.split(':').map(Number)
+  const resetMinutes = (rh ?? 4) * 60 + (rm ?? 0)
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+
+  // 如果当前时间 < 重置时间，则逻辑上还是「昨天」
+  const d = new Date(now)
+  if (currentMinutes < resetMinutes) {
+    d.setDate(d.getDate() - 1)
+  }
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function generateId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
+}
+
+function loadJSON<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key)
+    if (raw) return JSON.parse(raw)
+  } catch { /* 忽略 */ }
+  return fallback
+}
+
+function saveJSON(key: string, value: unknown) {
+  localStorage.setItem(key, JSON.stringify(value))
+}
+
+/* ─── 通知函数（延迟加载） ─── */
+let _sendNotification: ((options: { title: string; body: string }) => void) | null = null
+let _notifyReady = false
+
+async function ensureNotify() {
+  if (_notifyReady) return
+  _notifyReady = true
+  if (!isTauri()) return
+  try {
+    const mod = await import('@tauri-apps/plugin-notification')
+    let perm = await mod.isPermissionGranted()
+    if (!perm) {
+      const result = await mod.requestPermission()
+      perm = result === 'granted'
+    }
+    if (perm) {
+      _sendNotification = mod.sendNotification
+    }
+  } catch (e) {
+    console.warn('[tasks] notification plugin not available:', e)
+  }
+}
+
+function notify(title: string, body: string) {
+  if (_sendNotification) {
+    _sendNotification({ title, body })
+  }
+}
+
+export const useTasksStore = defineStore('tasks', () => {
+  /* ═══════════════════════════════════
+     配置
+     ═══════════════════════════════════ */
+  const config = ref<TasksConfig>(loadJSON(CONFIG_KEY, { ...defaultConfig }))
+
+  function updateConfig(patch: Partial<TasksConfig>) {
+    Object.assign(config.value, patch)
+    saveJSON(CONFIG_KEY, config.value)
+  }
+
+  function addCategory(name: string) {
+    if (name.trim() && !config.value.categories.includes(name.trim())) {
+      config.value.categories.push(name.trim())
+      saveJSON(CONFIG_KEY, config.value)
+    }
+  }
+
+  function removeCategory(name: string) {
+    config.value.categories = config.value.categories.filter(c => c !== name)
+    saveJSON(CONFIG_KEY, config.value)
+  }
+
+  /* ═══════════════════════════════════
+     每日任务
+     ═══════════════════════════════════ */
+  const tasks = ref<DailyTask[]>(loadJSON(TASKS_KEY, []))
+  const records = ref<DailyRecord[]>(loadJSON(RECORDS_KEY, []))
+
+  /** 当前逻辑日期 key */
+  const currentDayKey = computed(() => todayKey(config.value.resetTime))
+
+  /** 当日已完成 ID 集合 */
+  const todayCompletedIds = computed(() => {
+    const today = currentDayKey.value
+    const rec = records.value.find(r => r.date === today)
+    return new Set(rec?.completedIds ?? [])
+  })
+
+  /** 启用中的任务 */
+  const enabledTasks = computed(() =>
+    tasks.value.filter(t => t.enabled).sort((a, b) => a.sortOrder - b.sortOrder)
+  )
+
+  /** 按分类分组的任务 */
+  const tasksByCategory = computed(() => {
+    const groups = new Map<string, DailyTask[]>()
+    for (const t of enabledTasks.value) {
+      const cat = t.category || '未分类'
+      if (!groups.has(cat)) groups.set(cat, [])
+      groups.get(cat)!.push(t)
+    }
+    return groups
+  })
+
+  /** 所有已使用的分类 */
+  const usedCategories = computed(() => {
+    const cats = new Set<string>()
+    for (const t of tasks.value) {
+      if (t.category) cats.add(t.category)
+    }
+    return Array.from(cats)
+  })
+
+  /** 今日完成数 */
+  const completedCount = computed(() => {
+    const set = todayCompletedIds.value
+    return enabledTasks.value.filter(t => set.has(t.id)).length
+  })
+
+  /** 今日任务总数 */
+  const totalCount = computed(() => enabledTasks.value.length)
+
+  function persistTasks() { saveJSON(TASKS_KEY, tasks.value) }
+  function persistRecords() { saveJSON(RECORDS_KEY, records.value) }
+
+  function addTask(title: string, reminderTime?: string, category?: string) {
+    const maxOrder = tasks.value.reduce((m, t) => Math.max(m, t.sortOrder), 0)
+    tasks.value.push({
+      id: generateId(),
+      title,
+      reminderTime,
+      category,
+      enabled: true,
+      createdAt: new Date().toISOString(),
+      sortOrder: maxOrder + 1,
+    })
+    persistTasks()
+  }
+
+  function updateTask(id: string, patch: Partial<Pick<DailyTask, 'title' | 'reminderTime' | 'enabled' | 'category'>>) {
+    const t = tasks.value.find(x => x.id === id)
+    if (t) {
+      Object.assign(t, patch)
+      persistTasks()
+    }
+  }
+
+  function removeTask(id: string) {
+    tasks.value = tasks.value.filter(t => t.id !== id)
+    persistTasks()
+  }
+
+  function toggleComplete(id: string) {
+    const today = currentDayKey.value
+    let rec = records.value.find(r => r.date === today)
+    if (!rec) {
+      rec = { date: today, completedIds: [] }
+      records.value.push(rec)
+    }
+    const idx = rec.completedIds.indexOf(id)
+    if (idx >= 0) {
+      rec.completedIds.splice(idx, 1)
+    } else {
+      rec.completedIds.push(id)
+    }
+    persistRecords()
+  }
+
+  function isCompleted(id: string): boolean {
+    return todayCompletedIds.value.has(id)
+  }
+
+  /** 清理超过 30 天的记录 */
+  function cleanOldRecords() {
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - 30)
+    const cutoffStr = cutoff.toISOString().slice(0, 10)
+    records.value = records.value.filter(r => r.date >= cutoffStr)
+    persistRecords()
+  }
+
+  /* ═══════════════════════════════════
+     健康提醒
+     ═══════════════════════════════════ */
+  const healthReminder = ref<HealthReminder>(loadJSON(REMINDER_KEY, { ...defaultReminder }))
+
+  function updateReminder(patch: Partial<HealthReminder>) {
+    Object.assign(healthReminder.value, patch)
+    saveJSON(REMINDER_KEY, healthReminder.value)
+  }
+
+  function addReminderMessage(msg: string) {
+    if (msg.trim() && !healthReminder.value.messages.includes(msg.trim())) {
+      healthReminder.value.messages.push(msg.trim())
+      saveJSON(REMINDER_KEY, healthReminder.value)
+    }
+  }
+
+  function removeReminderMessage(index: number) {
+    healthReminder.value.messages.splice(index, 1)
+    saveJSON(REMINDER_KEY, healthReminder.value)
+  }
+
+  /** 上次健康提醒触发的分钟标记（避免同一分钟重复触发） */
+  const lastHealthTrigger = ref('')
+
+  /* ═══════════════════════════════════
+     倒计时器
+     ═══════════════════════════════════ */
+  const countdown = ref<CountdownState>({
+    isRunning: false,
+    isPaused: false,
+    totalSeconds: 25 * 60,
+    remainingSeconds: 25 * 60,
+  })
+
+  /** 倒计时结束标记（供 UI 读取） */
+  const countdownFinished = ref(false)
+
+  let countdownTimer: ReturnType<typeof setInterval> | null = null
+
+  function startCountdown(minutes: number) {
+    stopCountdown()
+    countdownFinished.value = false
+    const secs = minutes * 60
+    countdown.value = {
+      isRunning: true,
+      isPaused: false,
+      totalSeconds: secs,
+      remainingSeconds: secs,
+    }
+    countdownTimer = setInterval(() => {
+      if (!countdown.value.isPaused && countdown.value.isRunning) {
+        countdown.value.remainingSeconds--
+        if (countdown.value.remainingSeconds <= 0) {
+          countdown.value.remainingSeconds = 0
+          countdown.value.isRunning = false
+          countdownFinished.value = true
+          stopCountdown()
+          // ★ 直接发通知，零延迟
+          const mins = Math.round(countdown.value.totalSeconds / 60)
+          notify('Ω Notes — 计时结束', `${mins} 分钟倒计时已结束！`)
+        }
+      }
+    }, 1000)
+  }
+
+  function pauseCountdown() {
+    countdown.value.isPaused = !countdown.value.isPaused
+  }
+
+  function stopCountdown() {
+    if (countdownTimer) {
+      clearInterval(countdownTimer)
+      countdownTimer = null
+    }
+  }
+
+  function resetCountdown() {
+    stopCountdown()
+    countdownFinished.value = false
+    countdown.value = {
+      isRunning: false,
+      isPaused: false,
+      totalSeconds: countdown.value.totalSeconds,
+      remainingSeconds: countdown.value.totalSeconds,
+    }
+  }
+
+  /* ─── 初始化 ─── */
+  async function init() {
+    cleanOldRecords()
+    await ensureNotify()
+  }
+
+  return {
+    // 配置
+    config,
+    updateConfig,
+    addCategory,
+    removeCategory,
+    // 每日任务
+    tasks,
+    records,
+    currentDayKey,
+    enabledTasks,
+    tasksByCategory,
+    usedCategories,
+    todayCompletedIds,
+    completedCount,
+    totalCount,
+    addTask,
+    updateTask,
+    removeTask,
+    toggleComplete,
+    isCompleted,
+    cleanOldRecords,
+    // 健康提醒
+    healthReminder,
+    lastHealthTrigger,
+    updateReminder,
+    addReminderMessage,
+    removeReminderMessage,
+    // 倒计时
+    countdown,
+    countdownFinished,
+    startCountdown,
+    pauseCountdown,
+    stopCountdown,
+    resetCountdown,
+    // 通知（供 scheduler 复用）
+    notify,
+    // 初始化
+    init,
+  }
+})

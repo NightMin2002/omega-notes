@@ -37,6 +37,12 @@ const router = createRouter({
       meta: { title: '回收站' },
     },
     {
+      path: '/tasks',
+      name: 'tasks',
+      component: () => import('../views/TasksView.vue'),
+      meta: { title: '日常管理' },
+    },
+    {
       path: '/settings',
       name: 'settings',
       component: () => import('../views/SettingsView.vue'),
