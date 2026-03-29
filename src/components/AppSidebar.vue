@@ -100,8 +100,7 @@ function navigateFolder(path: string) {
 </script>
 
 <template>
-  <Transition name="sidebar-slide">
-    <aside v-show="!collapsed" class="sidebar">
+    <aside class="sidebar" :class="{ collapsed }">
       <nav class="sidebar-nav">
         <!-- 主导航 -->
         <div class="nav-section-label">导航</div>
@@ -343,7 +342,6 @@ function navigateFolder(path: string) {
         <span class="sidebar-version">Ω Notes v2.0.0</span>
       </div>
     </aside>
-  </Transition>
 
   <!-- 移动端遮罩 -->
   <Transition name="overlay-fade">
@@ -358,6 +356,7 @@ function navigateFolder(path: string) {
 <style scoped>
 .sidebar {
   width: var(--sidebar-width);
+  min-width: 0;
   height: 100%;
   background: var(--color-glass);
   backdrop-filter: blur(16px);
@@ -367,6 +366,14 @@ function navigateFolder(path: string) {
   flex-direction: column;
   flex-shrink: 0;
   z-index: var(--z-overlay);
+  overflow: hidden;
+  transition: width var(--duration-slow) var(--ease-out),
+              border-color var(--duration-slow) var(--ease-out);
+}
+
+.sidebar.collapsed {
+  width: 0;
+  border-right-color: transparent;
 }
 
 .sidebar-nav {
@@ -677,18 +684,6 @@ function navigateFolder(path: string) {
   max-height: 200px;
 }
 
-/* ─── 侧边栏过渡 ─── */
-.sidebar-slide-enter-active,
-.sidebar-slide-leave-active {
-  transition: transform var(--duration-slow) var(--ease-out),
-              opacity var(--duration-slow) var(--ease-out);
-}
-
-.sidebar-slide-enter-from,
-.sidebar-slide-leave-to {
-  transform: translateX(-100%);
-  opacity: 0;
-}
 
 /* ─── 移动端遮罩 ─── */
 .sidebar-overlay {

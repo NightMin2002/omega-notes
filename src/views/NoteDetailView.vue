@@ -287,6 +287,8 @@ const backlinks = computed(() => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: var(--space-6);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-divider);
   flex-wrap: wrap;
   gap: var(--space-3);
 }
@@ -392,7 +394,15 @@ const backlinks = computed(() => {
 }
 
 /* ─── 阅读模式 ─── */
-.note-article { padding-bottom: var(--space-12); }
+.note-article {
+  padding: var(--space-8);
+  padding-bottom: var(--space-12);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 3px var(--color-shadow),
+              inset 0 1px 0 var(--color-glass-border);
+}
 
 .note-title {
   font-size: clamp(1.5rem, 4vw, 2rem);

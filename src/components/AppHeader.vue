@@ -116,6 +116,7 @@ const themeStore = useThemeStore()
   height: 36px;
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
+  overflow: visible;
   transition: background-color var(--duration-fast) var(--ease-out),
               color var(--duration-fast) var(--ease-out);
 }

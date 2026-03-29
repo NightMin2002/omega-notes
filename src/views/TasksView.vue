@@ -570,12 +570,18 @@ const timeDisplay = computed(() => {
   width: 32px;
   height: 32px;
   color: var(--color-text-tertiary);
-  transition: color var(--duration-fast) var(--ease-out),
-              transform var(--duration-normal) var(--ease-out);
+  transition: color var(--duration-fast) var(--ease-out);
 }
 
 .settings-toggle.active {
   color: var(--color-accent);
+}
+
+.settings-toggle svg {
+  transition: transform var(--duration-normal) var(--ease-out);
+}
+
+.settings-toggle.active svg {
   transform: rotate(90deg);
 }
 
