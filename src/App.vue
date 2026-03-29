@@ -74,21 +74,15 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKeydown))
   transition: margin-left var(--duration-slow) var(--ease-out);
 }
 
-/* ─── 页面切换过渡（桌面风：快速、微缩放，避免网页感） ─── */
+/* ─── 页面切换过渡（纯 opacity，避免 transform 干扰拖拽定位） ─── */
 .page-fade-enter-active,
 .page-fade-leave-active {
-  transition: opacity 0.15s var(--ease-out),
-              transform 0.15s var(--ease-out);
+  transition: opacity 0.12s var(--ease-out);
 }
 
-.page-fade-enter-from {
-  opacity: 0;
-  transform: scale(0.99) translateY(4px);
-}
-
+.page-fade-enter-from,
 .page-fade-leave-to {
   opacity: 0;
-  transform: scale(0.99) translateY(-2px);
 }
 
 @media (prefers-reduced-motion: reduce) {

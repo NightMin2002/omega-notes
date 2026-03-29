@@ -231,3 +231,19 @@ textarea::placeholder {
     transition: none;
   }
 }
+
+/* ─── SortableJS 拖拽：全局样式（fallback 克隆体挂在 body 上，scoped 无效） ─── */
+/* ⚠️ 禁止设置 transform！SortableJS 用 translate3d() 内联样式移动克隆体 */
+.sortable-fallback {
+  opacity: 1 !important;
+  /* 独立属性，和 SortableJS 的 transform: translate3d() 叠加不冲突 */
+  rotate: 2deg !important;
+  scale: 1.03 !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35),
+              0 4px 12px rgba(0, 0, 0, 0.2) !important;
+  border-color: var(--color-accent) !important;
+  cursor: grabbing !important;
+  z-index: var(--z-modal) !important;
+  /* 必须清除继承的 transition，否则 translate3d 被过渡减速 */
+  transition: none !important;
+}

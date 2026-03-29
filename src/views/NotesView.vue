@@ -3,8 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useNotesStore } from '../stores/notes'
 import { useRouter, useRoute } from 'vue-router'
 import { previewHtml } from '../utils/markdown'
-import { VueDraggable } from 'vue-draggable-plus'
-import type { SortableEvent } from 'vue-draggable-plus'
+import { useDraggable } from 'vue-draggable-plus'
 
 const notesStore = useNotesStore()
 const router = useRouter()
@@ -102,16 +101,26 @@ function formatDate(dateStr: string): string {
   })
 }
 
-/* ─── 拖拽排序（vue-draggable-plus）─── */
+/* ─── 拖拽排序（useDraggable composable）─── */
+const gridRef = ref<HTMLElement | null>(null)
 const draggableNotes = ref<typeof displayedNotes.value>([])
 watch(displayedNotes, (val) => { draggableNotes.value = [...val] }, { immediate: true })
 
-function onDragEnd(e: SortableEvent) {
-  if (e.oldIndex == null || e.newIndex == null) return
-  if (e.oldIndex === e.newIndex) return
-  const ids = draggableNotes.value.map(n => n.id)
-  notesStore.reorderNotes(ids)
-}
+useDraggable(gridRef, draggableNotes, {
+  animation: 250,
+  forceFallback: true,
+  fallbackOnBody: true,
+  fallbackTolerance: 3,
+  ghostClass: 'sortable-ghost',
+  chosenClass: 'sortable-chosen',
+  fallbackClass: 'sortable-fallback',
+  delay: 80,
+  delayOnTouchOnly: true,
+  onEnd() {
+    const ids = draggableNotes.value.map(n => n.id)
+    notesStore.reorderNotes(ids)
+  },
+})
 </script>
 
 <template>
@@ -188,17 +197,11 @@ function onDragEnd(e: SortableEvent) {
       </button>
     </div>
 
-    <VueDraggable
-      v-if="displayedNotes.length > 0"
-      v-model="draggableNotes"
+    <!-- 笔记网格 -->
+    <div
+      v-show="displayedNotes.length > 0"
+      ref="gridRef"
       class="notes-grid"
-      :animation="200"
-      ghost-class="sortable-ghost"
-      chosen-class="sortable-chosen"
-      drag-class="sortable-drag"
-      :delay="120"
-      :delay-on-touch-only="true"
-      @end="onDragEnd"
     >
       <div
         v-for="note in draggableNotes"
@@ -227,10 +230,10 @@ function onDragEnd(e: SortableEvent) {
           <span class="note-card-date">{{ formatDate(note.updatedAt) }}</span>
         </div>
       </div>
-    </VueDraggable>
+    </div>
 
     <!-- 空状态 -->
-    <div v-else class="empty-state">
+    <div v-show="displayedNotes.length === 0" class="empty-state">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
         <polyline points="14 2 14 8 20 8" />
@@ -424,7 +427,8 @@ function onDragEnd(e: SortableEvent) {
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-lg);
-  transition: transform var(--duration-fast) var(--ease-out),
+  /* transform 让给 SortableJS 排斥动画，hover 用独立 translate */
+  transition: translate var(--duration-fast) var(--ease-out),
               box-shadow var(--duration-fast) var(--ease-out),
               border-color var(--duration-fast) var(--ease-out),
               opacity var(--duration-fast) var(--ease-out);
@@ -435,7 +439,7 @@ function onDragEnd(e: SortableEvent) {
 
 @media (hover: hover) {
   .note-card:hover {
-    transform: translateY(-3px);
+    translate: 0 -3px;
     box-shadow: var(--shadow-md);
     border-color: var(--color-border-strong);
   }
@@ -446,21 +450,15 @@ function onDragEnd(e: SortableEvent) {
 }
 
 /* ─── SortableJS 拖拽状态 ─── */
+
+/* ghost = 原位置占位符（标记放置目标） */
 .sortable-ghost {
-  opacity: 0.3;
-  transform: scale(0.97);
+  opacity: 0;
 }
 
+/* chosen = 被选中的原始元素（拖拽开始前短暂可见） */
 .sortable-chosen {
   cursor: grabbing;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  border-color: var(--color-accent) !important;
-  transform: scale(1.02);
-}
-
-.sortable-drag {
-  opacity: 0.9;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
 }
 
 .card-badges {
