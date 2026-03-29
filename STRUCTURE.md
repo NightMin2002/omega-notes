@@ -108,7 +108,7 @@ docs/
 | 文件 | 职责 | 修改频率 |
 |---|---|---|
 | `variables.css` | 定义所有 Design Token：颜色、间距、圆角、阴影、动效参数、层叠上下文。暗色主题为默认，亮色主题通过 `[data-theme='light']` 覆盖 | 低 — 仅在调整全局视觉时修改 |
-| `reset.css` | 消灭浏览器默认样式。包含 `box-sizing`、滚动条定制、焦点样式、表单元素重置、`::selection`、`prefers-reduced-motion` 降级 | 极低 — 几乎不需要改 |
+| `reset.css` | 消灭浏览器默认样式。包含 `box-sizing`、滚动条定制、焦点样式、表单元素重置、`::selection`、`prefers-reduced-motion` 降级、**SortableJS 拖拽克隆体全局样式** | 极低 — 几乎不需要改 |
 
 **加载顺序**：`main.ts` 中先 `import variables.css` 再 `import reset.css`，确保 Token 在重置规则可用。
 
@@ -135,7 +135,7 @@ docs/
 | 页面 | 路由 | 依赖的 Store | 功能 |
 |---|---|---|---|
 | `HomeView.vue` | `/` | `notes` | 统计卡片（总笔记/分类/已收藏/已置顶）、快捷入口、最近更新列表 |
-| `NotesView.vue` | `/notes` | `notes` | 搜索框、分类药丸、面包屑（嵌套分类时）、标签云筛选（`?tag=`）、收藏夹/最近视图（`?view=`）、笔记卡片网格 |
+| `NotesView.vue` | `/notes` | `notes` | 搜索框、分类药丸、面包屑（嵌套分类时）、标签云筛选（`?tag=`）、收藏夹/最近视图（`?view=`）、笔记卡片网格、**拖拽排序（useDraggable + SortableJS forceFallback）**、**Markdown 卡片预览** |
 | `WriteView.vue` | `/write` | `notes` | 模板选择器 → WYSIWYG/分屏编辑 + 图片插入 + `[[title]]` 链接插入 + 标题/分类/标签表单 |
 | `NoteDetailView.vue` | `/note/:id` | `notes` | 阅读模式 ↔ 编辑模式，收藏/置顶/删除，`[[title]]` 链接插入，自动记录到最近列表，反向链接面板 |
 | `TrashView.vue` | `/trash` | `notes` | 回收站：已删除笔记列表、恢复/永久删除、清空回收站确认 dialog |
@@ -147,6 +147,7 @@ docs/
 |---|---|---|
 | `markdown.ts` | `stripMarkdown(text)` | 剥离 Markdown 标记，返回纯文本 |
 | | `truncateText(text, max)` | 剥离标记 + 截断，用于卡片预览 |
+| | `previewHtml(text, max)` | Markdown → 安全 HTML 预览片段（保留换行/粗体/斜体，剥离复杂语法） |
 | `storage.ts` | `loadAllNotes()` | 从存储加载全部笔记（Tauri → .md 文件 / 浏览器 → localStorage） |
 | | `saveNote(note)` | 保存单条笔记 |
 | | `deleteNoteFile(id)` | 删除笔记文件 |
