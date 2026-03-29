@@ -397,60 +397,55 @@ const backlinks = computed(() => {
   }
 }
 
-/* ─── 阅读模式 — 极光玻璃卡片 ─── */
+/* ─── 阅读模式 — 方案 B：极光外发光 ─── */
 .note-article {
-  position: relative;
   border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
   overflow: hidden;
-  /* 双层边框：外层渐变 + 内层玻璃高光 */
-  padding: 1px; /* 留出渐变边框厚度 */
-  background:
-    linear-gradient(
-      135deg,
-      var(--color-accent) 0%,
-      rgba(99, 102, 241, 0.4) 25%,
-      rgba(168, 85, 247, 0.3) 50%,
-      rgba(59, 130, 246, 0.4) 75%,
-      var(--color-accent) 100%
-    );
-  background-size: 300% 300%;
-  animation: aurora-shift 8s ease-in-out infinite;
+  /* 外发光双层 */
+  box-shadow:
+    0 0 0 1px rgba(91, 127, 245, 0.2),
+    0 0 0 4px rgba(91, 127, 245, 0.06),
+    0 4px 24px var(--color-shadow);
 }
 
-@keyframes aurora-shift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .note-article { animation: none; }
-}
-
-/* Hero 区：标题 + 元信息，独立层级感 */
+/* Hero 区：标题 + 元信息 */
 .note-hero {
-  background: var(--color-bg-secondary);
+  background:
+    linear-gradient(135deg, rgba(91, 127, 245, 0.08) 0%, transparent 60%),
+    var(--color-bg-secondary);
   padding: var(--space-8) var(--space-8) var(--space-6);
   border-bottom: 1px solid var(--color-border);
   position: relative;
 }
 
-/* 底部高光线 */
+/* 顶部极光高光线 */
+.note-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 10%,
+    var(--color-accent) 30%,
+    rgba(168, 85, 247, 0.8) 50%,
+    var(--color-accent) 70%,
+    transparent 90%
+  );
+  opacity: 0.5;
+}
+
+/* 底部分割高光 */
 .note-hero::after {
   content: '';
   position: absolute;
-  bottom: 0;
-  left: var(--space-8);
-  right: var(--space-8);
+  bottom: -1px;
+  left: 0;
+  right: 0;
   height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--color-accent) 30%,
-    rgba(168, 85, 247, 0.6) 50%,
-    var(--color-accent) 70%,
-    transparent 100%
-  );
-  opacity: 0.5;
+  background: linear-gradient(90deg, transparent, rgba(91, 127, 245, 0.4), transparent);
 }
 
 /* 正文区 */
@@ -458,8 +453,6 @@ const backlinks = computed(() => {
   background: var(--color-bg-primary);
   padding: var(--space-6) var(--space-8) var(--space-12);
   min-height: 200px;
-  border-bottom-left-radius: calc(var(--radius-lg) - 1px);
-  border-bottom-right-radius: calc(var(--radius-lg) - 1px);
 }
 
 .note-title {
