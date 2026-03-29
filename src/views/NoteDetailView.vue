@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useNotesStore } from '../stores/notes'
 import { useSettingsStore } from '../stores/settings'
@@ -26,6 +26,12 @@ const editTags = ref('')
 const editorMode = ref<EditorMode>(settingsStore.defaultEditorMode)
 const detailTextareaRef = ref<HTMLTextAreaElement | null>(null)
 const editorKey = ref(0)
+
+// 支持的阅读模式方案
+const readingTheme = ref(localStorage.getItem('omega-reading-theme') || 'cyber')
+watch(readingTheme, (newVal) => {
+  localStorage.setItem('omega-reading-theme', newVal)
+})
 
 const {
   insertImageFromFile,
@@ -148,6 +154,45 @@ const backlinks = computed(() => {
               </button>
             </div>
           </template>
+          
+          <template v-else>
+            <!-- 阅读模式：视觉方案切换 -->
+            <div class="mode-switcher">
+              <button
+                class="mode-btn"
+                :class="{ active: readingTheme === 'aurora' }"
+                @click="readingTheme = 'aurora'"
+                data-tooltip="极光微光"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2v2" /><path d="M12 20v2" /><path d="M4.93 4.93l1.41 1.41" /><path d="M17.66 17.66l1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="M6.34 17.66l-1.41 1.41" /><path d="M19.07 4.93l-1.41 1.41" />
+                </svg>
+                <span>微光</span>
+              </button>
+              <button
+                class="mode-btn"
+                :class="{ active: readingTheme === 'glass' }"
+                @click="readingTheme = 'glass'"
+                data-tooltip="流光亚克力"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                </svg>
+                <span>玻璃</span>
+              </button>
+              <button
+                class="mode-btn"
+                :class="{ active: readingTheme === 'cyber' }"
+                @click="readingTheme = 'cyber'"
+                data-tooltip="星轨仪表盘"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" />
+                </svg>
+                <span>装甲</span>
+              </button>
+            </div>
+          </template>
 
           <button class="toolbar-btn" :class="{ active: note.isFavorite }" @click="toggleFavorite">
             <svg width="16" height="16" viewBox="0 0 24 24" :fill="note.isFavorite ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -246,7 +291,7 @@ const backlinks = computed(() => {
 
       <!-- 阅读模式 -->
       <template v-else>
-        <article class="note-article">
+        <article class="note-article" :class="`theme-${readingTheme}`">
           <header class="note-hero">
             <h1 class="note-title">{{ note.title || '未命名笔记' }}</h1>
 
@@ -397,20 +442,233 @@ const backlinks = computed(() => {
   }
 }
 
-/* ─── 阅读模式 — 方案 B：极光外发光 ─── */
-.note-article {
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  overflow: hidden;
-  /* 外发光双层 */
-  box-shadow:
-    0 0 0 1px rgba(91, 127, 245, 0.2),
-    0 0 0 4px rgba(91, 127, 245, 0.06),
-    0 4px 24px var(--color-shadow);
+/* =========================================
+   阅读模式 — 视觉方案：极光微光 (Aurora)
+   ========================================= */
+.theme-aurora {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
 }
 
-/* Hero 区：标题 + 元信息 */
-.note-hero {
+.theme-aurora .note-hero {
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-6) var(--space-8);
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08), 
+              0 0 0 1px rgba(99, 102, 241, 0.1);
+  transition: box-shadow 0.3s ease;
+}
+
+.theme-aurora .note-hero:hover {
+  box-shadow: 0 4px 24px rgba(99, 102, 241, 0.15), 
+              0 0 0 1px rgba(99, 102, 241, 0.2);
+}
+
+.theme-aurora .note-body {
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05),
+              0 0 0 1px var(--color-border);
+}
+
+.theme-aurora .note-title {
+  font-size: clamp(1.5rem, 4vw, 2.2rem);
+  font-weight: 800;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-4);
+}
+
+.theme-aurora .note-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+
+.theme-aurora .meta-category {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-bg-primary);
+  padding: 2px var(--space-3);
+  background: var(--color-accent);
+  border-radius: var(--radius-full);
+}
+
+.theme-aurora .meta-date {
+  font-size: 0.8rem;
+  color: var(--color-text-tertiary);
+}
+
+.theme-aurora .note-tags {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.theme-aurora .tag {
+  font-size: 0.75rem;
+  color: var(--color-accent);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-accent-muted);
+  border-radius: var(--radius-sm);
+}
+
+/* =========================================
+   阅读模式 — 视觉方案：星轨仪表盘 (Cyber)
+   ========================================= */
+.theme-cyber {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-2);
+}
+
+.theme-cyber .note-hero {
+  background: linear-gradient(145deg, var(--color-bg-secondary) 0%, var(--color-bg-primary) 100%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6) var(--space-8);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2),
+              inset 0 1px 1px rgba(255, 255, 255, 0.08); /* 顶部切边高光 */
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-cyber .note-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 16px 16px;
+  pointer-events: none;
+}
+
+.theme-cyber .note-hero::after {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, var(--color-accent) 0%, transparent 70%);
+  opacity: 0.15;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.theme-cyber .note-body {
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  padding: var(--space-8);
+  box-shadow: inset 0 8px 24px rgba(0, 0, 0, 0.3),
+              0 1px 0 rgba(255, 255, 255, 0.05); /* 底部物理反光 */
+  min-height: 400px;
+}
+
+.theme-cyber .note-body :deep(.markdown-body > *) {
+  position: relative;
+  padding-left: var(--space-4);
+  margin-left: calc(var(--space-4) * -1);
+  border-left: 2px solid transparent;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.25s var(--ease-out),
+              background-color 0.25s var(--ease-out);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.theme-cyber .note-body :deep(.markdown-body > *:hover) {
+  transform: translateX(6px);
+  border-color: var(--color-accent);
+  background-color: rgba(91, 127, 245, 0.05);
+}
+
+.theme-cyber .note-title {
+  font-size: clamp(1.5rem, 4vw, 2.2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-4);
+  position: relative;
+  z-index: 1;
+}
+
+.theme-cyber .note-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+  position: relative;
+  z-index: 1;
+}
+
+.theme-cyber .meta-category {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-bg-primary);
+  padding: 2px var(--space-3);
+  background: var(--color-text-secondary);
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.theme-cyber .meta-date {
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  color: var(--color-text-tertiary);
+}
+
+.theme-cyber .note-tags {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+}
+
+.theme-cyber .tag {
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--color-accent);
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border-radius: 2px;
+  border: 1px solid var(--color-accent);
+  text-transform: lowercase;
+}
+
+/* =========================================
+   阅读模式 — 视觉方案：流光亚克力 (Glass)
+   ========================================= */
+.theme-glass {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(var(--color-bg-primary), var(--color-bg-primary)) padding-box,
+    linear-gradient(135deg, rgba(99, 102, 241, 0.8) 0%, rgba(168, 85, 247, 0.8) 33%, rgba(236, 72, 153, 0.8) 66%, rgba(59, 130, 246, 0.8) 100%) border-box;
+  background-size: 100% 100%, 300% 300%;
+  animation: border-aurora 8s ease-in-out infinite;
+  box-shadow: 0 0 16px 2px rgba(99, 102, 241, 0.2), 0 4px 32px rgba(168, 85, 247, 0.2);
+}
+
+@keyframes border-aurora {
+  0%, 100% { background-position: 0% 0%, 0% 50%; }
+  50% { background-position: 0% 0%, 100% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-glass { animation: none; }
+}
+
+.theme-glass .note-hero {
   background:
     linear-gradient(135deg, rgba(91, 127, 245, 0.08) 0%, transparent 60%),
     var(--color-bg-secondary);
@@ -419,51 +677,37 @@ const backlinks = computed(() => {
   position: relative;
 }
 
-/* 顶部极光高光线 */
-.note-hero::before {
+.theme-glass .note-hero::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg,
-    transparent 10%,
-    var(--color-accent) 30%,
-    rgba(168, 85, 247, 0.8) 50%,
-    var(--color-accent) 70%,
-    transparent 90%
-  );
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent 10%, var(--color-accent) 30%, rgba(168, 85, 247, 0.8) 50%, var(--color-accent) 70%, transparent 90%);
   opacity: 0.5;
 }
 
-/* 底部分割高光 */
-.note-hero::after {
+.theme-glass .note-hero::after {
   content: '';
   position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 1px;
+  bottom: -1px; left: 0; right: 0; height: 1px;
   background: linear-gradient(90deg, transparent, rgba(91, 127, 245, 0.4), transparent);
 }
 
-/* 正文区 */
-.note-body {
+.theme-glass .note-body {
   background: var(--color-bg-primary);
   padding: var(--space-6) var(--space-8) var(--space-12);
   min-height: 200px;
 }
 
-.note-title {
+.theme-glass .note-title {
   font-size: clamp(1.5rem, 4vw, 2rem);
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.3;
   margin-bottom: var(--space-4);
+  color: var(--color-text-primary);
 }
 
-.note-meta {
+.theme-glass .note-meta {
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -471,7 +715,7 @@ const backlinks = computed(() => {
   margin-bottom: var(--space-4);
 }
 
-.meta-category {
+.theme-glass .meta-category {
   font-size: 0.8rem;
   font-weight: 500;
   color: var(--color-accent);
@@ -480,18 +724,18 @@ const backlinks = computed(() => {
   border-radius: var(--radius-full);
 }
 
-.meta-date {
+.theme-glass .meta-date {
   font-size: 0.8rem;
   color: var(--color-text-tertiary);
 }
 
-.note-tags {
+.theme-glass .note-tags {
   display: flex;
   gap: var(--space-2);
   flex-wrap: wrap;
 }
 
-.tag {
+.theme-glass .tag {
   font-size: 0.75rem;
   color: var(--color-text-secondary);
   padding: var(--space-1) var(--space-2);

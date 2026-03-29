@@ -180,10 +180,12 @@ const themeStore = useThemeStore()
 }
 /* ─── 侧边栏切换图标动画（☰ ↔ ×） ─── */
 .sidebar-toggle-icon .bar {
-  transform-origin: center;
   transition: transform var(--duration-normal) var(--ease-out),
               opacity var(--duration-fast) var(--ease-out);
 }
+.sidebar-toggle-icon .bar-top { transform-origin: 12px 6px; }
+.sidebar-toggle-icon .bar-mid { transform-origin: 12px 12px; }
+.sidebar-toggle-icon .bar-bot { transform-origin: 12px 18px; }
 
 .sidebar-toggle-icon:not(.collapsed) .bar-top {
   transform: translateY(6px) rotate(45deg);
