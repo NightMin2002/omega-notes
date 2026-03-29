@@ -101,22 +101,9 @@ async function ensureNotify() {
 }
 
 function notify(title: string, body: string) {
-  // 系统通知（后台/最小化时可见）
   if (_sendNotification) {
     _sendNotification({ title, body })
   }
-  // 应用内 Toast（前台时可见，可自定义样式）
-  if (_toastFn) {
-    _toastFn(title, body, 'info')
-  }
-}
-
-/** 应用内 Toast 推送回调 */
-let _toastFn: ((title: string, body: string, type: 'info' | 'success' | 'warning') => void) | null = null
-
-/** 注册应用内 Toast（在 App.vue 初始化时调用） */
-function registerToast(fn: typeof _toastFn) {
-  _toastFn = fn
 }
 
 export const useTasksStore = defineStore('tasks', () => {
@@ -382,7 +369,6 @@ export const useTasksStore = defineStore('tasks', () => {
     resetCountdown,
     // 通知（供 scheduler 复用）
     notify,
-    registerToast,
     // 初始化
     init,
   }

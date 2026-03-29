@@ -2,22 +2,12 @@
 import AppSidebar from './components/AppSidebar.vue'
 import AppHeader from './components/AppHeader.vue'
 import QuickNote from './components/QuickNote.vue'
-import AppToast from './components/AppToast.vue'
 import SearchDialog from './components/SearchDialog.vue'
-import { useTasksStore } from './stores/tasks'
-import { ref, onMounted, onUnmounted, provide } from 'vue'
-import { toastKey } from './utils/inject-keys'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 const sidebarCollapsed = ref(false)
 const showQuickNote = ref(false)
 const showSearch = ref(false)
-const toastRef = ref<InstanceType<typeof AppToast>>()
-
-function showToast(title: string, body: string, type: 'info' | 'success' | 'warning' = 'info', duration = 5000) {
-  toastRef.value?.push(title, body, type, duration)
-}
-
-provide(toastKey, showToast)
 
 function toggleSidebar() {
   sidebarCollapsed.value = !sidebarCollapsed.value
@@ -39,12 +29,7 @@ function handleGlobalKeydown(e: KeyboardEvent) {
 }
 
 
-onMounted(() => {
-  window.addEventListener('keydown', handleGlobalKeydown)
-  // 注册应用内 Toast 到 tasks store
-  const tasksStore = useTasksStore()
-  tasksStore.registerToast(showToast)
-})
+onMounted(() => window.addEventListener('keydown', handleGlobalKeydown))
 onUnmounted(() => window.removeEventListener('keydown', handleGlobalKeydown))
 </script>
 
@@ -71,7 +56,6 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKeydown))
   <!-- 全局弹窗 -->
   <QuickNote :open="showQuickNote" @close="showQuickNote = false" />
   <SearchDialog :open="showSearch" @close="showSearch = false" />
-  <AppToast ref="toastRef" />
 </template>
 
 <style scoped>

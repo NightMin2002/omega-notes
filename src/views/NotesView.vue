@@ -3,6 +3,8 @@ import { computed, ref, watch } from 'vue'
 import { useNotesStore } from '../stores/notes'
 import { useRouter, useRoute } from 'vue-router'
 import { truncateText } from '../utils/markdown'
+import { VueDraggable } from 'vue-draggable-plus'
+import type { SortableEvent } from 'vue-draggable-plus'
 
 const notesStore = useNotesStore()
 const router = useRouter()
@@ -100,83 +102,15 @@ function formatDate(dateStr: string): string {
   })
 }
 
-/* ─── 拖拽排序（pointer events 实现）─── */
-const draggedNoteId = ref<string | null>(null)
-const dropTargetId = ref<string | null>(null)
-const isDragging = ref(false)
-
-let dragStartX = 0
-let dragStartY = 0
-const DRAG_THRESHOLD = 5
-let pendingDragId: string | null = null
-
-function onCardPointerDown(e: PointerEvent, noteId: string) {
-  /* 仅主键 */
-  if (e.button !== 0) return
-  e.preventDefault()
-
-  /* 释放按钮的隐式指针捕获，否则 elementFromPoint 无法检测其他元素 */
-  const target = e.target as HTMLElement
-  try { target.releasePointerCapture(e.pointerId) } catch { /* 忽略 */ }
-
-  pendingDragId = noteId
-  dragStartX = e.clientX
-  dragStartY = e.clientY
-
-  document.addEventListener('pointermove', onDocPointerMove)
-  document.addEventListener('pointerup', onDocPointerUp)
-}
-
-function onDocPointerMove(e: PointerEvent) {
-  if (!pendingDragId) return
-  const dx = e.clientX - dragStartX
-  const dy = e.clientY - dragStartY
-
-  /* 超过阈值 → 开始拖拽 */
-  if (!isDragging.value && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
-    isDragging.value = true
-    draggedNoteId.value = pendingDragId
-  }
-
-  if (!isDragging.value) return
-
-  /* 检测当前悬停在哪个卡片上 */
-  const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null
-  const card = el?.closest('.note-card') as HTMLElement | null
-  if (card) {
-    const targetId = card.dataset.noteId ?? null
-    dropTargetId.value = targetId && targetId !== draggedNoteId.value ? targetId : null
-  } else {
-    dropTargetId.value = null
-  }
-}
-
-function onDocPointerUp() {
-  document.removeEventListener('pointermove', onDocPointerMove)
-  document.removeEventListener('pointerup', onDocPointerUp)
-
-  if (isDragging.value && draggedNoteId.value && dropTargetId.value) {
-    const ids = displayedNotes.value.map(n => n.id)
-    const fromIdx = ids.indexOf(draggedNoteId.value)
-    const toIdx = ids.indexOf(dropTargetId.value)
-    if (fromIdx !== -1 && toIdx !== -1) {
-      ids.splice(fromIdx, 1)
-      ids.splice(toIdx, 0, draggedNoteId.value)
-      notesStore.reorderNotes(ids)
-    }
-  }
-
-  /* 如果没有拖拽（只是点击），触发导航 */
-  const wasClick = !isDragging.value && pendingDragId
-  const clickedId = pendingDragId
-
-  draggedNoteId.value = null
-  dropTargetId.value = null
-  isDragging.value = false
-  pendingDragId = null
-
-  if (wasClick && clickedId) {
-    openNote(clickedId)
+/* ─── 拖拽排序（vue-draggable-plus）─── */
+function onDragEnd(e: SortableEvent) {
+  if (e.oldIndex == null || e.newIndex == null) return
+  if (e.oldIndex === e.newIndex) return
+  const ids = displayedNotes.value.map(n => n.id)
+  const [moved] = ids.splice(e.oldIndex, 1)
+  if (moved) {
+    ids.splice(e.newIndex, 0, moved)
+    notesStore.reorderNotes(ids)
   }
 }
 </script>
@@ -255,22 +189,25 @@ function onDocPointerUp() {
       </button>
     </div>
 
-    <!-- 笔记网格 -->
-    <div
+    <VueDraggable
       v-if="displayedNotes.length > 0"
+      :model-value="displayedNotes"
       class="notes-grid"
+      :animation="200"
+      ghost-class="sortable-ghost"
+      chosen-class="sortable-chosen"
+      drag-class="sortable-drag"
+      :delay="120"
+      :delay-on-touch-only="true"
+      @end="onDragEnd"
     >
       <button
         v-for="note in displayedNotes"
         :key="note.id"
         class="note-card"
-        :class="{
-          pinned: note.isPinned,
-          dragging: draggedNoteId === note.id,
-          'drop-target': dropTargetId === note.id,
-        }"
+        :class="{ pinned: note.isPinned }"
         :data-note-id="note.id"
-        @pointerdown="onCardPointerDown($event, note.id)"
+        @click="openNote(note.id)"
       >
         <div class="card-badges">
           <svg v-if="note.isFavorite" class="fav-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -288,7 +225,7 @@ function onDocPointerUp() {
           <span class="note-card-date">{{ formatDate(note.updatedAt) }}</span>
         </div>
       </button>
-    </div>
+    </VueDraggable>
 
     <!-- 空状态 -->
     <div v-else class="empty-state">
@@ -502,19 +439,26 @@ function onDocPointerUp() {
   }
 }
 
-.note-card.dragging {
-  opacity: 0.4;
-  transform: scale(0.98);
-  cursor: grabbing;
-}
-
-.note-card.drop-target {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 2px var(--color-accent-muted);
-}
-
 .note-card.pinned {
   border-color: var(--color-accent-muted);
+}
+
+/* ─── SortableJS 拖拽状态 ─── */
+.sortable-ghost {
+  opacity: 0.3;
+  transform: scale(0.97);
+}
+
+.sortable-chosen {
+  cursor: grabbing;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border-color: var(--color-accent) !important;
+  transform: scale(1.02);
+}
+
+.sortable-drag {
+  opacity: 0.9;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
 }
 
 .card-badges {
