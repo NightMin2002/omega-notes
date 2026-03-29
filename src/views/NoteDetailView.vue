@@ -28,7 +28,7 @@ const detailTextareaRef = ref<HTMLTextAreaElement | null>(null)
 const editorKey = ref(0)
 
 // 支持的阅读模式方案
-const readingTheme = ref(localStorage.getItem('omega-reading-theme') || 'cyber')
+const readingTheme = ref(localStorage.getItem('omega-reading-theme') || 'aurora')
 watch(readingTheme, (newVal) => {
   localStorage.setItem('omega-reading-theme', newVal)
 })
@@ -162,34 +162,23 @@ const backlinks = computed(() => {
                 class="mode-btn"
                 :class="{ active: readingTheme === 'aurora' }"
                 @click="readingTheme = 'aurora'"
-                data-tooltip="极光微光"
+                data-tooltip="精读模式"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 2v2" /><path d="M12 20v2" /><path d="M4.93 4.93l1.41 1.41" /><path d="M17.66 17.66l1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="M6.34 17.66l-1.41 1.41" /><path d="M19.07 4.93l-1.41 1.41" />
                 </svg>
-                <span>微光</span>
+                <span>精读</span>
               </button>
               <button
                 class="mode-btn"
-                :class="{ active: readingTheme === 'glass' }"
-                @click="readingTheme = 'glass'"
-                data-tooltip="流光亚克力"
+                :class="{ active: readingTheme === 'ink' }"
+                @click="readingTheme = 'ink'"
+                data-tooltip="笔墨模式"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <path d="M12 19l7-7 3 3-7 7-3-3z" /><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="M2 2l7.586 7.586" /><circle cx="11" cy="11" r="2" />
                 </svg>
-                <span>玻璃</span>
-              </button>
-              <button
-                class="mode-btn"
-                :class="{ active: readingTheme === 'cyber' }"
-                @click="readingTheme = 'cyber'"
-                data-tooltip="星轨仪表盘"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" />
-                </svg>
-                <span>装甲</span>
+                <span>笔墨</span>
               </button>
             </div>
           </template>
@@ -357,22 +346,34 @@ const backlinks = computed(() => {
   font-size: 0.85rem;
   font-weight: 500;
   color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
   transition: background-color var(--duration-fast) var(--ease-out),
-              color var(--duration-fast) var(--ease-out);
+              color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
+}
+
+.toolbar-btn:active {
+  transform: scale(0.98);
 }
 
 @media (hover: hover) {
   .toolbar-btn:hover {
     background: var(--color-bg-hover);
     color: var(--color-text-primary);
+    border-color: var(--color-border-strong);
   }
   .toolbar-btn.danger:hover {
     background: var(--color-danger-muted);
     color: var(--color-danger);
+    border-color: var(--color-danger);
   }
 }
 
-.toolbar-btn.active { color: var(--color-accent); }
+.toolbar-btn.active {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
 
 /* ─── 模式切换 ─── */
 .mode-switcher {
@@ -518,230 +519,97 @@ const backlinks = computed(() => {
 }
 
 /* =========================================
-   阅读模式 — 视觉方案：星轨仪表盘 (Cyber)
+   阅读模式 — 视觉方案：笔墨 (Ink)
+   极简层级，左侧边线 + 红线纸感
    ========================================= */
-.theme-cyber {
+.theme-ink {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
-  padding: var(--space-2);
+  gap: 0;
 }
 
-.theme-cyber .note-hero {
-  background: linear-gradient(145deg, var(--color-bg-secondary) 0%, var(--color-bg-primary) 100%);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-6) var(--space-8);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2),
-              inset 0 1px 1px rgba(255, 255, 255, 0.08); /* 顶部切边高光 */
+.theme-ink .note-hero {
+  padding: var(--space-8) var(--space-8) var(--space-6);
+  border-bottom: 2px solid var(--color-border);
   position: relative;
-  overflow: hidden;
 }
 
-.theme-cyber .note-hero::before {
+.theme-ink .note-hero::after {
   content: '';
   position: absolute;
-  inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
-  background-size: 16px 16px;
-  pointer-events: none;
+  left: var(--space-6);
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-accent-muted);
 }
 
-.theme-cyber .note-hero::after {
-  content: '';
-  position: absolute;
-  top: -50px;
-  right: -50px;
-  width: 250px;
-  height: 250px;
-  background: radial-gradient(circle, var(--color-accent) 0%, transparent 70%);
-  opacity: 0.15;
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.theme-cyber .note-body {
-  background: var(--color-bg-primary);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  padding: var(--space-8);
-  box-shadow: inset 0 8px 24px rgba(0, 0, 0, 0.3),
-              0 1px 0 rgba(255, 255, 255, 0.05); /* 底部物理反光 */
-  min-height: 400px;
-}
-
-.theme-cyber .note-body :deep(.markdown-body > *) {
-  position: relative;
-  padding-left: var(--space-4);
-  margin-left: calc(var(--space-4) * -1);
-  border-left: 2px solid transparent;
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-              border-color 0.25s var(--ease-out),
-              background-color 0.25s var(--ease-out);
-  border-radius: 0 var(--radius-md) var(--radius-md) 0;
-}
-
-.theme-cyber .note-body :deep(.markdown-body > *:hover) {
-  transform: translateX(6px);
-  border-color: var(--color-accent);
-  background-color: rgba(91, 127, 245, 0.05);
-}
-
-.theme-cyber .note-title {
-  font-size: clamp(1.5rem, 4vw, 2.2rem);
-  font-weight: 800;
+.theme-ink .note-title {
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--color-text-primary);
   margin-bottom: var(--space-4);
-  position: relative;
-  z-index: 1;
+  padding-left: var(--space-6);
 }
 
-.theme-cyber .note-meta {
+.theme-ink .note-meta {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   flex-wrap: wrap;
   margin-bottom: var(--space-4);
-  position: relative;
-  z-index: 1;
+  padding-left: var(--space-6);
 }
 
-.theme-cyber .meta-category {
+.theme-ink .meta-category {
   font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--color-bg-primary);
-  padding: 2px var(--space-3);
-  background: var(--color-text-secondary);
-  border-radius: 3px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.theme-cyber .meta-date {
-  font-size: 0.8rem;
-  font-family: var(--font-mono);
-  color: var(--color-text-tertiary);
-}
-
-.theme-cyber .note-tags {
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  position: relative;
-  z-index: 1;
-}
-
-.theme-cyber .tag {
-  font-size: 0.75rem;
-  font-family: var(--font-mono);
+  font-weight: 600;
   color: var(--color-accent);
-  padding: var(--space-1) var(--space-2);
-  background: transparent;
-  border-radius: 2px;
+  padding: var(--space-1) var(--space-3);
   border: 1px solid var(--color-accent);
-  text-transform: lowercase;
+  border-radius: var(--radius-sm);
 }
 
-/* =========================================
-   阅读模式 — 视觉方案：流光亚克力 (Glass)
-   ========================================= */
-.theme-glass {
-  position: relative;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  border: 1.5px solid transparent;
-  background:
-    linear-gradient(var(--color-bg-primary), var(--color-bg-primary)) padding-box,
-    linear-gradient(135deg, rgba(99, 102, 241, 0.8) 0%, rgba(168, 85, 247, 0.8) 33%, rgba(236, 72, 153, 0.8) 66%, rgba(59, 130, 246, 0.8) 100%) border-box;
-  background-size: 100% 100%, 300% 300%;
-  animation: border-aurora 8s ease-in-out infinite;
-  box-shadow: 0 0 16px 2px rgba(99, 102, 241, 0.2), 0 4px 32px rgba(168, 85, 247, 0.2);
-}
-
-@keyframes border-aurora {
-  0%, 100% { background-position: 0% 0%, 0% 50%; }
-  50% { background-position: 0% 0%, 100% 50%; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .theme-glass { animation: none; }
-}
-
-.theme-glass .note-hero {
-  background:
-    linear-gradient(135deg, rgba(91, 127, 245, 0.08) 0%, transparent 60%),
-    var(--color-bg-secondary);
-  padding: var(--space-8) var(--space-8) var(--space-6);
-  border-bottom: 1px solid var(--color-border);
-  position: relative;
-}
-
-.theme-glass .note-hero::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent 10%, var(--color-accent) 30%, rgba(168, 85, 247, 0.8) 50%, var(--color-accent) 70%, transparent 90%);
-  opacity: 0.5;
-}
-
-.theme-glass .note-hero::after {
-  content: '';
-  position: absolute;
-  bottom: -1px; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(91, 127, 245, 0.4), transparent);
-}
-
-.theme-glass .note-body {
-  background: var(--color-bg-primary);
-  padding: var(--space-6) var(--space-8) var(--space-12);
-  min-height: 200px;
-}
-
-.theme-glass .note-title {
-  font-size: clamp(1.5rem, 4vw, 2rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.3;
-  margin-bottom: var(--space-4);
-  color: var(--color-text-primary);
-}
-
-.theme-glass .note-meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-  margin-bottom: var(--space-4);
-}
-
-.theme-glass .meta-category {
+.theme-ink .meta-date {
   font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--color-accent);
-  padding: var(--space-1) var(--space-2);
-  background: var(--color-accent-muted);
-  border-radius: var(--radius-full);
-}
-
-.theme-glass .meta-date {
-  font-size: 0.8rem;
+  font-family: var(--font-mono);
   color: var(--color-text-tertiary);
 }
 
-.theme-glass .note-tags {
+.theme-ink .note-tags {
   display: flex;
   gap: var(--space-2);
   flex-wrap: wrap;
+  padding-left: var(--space-6);
 }
 
-.theme-glass .tag {
+.theme-ink .tag {
   font-size: 0.75rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-tertiary);
   padding: var(--space-1) var(--space-2);
-  background: var(--color-bg-tertiary);
-  border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
+  border-bottom: 1px dashed var(--color-text-tertiary);
+}
+
+.theme-ink .note-body {
+  padding: var(--space-6) var(--space-8) var(--space-12);
+  position: relative;
+  min-height: 300px;
+}
+
+.theme-ink .note-body::before {
+  content: '';
+  position: absolute;
+  left: var(--space-6);
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-accent-muted);
+}
+
+.theme-ink .note-body :deep(.markdown-body) {
+  padding-left: var(--space-6);
+  line-height: 1.9;
 }
 
 /* ─── 编辑表单 ─── */
@@ -785,13 +653,20 @@ const backlinks = computed(() => {
 .btn-save {
   background: var(--color-accent);
   color: var(--color-text-inverse);
+  border: 1px solid var(--color-accent);
 }
 
 .btn-save:disabled { opacity: 0.5; }
 
 @media (hover: hover) {
-  .btn-save:hover:not(:disabled) { background: var(--color-accent-hover); }
-  .btn-cancel:hover { background: var(--color-bg-hover); }
+  .btn-save:hover:not(:disabled) {
+    background: var(--color-accent-hover);
+    border-color: var(--color-accent-hover);
+  }
+  .btn-cancel:hover {
+    background: var(--color-bg-hover);
+    border-color: var(--color-border-strong);
+  }
 }
 
 .btn-cancel {

@@ -31,8 +31,8 @@ export function stripMarkdown(text: string): string {
   t = t.replace(/^[-*_]{3,}\s*$/gm, '')
   // 移除反斜杠转义
   t = t.replace(/\\([*_`~#\[\]()\\>+\-.!|])/g, '$1')
-  // 合并多余空白
-  t = t.replace(/\n{2,}/g, ' ')
+  // 合并多余空白，段落间用 · 分隔以保留层次感
+  t = t.replace(/\n{2,}/g, ' \u00b7 ')
   t = t.replace(/\n/g, ' ')
   return t.trim()
 }

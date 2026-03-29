@@ -3,7 +3,7 @@
  * QuickNote — 快速笔记弹窗
  * 随时随地记一笔，自动归类到"收件箱"
  */
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useNotesStore } from '../stores/notes'
 
 const props = defineProps<{
@@ -26,16 +26,37 @@ watch(() => props.open, (val) => {
   }
 })
 
+/** 计算下一个速记编号 */
+const nextQuickIndex = computed(() => {
+  const count = notesStore.activeNotes.filter(
+    n => n.category === '收件箱' && /^速记 #\d+$/.test(n.title)
+  ).length
+  return count + 1
+})
+
+/**
+ * 将 textarea 的单换行转换为 Markdown 段落分隔（双换行），
+ * 避免 Milkdown 编辑器和 markdown-it 渲染时吞掉换行。
+ */
+function normalizeLineBreaks(text: string): string {
+  return text
+    .replace(/\r\n/g, '\n')          // 统一为 LF
+    .replace(/\n{3,}/g, '\n\n')       // 3+ 换行压缩为 2
+    .replace(/(?<!\n)\n(?!\n)/g, '\n\n') // 单换行 → 双换行
+}
+
 async function save() {
   if (!content.value.trim() || isSaving.value) return
   isSaving.value = true
 
-  const firstLine = content.value.trim().split('\n')[0] || ''
-  const title = firstLine.replace(/^#+\s*/, '').slice(0, 50) || '快速笔记'
+  const normalized = normalizeLineBreaks(content.value.trim())
+  const firstLine = normalized.split('\n')[0] || ''
+  const extracted = firstLine.replace(/^#+\s*/, '').trim().slice(0, 50)
+  const title = extracted || `速记 #${nextQuickIndex.value}`
 
   await notesStore.addNote({
     title,
-    content: content.value.trim(),
+    content: normalized,
     category: '收件箱',
     tags: [],
   })
@@ -246,14 +267,19 @@ function handleKeydown(e: KeyboardEvent) {
   font-size: 0.85rem;
   background: var(--color-accent);
   color: var(--color-text-inverse);
+  border: 1px solid var(--color-accent);
   transition: background-color var(--duration-fast) var(--ease-out),
-              opacity var(--duration-fast) var(--ease-out);
+              opacity var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
 }
 
 .quick-note-save:disabled { opacity: 0.5; }
 
 @media (hover: hover) {
-  .quick-note-save:hover:not(:disabled) { background: var(--color-accent-hover); }
+  .quick-note-save:hover:not(:disabled) {
+    background: var(--color-accent-hover);
+    border-color: var(--color-accent-hover);
+  }
 }
 
 .spinner {
