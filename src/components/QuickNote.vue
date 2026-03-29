@@ -50,9 +50,7 @@ async function save() {
   isSaving.value = true
 
   const normalized = normalizeLineBreaks(content.value.trim())
-  const firstLine = normalized.split('\n')[0] || ''
-  const extracted = firstLine.replace(/^#+\s*/, '').trim().slice(0, 50)
-  const title = extracted || `速记 #${nextQuickIndex.value}`
+  const title = `速记 #${nextQuickIndex.value}`
 
   await notesStore.addNote({
     title,

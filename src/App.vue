@@ -2,12 +2,22 @@
 import AppSidebar from './components/AppSidebar.vue'
 import AppHeader from './components/AppHeader.vue'
 import QuickNote from './components/QuickNote.vue'
+import AppToast from './components/AppToast.vue'
 import SearchDialog from './components/SearchDialog.vue'
-import { ref, onMounted, onUnmounted } from 'vue'
+import { useTasksStore } from './stores/tasks'
+import { ref, onMounted, onUnmounted, provide } from 'vue'
+import { toastKey } from './utils/inject-keys'
 
 const sidebarCollapsed = ref(false)
 const showQuickNote = ref(false)
 const showSearch = ref(false)
+const toastRef = ref<InstanceType<typeof AppToast>>()
+
+function showToast(title: string, body: string, type: 'info' | 'success' | 'warning' = 'info', duration = 5000) {
+  toastRef.value?.push(title, body, type, duration)
+}
+
+provide(toastKey, showToast)
 
 function toggleSidebar() {
   sidebarCollapsed.value = !sidebarCollapsed.value
@@ -28,7 +38,13 @@ function handleGlobalKeydown(e: KeyboardEvent) {
   }
 }
 
-onMounted(() => window.addEventListener('keydown', handleGlobalKeydown))
+
+onMounted(() => {
+  window.addEventListener('keydown', handleGlobalKeydown)
+  // 注册应用内 Toast 到 tasks store
+  const tasksStore = useTasksStore()
+  tasksStore.registerToast(showToast)
+})
 onUnmounted(() => window.removeEventListener('keydown', handleGlobalKeydown))
 </script>
 
@@ -55,6 +71,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKeydown))
   <!-- 全局弹窗 -->
   <QuickNote :open="showQuickNote" @close="showQuickNote = false" />
   <SearchDialog :open="showSearch" @close="showSearch = false" />
+  <AppToast ref="toastRef" />
 </template>
 
 <style scoped>
@@ -73,21 +90,28 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKeydown))
   transition: margin-left var(--duration-slow) var(--ease-out);
 }
 
-/* ─── 页面切换过渡 ─── */
+/* ─── 页面切换过渡（桌面风：快速、微缩放，避免网页感） ─── */
 .page-fade-enter-active,
 .page-fade-leave-active {
-  transition: opacity var(--duration-normal) var(--ease-out),
-              transform var(--duration-normal) var(--ease-out);
+  transition: opacity 0.15s var(--ease-out),
+              transform 0.15s var(--ease-out);
 }
 
 .page-fade-enter-from {
   opacity: 0;
-  transform: translateY(8px);
+  transform: scale(0.99) translateY(4px);
 }
 
 .page-fade-leave-to {
   opacity: 0;
-  transform: translateY(-4px);
+  transform: scale(0.99) translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-fade-enter-active,
+  .page-fade-leave-active {
+    transition: none;
+  }
 }
 
 /* ─── 响应式 ─── */

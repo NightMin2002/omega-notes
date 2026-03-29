@@ -346,7 +346,7 @@ const backlinks = computed(() => {
   font-size: 0.85rem;
   font-weight: 500;
   color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-button);
   transition: background-color var(--duration-fast) var(--ease-out),
               color var(--duration-fast) var(--ease-out),
               border-color var(--duration-fast) var(--ease-out),
@@ -672,7 +672,7 @@ const backlinks = computed(() => {
 .btn-cancel {
   background: var(--color-bg-tertiary);
   color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-button);
 }
 
 .not-found {
