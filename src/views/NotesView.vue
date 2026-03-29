@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useNotesStore } from '../stores/notes'
 import { useRouter, useRoute } from 'vue-router'
-import { truncateText } from '../utils/markdown'
+import { previewHtml } from '../utils/markdown'
 import { VueDraggable } from 'vue-draggable-plus'
 import type { SortableEvent } from 'vue-draggable-plus'
 
@@ -103,15 +103,14 @@ function formatDate(dateStr: string): string {
 }
 
 /* ─── 拖拽排序（vue-draggable-plus）─── */
+const draggableNotes = ref<typeof displayedNotes.value>([])
+watch(displayedNotes, (val) => { draggableNotes.value = [...val] }, { immediate: true })
+
 function onDragEnd(e: SortableEvent) {
   if (e.oldIndex == null || e.newIndex == null) return
   if (e.oldIndex === e.newIndex) return
-  const ids = displayedNotes.value.map(n => n.id)
-  const [moved] = ids.splice(e.oldIndex, 1)
-  if (moved) {
-    ids.splice(e.newIndex, 0, moved)
-    notesStore.reorderNotes(ids)
-  }
+  const ids = draggableNotes.value.map(n => n.id)
+  notesStore.reorderNotes(ids)
 }
 </script>
 
@@ -191,7 +190,7 @@ function onDragEnd(e: SortableEvent) {
 
     <VueDraggable
       v-if="displayedNotes.length > 0"
-      :model-value="displayedNotes"
+      v-model="draggableNotes"
       class="notes-grid"
       :animation="200"
       ghost-class="sortable-ghost"
@@ -201,13 +200,16 @@ function onDragEnd(e: SortableEvent) {
       :delay-on-touch-only="true"
       @end="onDragEnd"
     >
-      <button
-        v-for="note in displayedNotes"
+      <div
+        v-for="note in draggableNotes"
         :key="note.id"
         class="note-card"
         :class="{ pinned: note.isPinned }"
         :data-note-id="note.id"
+        role="button"
+        tabindex="0"
         @click="openNote(note.id)"
+        @keydown.enter="openNote(note.id)"
       >
         <div class="card-badges">
           <svg v-if="note.isFavorite" class="fav-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -219,12 +221,12 @@ function onDragEnd(e: SortableEvent) {
           </svg>
         </div>
         <h3 class="note-card-title">{{ note.title || '未命名笔记' }}</h3>
-        <p class="note-card-content">{{ truncateText(note.content) }}</p>
+        <div class="note-card-content" v-html="previewHtml(note.content)" />
         <div class="note-card-footer">
           <span class="note-card-category">{{ note.category }}</span>
           <span class="note-card-date">{{ formatDate(note.updatedAt) }}</span>
         </div>
-      </button>
+      </div>
     </VueDraggable>
 
     <!-- 空状态 -->
@@ -492,11 +494,23 @@ function onDragEnd(e: SortableEvent) {
   font-size: 0.85rem;
   color: var(--color-text-secondary);
   line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
+  /* 3 行 × 1.5 行高 × 0.85rem ≈ 3.825rem，取整为 4em */
+  max-height: 4em;
   overflow: hidden;
   margin-bottom: var(--space-3);
+  word-break: break-word;
+}
+
+/* 预览内粗体 */
+.note-card-content :deep(strong) {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* 预览内斜体 */
+.note-card-content :deep(em) {
+  font-style: italic;
+  opacity: 0.85;
 }
 
 .note-card-footer {
