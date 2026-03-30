@@ -58,6 +58,10 @@ export interface ExportPayload {
   exportedAt: string
   noteCount: number
   notes: Note[]
+  /** 每日任务模板列表（v2.6+） */
+  tasks?: DailyTask[]
+  /** 每日完成记录（v2.6+） */
+  taskRecords?: DailyRecord[]
 }
 
 /** 编辑器模式 */
@@ -74,6 +78,8 @@ export interface AppSettings {
   fontFamily: FontFamily
   /** 回收站自动清理天数（0 = 不自动清理） */
   trashAutoCleanDays: number
+  /** 内容缩放百分比（80-150，默认 100） */
+  contentZoom: number
 }
 
 /* ═══════════════════════════════════

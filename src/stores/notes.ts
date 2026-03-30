@@ -334,19 +334,29 @@ export const useNotesStore = defineStore('notes', () => {
     )
   }
 
-  /** 批量导入笔记（跳过已存在的 ID） */
+  /** 批量导入笔记（ID 重复则跳过；标题重复则添加后缀） */
   async function importBatch(items: Partial<Note>[]): Promise<number> {
     const existingIds = new Set(notes.value.map(n => n.id))
+    /* 构建标题索引（包含回收站内笔记） */
+    const existingTitles = new Set(
+      notes.value.map(n => n.title.toLowerCase())
+    )
     let imported = 0
 
     for (const item of items) {
       const id = item.id || generateId()
       if (existingIds.has(id)) continue
 
+      let title = item.title || ''
+      /* 如果标题已存在（含回收站），给标题加后缀 */
+      if (title && existingTitles.has(title.toLowerCase())) {
+        title = `${title} (导入副本)`
+      }
+
       const now = new Date().toISOString()
       const note: Note = {
         id,
-        title: item.title || '',
+        title,
         content: item.content || '',
         category: item.category || '未分类',
         tags: item.tags || [],
@@ -357,6 +367,8 @@ export const useNotesStore = defineStore('notes', () => {
       }
       notes.value.unshift(note)
       await saveNote(note)
+      existingIds.add(id)
+      existingTitles.add(note.title.toLowerCase())
       imported++
     }
 

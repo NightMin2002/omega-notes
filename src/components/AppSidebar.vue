@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useNotesStore } from '../stores/notes'
+import { useTasksStore } from '../stores/tasks'
 import { exportNotesAsJson, importNotesFromFiles } from '../utils/dataio'
 
 defineProps<{
@@ -15,6 +16,7 @@ const emit = defineEmits<{
 const route = useRoute()
 const router = useRouter()
 const notesStore = useNotesStore()
+const tasksStore = useTasksStore()
 const showShortcuts = ref(false)
 
 const inboxCount = computed(() =>
@@ -31,15 +33,25 @@ function collapseIfMobile() {
 }
 
 async function handleExport() {
-  await exportNotesAsJson(notesStore.notes)
+  await exportNotesAsJson(notesStore.notes, tasksStore.tasks, tasksStore.records)
 }
 
 async function handleImport() {
-  const items = await importNotesFromFiles()
-  if (items.length === 0) return
-  const count = await notesStore.importBatch(items)
-  if (count > 0) {
-    importMessage.value = `已导入 ${count} 条笔记`
+  const data = await importNotesFromFiles()
+  if (data.notes.length === 0 && data.tasks.length === 0) return
+
+  const parts: string[] = []
+  if (data.notes.length > 0) {
+    const count = await notesStore.importBatch(data.notes)
+    if (count > 0) parts.push(`${count} 条笔记`)
+  }
+  if (data.tasks.length > 0) {
+    const count = tasksStore.importTasks(data.tasks, data.taskRecords)
+    if (count > 0) parts.push(`${count} 条任务`)
+  }
+
+  if (parts.length > 0) {
+    importMessage.value = `已导入 ${parts.join('、')}`
     setTimeout(() => { importMessage.value = '' }, 3000)
   }
 }

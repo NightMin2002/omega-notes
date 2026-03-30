@@ -1,4 +1,4 @@
-import type { Note, ExportPayload } from '@/types'
+import type { Note, ExportPayload, DailyTask, DailyRecord } from '@/types'
 import { isTauri, parseFrontmatter, parseTags } from '@/utils/storage'
 
 /** 浏览器环境下载文本文件 */
@@ -30,14 +30,21 @@ async function tauriSave(defaultName: string, content: string) {
   }
 }
 
-/** 导出全部笔记为 JSON */
-export async function exportNotesAsJson(notes: Note[]) {
+/** 导出全部笔记为 JSON（可选包含任务数据） */
+export async function exportNotesAsJson(
+  notes: Note[],
+  tasks?: DailyTask[],
+  taskRecords?: DailyRecord[],
+) {
   const payload: ExportPayload = {
     version: 2,
     exportedAt: new Date().toISOString(),
     noteCount: notes.length,
     notes,
   }
+  if (tasks && tasks.length > 0) payload.tasks = tasks
+  if (taskRecords && taskRecords.length > 0) payload.taskRecords = taskRecords
+
   const json = JSON.stringify(payload, null, 2)
   const date = new Date().toISOString().slice(0, 10)
   const filename = `omega-notes-${date}.json`
@@ -86,10 +93,33 @@ function readFileAsText(file: File): Promise<string> {
 }
 
 /**
- * 从用户选择的文件导入笔记
- * @returns 解析出的笔记数据（调用方负责去重和入库）
+ * 导入结果（包含笔记 + 可选的任务数据）
  */
-export async function importNotesFromFiles(): Promise<Partial<Note>[]> {
+export interface ImportResult {
+  notes: Partial<Note>[]
+  tasks: DailyTask[]
+  taskRecords: DailyRecord[]
+}
+
+/**
+ * 从用户选择的文件导入笔记（及可选的任务数据）
+ * @returns 解析出的数据（调用方负责去重和入库）
+ */
+export async function importNotesFromFiles(): Promise<ImportResult> {
+  const result: ImportResult = { notes: [], tasks: [], taskRecords: [] }
+
+  function processJson(data: any) {
+    if (data.notes && Array.isArray(data.notes)) {
+      result.notes.push(...data.notes)
+    }
+    if (data.tasks && Array.isArray(data.tasks)) {
+      result.tasks.push(...data.tasks)
+    }
+    if (data.taskRecords && Array.isArray(data.taskRecords)) {
+      result.taskRecords.push(...data.taskRecords)
+    }
+  }
+
   /* Tauri 环境：用原生文件对话框 */
   if (isTauri()) {
     const { open } = await import('@tauri-apps/plugin-dialog')
@@ -103,27 +133,23 @@ export async function importNotesFromFiles(): Promise<Partial<Note>[]> {
       }],
     })
 
-    if (!selected) return []
+    if (!selected) return result
     const paths = Array.isArray(selected) ? selected : [selected]
 
-    const results: Partial<Note>[] = []
     for (const filePath of paths) {
       try {
         const text = await readTextFile(filePath)
         if (filePath.endsWith('.json')) {
-          const data = JSON.parse(text)
-          if (data.notes && Array.isArray(data.notes)) {
-            results.push(...data.notes)
-          }
+          processJson(JSON.parse(text))
         } else if (filePath.endsWith('.md')) {
           const name = filePath.split(/[\\/]/).pop() || 'note.md'
-          results.push(parseMdFile(name, text))
+          result.notes.push(parseMdFile(name, text))
         }
       } catch (err) {
         console.error(`导入文件失败: ${filePath}`, err)
       }
     }
-    return results
+    return result
   }
 
   /* 浏览器环境：用 <input type="file"> */
@@ -134,11 +160,9 @@ export async function importNotesFromFiles(): Promise<Partial<Note>[]> {
     input.multiple = true
     input.onchange = async () => {
       if (!input.files || input.files.length === 0) {
-        resolve([])
+        resolve(result)
         return
       }
-
-      const results: Partial<Note>[] = []
 
       for (let i = 0; i < input.files.length; i++) {
         const file = input.files[i]!
@@ -146,21 +170,18 @@ export async function importNotesFromFiles(): Promise<Partial<Note>[]> {
           const text = await readFileAsText(file)
 
           if (file.name.endsWith('.json')) {
-            const data = JSON.parse(text)
-            if (data.notes && Array.isArray(data.notes)) {
-              results.push(...data.notes)
-            }
+            processJson(JSON.parse(text))
           } else if (file.name.endsWith('.md')) {
-            results.push(parseMdFile(file.name, text))
+            result.notes.push(parseMdFile(file.name, text))
           }
         } catch (err) {
           console.error(`导入文件失败: ${file.name}`, err)
         }
       }
 
-      resolve(results)
+      resolve(result)
     }
-    input.addEventListener('cancel', () => resolve([]))
+    input.addEventListener('cancel', () => resolve(result))
     input.click()
   })
 }

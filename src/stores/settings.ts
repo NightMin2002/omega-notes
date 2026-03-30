@@ -12,6 +12,7 @@ const defaults: AppSettings = {
   defaultEditorMode: 'wysiwyg',
   fontFamily: 'system',
   trashAutoCleanDays: 30,
+  contentZoom: 100,
 }
 
 function loadSettings(): AppSettings {
@@ -42,6 +43,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const defaultEditorMode = computed(() => settings.value.defaultEditorMode)
   const fontFamily = computed(() => settings.value.fontFamily)
   const trashAutoCleanDays = computed(() => settings.value.trashAutoCleanDays)
+  const contentZoom = computed(() => settings.value.contentZoom)
 
   // ─── Actions ───
   function setDefaultEditorMode(mode: EditorMode) {
@@ -60,13 +62,24 @@ export const useSettingsStore = defineStore('settings', () => {
     persist(settings.value)
   }
 
+  function setContentZoom(zoom: number) {
+    settings.value.contentZoom = Math.max(80, Math.min(150, zoom))
+    applyZoom(settings.value.contentZoom)
+    persist(settings.value)
+  }
+
+  function applyZoom(zoom: number) {
+    document.documentElement.style.setProperty('--content-zoom', `${zoom}%`)
+  }
+
   function applyFont(family: FontFamily) {
     document.documentElement.style.setProperty('--font-sans', fontMap[family])
   }
 
-  /** 初始化时应用已保存的字体 */
+  /** 初始化时应用已保存的字体和缩放 */
   function init() {
     applyFont(settings.value.fontFamily)
+    applyZoom(settings.value.contentZoom)
   }
 
   return {
@@ -74,9 +87,11 @@ export const useSettingsStore = defineStore('settings', () => {
     defaultEditorMode,
     fontFamily,
     trashAutoCleanDays,
+    contentZoom,
     setDefaultEditorMode,
     setFontFamily,
     setTrashAutoCleanDays,
+    setContentZoom,
     init,
   }
 })

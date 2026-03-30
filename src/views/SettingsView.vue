@@ -189,6 +189,45 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside, true
           </button>
         </div>
       </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <span class="setting-label">内容缩放</span>
+          <span class="setting-desc">调整笔记内容区域的字体大小（{{ settingsStore.contentZoom }}%）</span>
+        </div>
+        <div class="zoom-controls">
+          <button
+            type="button"
+            class="zoom-btn"
+            :disabled="settingsStore.contentZoom <= 80"
+            @click="settingsStore.setContentZoom(settingsStore.contentZoom - 5)"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+          <div class="zoom-track">
+            <div class="zoom-fill" :style="{ width: ((settingsStore.contentZoom - 80) / 70 * 100) + '%' }" />
+          </div>
+          <button
+            type="button"
+            class="zoom-btn"
+            :disabled="settingsStore.contentZoom >= 150"
+            @click="settingsStore.setContentZoom(settingsStore.contentZoom + 5)"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="zoom-reset"
+            :disabled="settingsStore.contentZoom === 100"
+            @click="settingsStore.setContentZoom(100)"
+          >重置</button>
+        </div>
+      </div>
     </section>
 
     <!-- ═══ 编辑器 ═══ -->
@@ -919,4 +958,98 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside, true
     border-bottom: 1px solid var(--color-divider);
   }
 }
+
+/* ═══ 缩放控制 ═══ */
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.zoom-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+
+.zoom-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.zoom-btn:not(:disabled):active {
+  transform: scale(0.92);
+  background: var(--color-accent-muted);
+  color: var(--color-accent);
+}
+
+@media (hover: hover) {
+  .zoom-btn:not(:disabled):hover {
+    border-color: var(--color-border-strong);
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+  }
+}
+
+.zoom-btn:focus-visible {
+  border-color: var(--color-accent);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-accent-muted);
+}
+
+.zoom-track {
+  width: 80px;
+  height: 4px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.zoom-fill {
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: var(--radius-full);
+  transition: width var(--duration-fast) var(--ease-out);
+}
+
+.zoom-reset {
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  color: var(--color-text-tertiary);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  transition: color var(--duration-fast) var(--ease-out),
+              background-color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+
+.zoom-reset:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.zoom-reset:not(:disabled):active {
+  transform: scale(0.96);
+}
+
+@media (hover: hover) {
+  .zoom-reset:not(:disabled):hover {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+    background: var(--color-accent-muted);
+  }
+}
+
 </style>

@@ -414,9 +414,21 @@ const backlinks = computed(() => {
   justify-content: space-between;
   margin-bottom: var(--space-6);
   padding-bottom: var(--space-4);
+  padding-top: var(--space-4);
   border-bottom: 1px solid var(--color-divider);
   flex-wrap: wrap;
   gap: var(--space-3);
+  /* #15: 粘性定位 */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  margin-left: calc(-1 * var(--space-6, 24px));
+  margin-right: calc(-1 * var(--space-6, 24px));
+  padding-left: var(--space-6, 24px);
+  padding-right: var(--space-6, 24px);
 }
 
 .toolbar-actions {

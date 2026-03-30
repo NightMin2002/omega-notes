@@ -260,6 +260,18 @@ const timeDisplay = computed(() => {
             <div v-if="groupedTasks.length > 1 || group.name !== '未分类'" class="group-label">
               <span class="group-name">{{ group.name }}</span>
               <span class="group-count">{{ group.tasks.length }}</span>
+              <button
+                type="button"
+                v-if="group.tasks.some(t => !store.isCompleted(t.id) && !store.isSkipped(t.id))"
+                class="btn-complete-all"
+                @click="store.completeAllInCategory(group.name)"
+                data-tooltip="一键完成此分类"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                全部完成
+              </button>
             </div>
 
             <div
@@ -768,6 +780,40 @@ const timeDisplay = computed(() => {
   background: var(--color-bg-tertiary);
   padding: 0 var(--space-1);
   border-radius: var(--radius-sm);
+}
+
+.btn-complete-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  font-size: 0.62rem;
+  font-weight: 500;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
+  color: var(--color-success, #48bb78);
+  background: transparent;
+  border: 1px solid var(--color-success, #48bb78);
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out),
+              background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
+}
+
+.group-label:hover .btn-complete-all { opacity: 1; }
+
+.btn-complete-all:active { transform: scale(0.95); }
+
+@media (hover: hover) {
+  .btn-complete-all:hover {
+    background: var(--color-success, #48bb78);
+    color: var(--color-text-inverse);
+  }
+}
+
+@media (hover: none) {
+  .btn-complete-all { opacity: 1; }
 }
 
 /* ═══════════════════════════════

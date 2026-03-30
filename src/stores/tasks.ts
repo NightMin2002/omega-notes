@@ -267,6 +267,60 @@ export const useTasksStore = defineStore('tasks', () => {
     return todaySkippedIds.value.has(id)
   }
 
+  /** 一键完成某分类下所有未完成任务 */
+  function completeAllInCategory(category: string) {
+    const today = currentDayKey.value
+    let rec = records.value.find(r => r.date === today)
+    if (!rec) {
+      rec = { date: today, completedIds: [], skippedIds: [] }
+      records.value.push(rec)
+    }
+    for (const task of enabledTasks.value) {
+      const taskCat = task.category || '未分类'
+      if (taskCat === category && !rec.completedIds.includes(task.id)) {
+        rec.completedIds.push(task.id)
+      }
+    }
+    persistRecords()
+  }
+
+  /** 导入任务（跳过已存在的 ID） */
+  function importTasks(incoming: DailyTask[], incomingRecords?: DailyRecord[]): number {
+    const existingIds = new Set(tasks.value.map(t => t.id))
+    let imported = 0
+    for (const t of incoming) {
+      if (!existingIds.has(t.id)) {
+        tasks.value.push(t)
+        existingIds.add(t.id)
+        imported++
+      }
+    }
+    if (imported > 0) persistTasks()
+
+    /* 合并完成记录 */
+    if (incomingRecords && incomingRecords.length > 0) {
+      for (const ir of incomingRecords) {
+        const existing = records.value.find(r => r.date === ir.date)
+        if (existing) {
+          for (const cid of ir.completedIds) {
+            if (!existing.completedIds.includes(cid)) existing.completedIds.push(cid)
+          }
+          if (ir.skippedIds) {
+            if (!existing.skippedIds) existing.skippedIds = []
+            for (const sid of ir.skippedIds) {
+              if (!existing.skippedIds.includes(sid)) existing.skippedIds.push(sid)
+            }
+          }
+        } else {
+          records.value.push(ir)
+        }
+      }
+      persistRecords()
+    }
+
+    return imported
+  }
+
   /* ═══════════════════════════════════
      健康提醒
      ═══════════════════════════════════ */
@@ -385,6 +439,8 @@ export const useTasksStore = defineStore('tasks', () => {
     cleanOldRecords,
     toggleSkip,
     isSkipped,
+    completeAllInCategory,
+    importTasks,
     // 健康提醒
     healthReminder,
     lastHealthTrigger,
