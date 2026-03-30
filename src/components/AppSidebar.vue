@@ -409,7 +409,7 @@ function navigateFolder(path: string) {
 
 .nav-divider {
   height: 1px;
-  background: var(--color-divider);
+  background: linear-gradient(90deg, transparent, var(--color-divider) 20%, var(--color-divider) 80%, transparent);
   margin: var(--space-2) var(--space-3);
 }
 
@@ -523,20 +523,36 @@ function navigateFolder(path: string) {
   color: var(--color-text-secondary);
   font-size: 0.9rem;
   font-weight: 500;
+  position: relative;
   transition: background-color var(--duration-fast) var(--ease-out),
-              color var(--duration-fast) var(--ease-out);
+              color var(--duration-fast) var(--ease-out),
+              translate var(--duration-fast) var(--ease-out);
 }
 
 @media (hover: hover) {
   .nav-item:hover {
     background: var(--color-bg-hover);
     color: var(--color-text-primary);
+    translate: 2px 0;
   }
 }
 
 .nav-item.active {
   background: var(--color-accent-muted);
   color: var(--color-accent);
+}
+
+/* 活跃指示条 */
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 16px;
+  border-radius: 0 var(--radius-full) var(--radius-full) 0;
+  background: var(--color-accent);
 }
 
 .nav-label {

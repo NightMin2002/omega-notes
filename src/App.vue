@@ -71,7 +71,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKeydown))
   overflow-y: auto;
   overflow-x: hidden;
   padding: var(--space-6);
-  font-size: var(--content-zoom, 100%);
+  zoom: var(--content-zoom, 1);
   transition: margin-left var(--duration-slow) var(--ease-out);
 }
 

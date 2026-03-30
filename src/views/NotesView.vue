@@ -107,13 +107,16 @@ const draggableNotes = ref<typeof displayedNotes.value>([])
 watch(displayedNotes, (val) => { draggableNotes.value = [...val] }, { immediate: true })
 
 useDraggable(gridRef, draggableNotes, {
-  animation: 250,
+  animation: 200,
   forceFallback: true,
   fallbackOnBody: true,
   fallbackTolerance: 3,
   ghostClass: 'sortable-ghost',
   chosenClass: 'sortable-chosen',
   fallbackClass: 'sortable-fallback',
+  /* CSS Grid 优化：降低交换灵敏度，防止拖拽时频繁抖动 */
+  swapThreshold: 0.65,
+  invertSwap: true,
   delay: 80,
   delayOnTouchOnly: true,
   onStart() {
@@ -122,9 +125,16 @@ useDraggable(gridRef, draggableNotes, {
   onEnd() {
     const ids = draggableNotes.value.map(n => n.id)
     notesStore.reorderNotes(ids)
-    /* 延迟移除，避免 SortableJS 将元素放回 DOM 时 CSS transition 引发抽搐 */
+    /*
+     * 拖拽结束后 SortableJS 将元素放回 DOM 触发布局重排。
+     * 必须等到浏览器完成两次渲染帧（reflow + paint），
+     * 再移除 is-dragging 恢复正常样式，否则 transition 会
+     * 让元素从旧位置"飞"到新位置产生抽搐。
+     */
     requestAnimationFrame(() => {
-      setTimeout(() => gridRef.value?.classList.remove('is-dragging'), 60)
+      requestAnimationFrame(() => {
+        gridRef.value?.classList.remove('is-dragging')
+      })
     })
   },
 })
@@ -463,14 +473,15 @@ useDraggable(gridRef, draggableNotes, {
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-lg);
-  /* transform 让给 SortableJS 排斥动画，hover 用独立 translate */
+  /* hover 用独立 translate（不干扰 SortableJS 的 transform） */
   transition: translate var(--duration-fast) var(--ease-out),
               box-shadow var(--duration-fast) var(--ease-out),
-              border-color var(--duration-fast) var(--ease-out),
-              opacity var(--duration-fast) var(--ease-out);
+              border-color var(--duration-fast) var(--ease-out);
   cursor: grab;
   user-select: none;
   touch-action: none;
+  /* GPU 加速，减少拖拽时视觉闪烁 */
+  will-change: transform;
 }
 
 @media (hover: hover) {
@@ -485,21 +496,26 @@ useDraggable(gridRef, draggableNotes, {
   border-color: var(--color-accent-muted);
 }
 
-/* ─── SortableJS 拖拽状态 ─── */
+/* --- SortableJS 拖拽状态 --- */
 
-/* ghost = 原位置占位符（标记放置目标） */
+/* ghost = 原位置占位符 */
 .sortable-ghost {
   opacity: 0;
+  pointer-events: none;
 }
 
-/* chosen = 被选中的原始元素（拖拽开始前短暂可见） */
+/* chosen = 被选中的原始元素 */
 .sortable-chosen {
   cursor: grabbing;
 }
 
-/* 拖拽过程中禁用卡片 transition，避免拖拽结束后抽搐拖动 */
+/*
+ * 拖拽进行中：完全禁用卡片 transition + hover translate，
+ * 避免 SortableJS 移动 DOM 节点时 CSS 过渡产生「抽搐」。
+ */
 .is-dragging .note-card {
   transition: none !important;
+  translate: none !important;
 }
 
 .card-badges {

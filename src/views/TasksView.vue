@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { useTasksStore } from '../stores/tasks'
 import TimePicker from '../components/TimePicker.vue'
 
@@ -15,6 +15,16 @@ const editTitle = ref('')
 const editTime = ref<string | undefined>()
 const editCategory = ref('')
 const activeFilter = ref<string | null>(null)
+
+/* ─── 显示模式 & 主题 ─── */
+const taskDisplayMode = ref<'list' | 'card'>(
+  (localStorage.getItem('omega-task-display') as 'list' | 'card') || 'list'
+)
+const taskTheme = ref(
+  localStorage.getItem('omega-task-theme') || 'default'
+)
+watch(taskDisplayMode, v => localStorage.setItem('omega-task-display', v))
+watch(taskTheme, v => localStorage.setItem('omega-task-theme', v))
 
 function handleAddTask() {
   if (!newTaskTitle.value.trim()) return
@@ -223,6 +233,27 @@ const timeDisplay = computed(() => {
             <h2>每日任务</h2>
           </div>
           <span class="task-counter">{{ store.completedCount }}/{{ store.totalCount }}</span>
+          <div class="view-controls">
+            <div class="view-toggle">
+              <button type="button" class="view-btn" :class="{ active: taskDisplayMode === 'list' }" @click="taskDisplayMode = 'list'" data-tooltip="列表">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
+                  <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
+                </svg>
+              </button>
+              <button type="button" class="view-btn" :class="{ active: taskDisplayMode === 'card' }" @click="taskDisplayMode = 'card'" data-tooltip="卡片">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
+                  <rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
+                </svg>
+              </button>
+            </div>
+            <div class="theme-pills">
+              <button type="button" class="theme-pill" :class="{ active: taskTheme === 'default' }" @click="taskTheme = 'default'">默认</button>
+              <button type="button" class="theme-pill" :class="{ active: taskTheme === 'minimal' }" @click="taskTheme = 'minimal'">简约</button>
+              <button type="button" class="theme-pill" :class="{ active: taskTheme === 'colorful' }" @click="taskTheme = 'colorful'">彩色</button>
+            </div>
+          </div>
         </div>
 
         <!-- 分类筛选 -->
@@ -251,7 +282,7 @@ const timeDisplay = computed(() => {
         </div>
 
         <!-- 任务列表 -->
-        <div class="task-list">
+        <div class="task-list" :class="[`display-${taskDisplayMode}`, `theme-${taskTheme}`]">
           <div v-if="filteredTasks.length === 0" class="empty-state">
             {{ activeFilter ? `「${activeFilter}」下没有任务` : '还没有任务，点击下方添加' }}
           </div>
@@ -721,6 +752,89 @@ const timeDisplay = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* ── 视图控件 ── */
+.view-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.view-toggle {
+  display: flex;
+  gap: 2px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+
+.view-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-tertiary);
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.view-btn.active {
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  box-shadow: 0 1px 3px var(--color-shadow);
+}
+
+@media (hover: hover) {
+  .view-btn:not(.active):hover {
+    color: var(--color-text-secondary);
+  }
+}
+
+.view-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-accent-muted);
+}
+
+.theme-pills {
+  display: flex;
+  gap: 2px;
+}
+
+.theme-pill {
+  font-size: 0.62rem;
+  font-weight: 500;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  color: var(--color-text-tertiary);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+
+.theme-pill.active {
+  background: var(--color-accent-muted);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+@media (hover: hover) {
+  .theme-pill:not(.active):hover {
+    border-color: var(--color-border-strong);
+    color: var(--color-text-secondary);
+  }
+}
+
+.theme-pill:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-accent-muted);
 }
 
 .card-title-row {
@@ -1493,4 +1607,157 @@ const timeDisplay = computed(() => {
     transition: none;
   }
 }
+
+/* ═══════════════════════════════
+   #4 卡片视图模式
+   ═══════════════════════════════ */
+.task-list.display-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-2);
+}
+
+.display-card .group-label {
+  grid-column: 1 / -1;
+}
+
+.display-card .task-row {
+  flex-direction: column;
+  align-items: stretch;
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  gap: var(--space-2);
+  transition: translate var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .display-card .task-row:hover {
+    translate: 0 -2px;
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-border-strong);
+  }
+}
+
+.display-card .task-row:active {
+  transform: scale(0.98);
+}
+
+.display-card .task-check {
+  order: -1;
+}
+
+.display-card .task-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.display-card .task-actions {
+  opacity: 1;
+  justify-content: flex-end;
+  border-top: 1px solid var(--color-divider);
+  padding-top: var(--space-1);
+  margin-top: auto;
+}
+
+.display-card .badge {
+  align-self: flex-start;
+}
+
+/* ═══════════════════════════════
+   #4 简约主题
+   ═══════════════════════════════ */
+.theme-minimal .task-row {
+  border-bottom: 1px dashed var(--color-divider);
+  border-radius: 0;
+  padding: var(--space-1) 0;
+}
+
+@media (hover: hover) {
+  .theme-minimal .task-row:hover {
+    background: transparent;
+  }
+}
+
+.theme-minimal .task-name {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+}
+
+.theme-minimal .task-row.completed .task-name {
+  opacity: 0.4;
+}
+
+.theme-minimal .badge {
+  opacity: 0.6;
+  font-size: 0.6rem;
+}
+
+.theme-minimal .check-box {
+  width: 16px;
+  height: 16px;
+  border-width: 1.5px;
+  border-radius: var(--radius-full);
+}
+
+.theme-minimal .group-label {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* card + minimal */
+.display-card.theme-minimal .task-row {
+  border-bottom: none;
+  border: 1px dashed var(--color-divider);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+}
+
+/* ═══════════════════════════════
+   #4 彩色主题
+   ═══════════════════════════════ */
+.theme-colorful .task-row {
+  border-left: 3px solid var(--color-accent);
+  padding-left: calc(var(--space-2) + 1px);
+  border-radius: var(--radius-sm);
+}
+
+.theme-colorful .group-label {
+  background: var(--color-accent-muted);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+}
+
+.theme-colorful .group-name {
+  color: var(--color-accent);
+}
+
+/* 不同分类用不同色相 */
+.theme-colorful .task-row:nth-child(6n+1) { border-left-color: oklch(0.72 0.15 240); }
+.theme-colorful .task-row:nth-child(6n+2) { border-left-color: oklch(0.72 0.15 160); }
+.theme-colorful .task-row:nth-child(6n+3) { border-left-color: oklch(0.72 0.15 30); }
+.theme-colorful .task-row:nth-child(6n+4) { border-left-color: oklch(0.72 0.15 300); }
+.theme-colorful .task-row:nth-child(6n+5) { border-left-color: oklch(0.72 0.15 80); }
+
+.theme-colorful .check-box.checked {
+  background: oklch(0.72 0.15 160);
+  border-color: oklch(0.72 0.15 160);
+}
+
+/* card + colorful */
+.display-card.theme-colorful .task-row {
+  border-left-width: 4px;
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-accent);
+}
+
+.display-card.theme-colorful .task-row:nth-child(6n+1) { border-left-color: oklch(0.72 0.15 240); }
+.display-card.theme-colorful .task-row:nth-child(6n+2) { border-left-color: oklch(0.72 0.15 160); }
+.display-card.theme-colorful .task-row:nth-child(6n+3) { border-left-color: oklch(0.72 0.15 30); }
+.display-card.theme-colorful .task-row:nth-child(6n+4) { border-left-color: oklch(0.72 0.15 300); }
+.display-card.theme-colorful .task-row:nth-child(6n+5) { border-left-color: oklch(0.72 0.15 80); }
+
 </style>

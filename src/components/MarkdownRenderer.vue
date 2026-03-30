@@ -1,13 +1,8 @@
 <script setup lang="ts">
-/**
- * MarkdownRenderer — Markdown → HTML 渲染
- * 用于笔记详情的阅读模式 + 分屏实时预览
- * 支持 [[title]] 双向链接语法
- */
 import { computed, onMounted, onUpdated, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import MarkdownIt from 'markdown-it'
-import highlightjs from 'markdown-it-highlightjs'
+import hljs from 'highlight.js'
 import texmath from 'markdown-it-texmath'
 import taskLists from 'markdown-it-task-lists'
 import katex from 'katex'
@@ -27,9 +22,17 @@ const md = new MarkdownIt({
   linkify: true,
   typographer: true,
   breaks: true,
+  highlight(str, lang) {
+    /* 只对 hljs 已注册的语言做高亮，其余原样输出 */
+    if (lang && hljs.getLanguage(lang)) {
+      try {
+        return `<pre class="hljs"><code>${hljs.highlight(str, { language: lang, ignoreIllegals: true }).value}</code></pre>`
+      } catch { /* fallback */ }
+    }
+    return `<pre class="hljs"><code>${md.utils.escapeHtml(str)}</code></pre>`
+  },
 })
 
-md.use(highlightjs)
 md.use(texmath, { engine: katex, delimiters: 'dollars' })
 md.use(taskLists, { enabled: true })
 

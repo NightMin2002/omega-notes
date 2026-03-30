@@ -69,7 +69,7 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   function applyZoom(zoom: number) {
-    document.documentElement.style.setProperty('--content-zoom', `${zoom}%`)
+    document.documentElement.style.setProperty('--content-zoom', String(zoom / 100))
   }
 
   function applyFont(family: FontFamily) {

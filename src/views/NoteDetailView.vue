@@ -199,6 +199,30 @@ const backlinks = computed(() => {
                 <span>分屏</span>
               </button>
             </div>
+
+            <!-- 编辑时也可切换视觉主题 -->
+            <div class="mode-switcher">
+              <button class="mode-btn" :class="{ active: readingTheme === 'aurora' }" @click="readingTheme = 'aurora'" data-tooltip="精读">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2v2" /><path d="M12 20v2" /><path d="M4.93 4.93l1.41 1.41" /><path d="M17.66 17.66l1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="M6.34 17.66l-1.41 1.41" /><path d="M19.07 4.93l-1.41 1.41" />
+                </svg>
+              </button>
+              <button class="mode-btn" :class="{ active: readingTheme === 'ink' }" @click="readingTheme = 'ink'" data-tooltip="笔墨">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 19l7-7 3 3-7 7-3-3z" /><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="M2 2l7.586 7.586" /><circle cx="11" cy="11" r="2" />
+                </svg>
+              </button>
+              <button class="mode-btn" :class="{ active: readingTheme === 'terminal' }" @click="readingTheme = 'terminal'" data-tooltip="终端">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" />
+                </svg>
+              </button>
+              <button class="mode-btn" :class="{ active: readingTheme === 'parchment' }" @click="readingTheme = 'parchment'" data-tooltip="羊皮纸">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                </svg>
+              </button>
+            </div>
           </template>
           
           <template v-else>
@@ -278,12 +302,43 @@ const backlinks = computed(() => {
             </svg>
             <span>删除</span>
           </button>
+
+          <div class="toolbar-sep" />
+
+          <!-- 缩放控件 -->
+          <div class="zoom-inline">
+            <button
+              type="button"
+              class="zoom-inline-btn"
+              :disabled="settingsStore.contentZoom <= 80"
+              @click="settingsStore.setContentZoom(settingsStore.contentZoom - 5)"
+              data-tooltip="缩小"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                <line x1="8" y1="11" x2="14" y2="11" />
+              </svg>
+            </button>
+            <span class="zoom-value" data-tooltip="双击重置缩放" @dblclick="settingsStore.setContentZoom(100)">{{ settingsStore.contentZoom }}%</span>
+            <button
+              type="button"
+              class="zoom-inline-btn"
+              :disabled="settingsStore.contentZoom >= 150"
+              @click="settingsStore.setContentZoom(settingsStore.contentZoom + 5)"
+              data-tooltip="放大"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                <line x1="11" y1="8" x2="11" y2="14" /><line x1="8" y1="11" x2="14" y2="11" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
       <!-- 编辑模式 -->
       <template v-if="isEditing">
-        <form class="edit-form" @submit.prevent="saveEdit" novalidate>
+        <form class="edit-form" :class="`theme-${readingTheme}`" @submit.prevent="saveEdit" novalidate>
           <input v-model="editTitle" type="text" class="edit-title" placeholder="笔记标题">
 
           <!-- WYSIWYG 模式 -->
@@ -507,6 +562,73 @@ const backlinks = computed(() => {
 @media (hover: hover) {
   .mode-btn:not(.active):hover {
     color: var(--color-text-secondary);
+  }
+}
+
+/* ─── 工具栏分隔 ─── */
+.toolbar-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--color-divider);
+  margin: 0 var(--space-1);
+}
+
+/* ─── 内联缩放 ─── */
+.zoom-inline {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.zoom-inline-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-tertiary);
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.zoom-inline-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.zoom-inline-btn:not(:disabled):active {
+  transform: scale(0.9);
+  color: var(--color-accent);
+}
+
+@media (hover: hover) {
+  .zoom-inline-btn:not(:disabled):hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+  }
+}
+
+.zoom-inline-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-accent-muted);
+}
+
+.zoom-value {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  min-width: 32px;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .zoom-value:hover {
+    color: var(--color-accent);
   }
 }
 
@@ -979,6 +1101,46 @@ const backlinks = computed(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+/* ── 编辑模式主题适配 ── */
+.edit-form.theme-aurora {
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08),
+              0 0 0 1px rgba(99, 102, 241, 0.1);
+}
+
+.edit-form.theme-ink {
+  border-left: 3px solid var(--color-accent-muted);
+  padding-left: var(--space-6);
+}
+
+.edit-form.theme-terminal {
+  background: oklch(0.16 0.015 250);
+  border: 1px solid oklch(0.3 0.03 160);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  font-family: var(--font-mono);
+}
+
+.edit-form.theme-terminal .edit-title {
+  font-family: var(--font-mono);
+  color: oklch(0.85 0.15 160);
+  border-color: oklch(0.3 0.03 160);
+}
+
+.edit-form.theme-parchment {
+  background: oklch(0.95 0.02 80);
+  border: 1px solid oklch(0.8 0.04 80);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+}
+
+[data-theme='dark'] .edit-form.theme-parchment {
+  background: oklch(0.22 0.02 55);
+  border-color: oklch(0.35 0.03 50);
 }
 
 .edit-title {
