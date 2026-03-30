@@ -159,6 +159,16 @@ const backlinks = computed(() => {
   return id ? notesStore.getBacklinks(id) : []
 })
 
+/** 悬挂笔记 — 在独立窗口打开 */
+async function popoutNote() {
+  try {
+    const { invoke } = await import('@tauri-apps/api/core')
+    await invoke('open_popout', { kind: 'note', noteId: route.params.id })
+  } catch {
+    // 浏览器环境不支持
+  }
+}
+
 </script>
 
 <template>
@@ -294,6 +304,14 @@ const backlinks = computed(() => {
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
             </svg>
             <span>编辑</span>
+          </button>
+          <button v-if="!isEditing" class="toolbar-btn" @click="popoutNote" data-tooltip="在独立窗口打开">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+            <span>悬挂</span>
           </button>
           <button class="toolbar-btn danger" @click="handleDelete">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

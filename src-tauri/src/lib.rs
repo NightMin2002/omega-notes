@@ -1,8 +1,66 @@
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager, WindowEvent,
+    Manager, WindowEvent, WebviewUrl, WebviewWindowBuilder,
 };
+
+/* ─── 悬挂窗口 / 悬浮球 ─── */
+
+#[tauri::command]
+async fn open_popout(app: tauri::AppHandle, kind: String, note_id: Option<String>) -> Result<(), String> {
+    let (label, route, w, h, transparent, decorations) = match kind.as_str() {
+        "float" => ("floating-ball", "/float".to_string(), 64.0, 64.0, true, false),
+        "tasks" => ("popout-tasks", "/popout/tasks".to_string(), 340.0, 520.0, false, false),
+        "timer" => ("popout-timer", "/popout/timer".to_string(), 240.0, 280.0, false, false),
+        "note"  => {
+            let id = note_id.unwrap_or_default();
+            ("popout-note", format!("/popout/note/{}", id), 520.0, 700.0, false, false)
+        }
+        _ => return Err("Unknown popout kind".into()),
+    };
+
+    // 如果窗口已存在 → 聚焦
+    if let Some(win) = app.get_webview_window(label) {
+        let _ = win.show();
+        let _ = win.unminimize();
+        let _ = win.set_focus();
+        return Ok(());
+    }
+
+    // 用查询参数传递目标路由，前端 main.ts 读取后跳转
+    let url = WebviewUrl::App(format!("index.html?popout_route={}", route).into());
+    let mut builder = WebviewWindowBuilder::new(&app, label, url)
+        .title("Ω Notes")
+        .inner_size(w, h)
+        .always_on_top(true)
+        .resizable(true)
+        .decorations(decorations)
+        .skip_taskbar(kind == "float");
+
+    if transparent {
+        builder = builder.transparent(true);
+    }
+
+    builder.build().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn resize_popout(app: tauri::AppHandle, label: String, w: f64, h: f64) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window(&label) {
+        let size = tauri::LogicalSize::new(w, h);
+        win.set_size(size).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn close_popout(app: tauri::AppHandle, label: String) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window(&label) {
+        win.destroy().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -19,6 +77,7 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }))
+        .invoke_handler(tauri::generate_handler![open_popout, resize_popout, close_popout])
         .setup(|app| {
             // 开发模式日志
             if cfg!(debug_assertions) {
@@ -47,8 +106,12 @@ pub fn run() {
             #[cfg(desktop)]
             {
                 let show = MenuItemBuilder::with_id("show", "显示 Ω Notes").build(app)?;
+                let float_tasks = MenuItemBuilder::with_id("float-tasks", "📋 悬挂任务").build(app)?;
+                let float_timer = MenuItemBuilder::with_id("float-timer", "⏱ 悬挂计时").build(app)?;
                 let quit = MenuItemBuilder::with_id("quit", "退出").build(app)?;
-                let menu = MenuBuilder::new(app).items(&[&show, &quit]).build()?;
+                let menu = MenuBuilder::new(app)
+                    .items(&[&show, &float_tasks, &float_timer, &quit])
+                    .build()?;
 
                 TrayIconBuilder::new()
                     .icon(app.default_window_icon().unwrap().clone())
@@ -61,6 +124,18 @@ pub fn run() {
                                 let _ = window.unminimize();
                                 let _ = window.set_focus();
                             }
+                        }
+                        "float-tasks" => {
+                            let handle = app.clone();
+                            tauri::async_runtime::spawn(async move {
+                                let _ = open_popout(handle, "tasks".into(), None).await;
+                            });
+                        }
+                        "float-timer" => {
+                            let handle = app.clone();
+                            tauri::async_runtime::spawn(async move {
+                                let _ = open_popout(handle, "timer".into(), None).await;
+                            });
                         }
                         "quit" => {
                             app.exit(0);
@@ -88,13 +163,17 @@ pub fn run() {
 
             Ok(())
         })
-        // ─── 关闭按钮 → 最小化到托盘（而非退出） ───
+        // ─── 关闭按钮 → 最小化到托盘（而非退出）───
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                let _ = window.hide();
+                // 只有主窗口最小化到托盘，子窗口直接关闭
+                if window.label() == "main" {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
             }
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+

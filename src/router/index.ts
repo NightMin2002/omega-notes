@@ -48,6 +48,31 @@ const router = createRouter({
       component: () => import('../views/SettingsView.vue'),
       meta: { title: '设置' },
     },
+    /* ─── 悬挂窗口 / 悬浮球路由（独立窗口渲染，不含侧边栏） ─── */
+    {
+      path: '/float',
+      name: 'floating-ball',
+      component: () => import('../views/popout/FloatingBall.vue'),
+      meta: { popout: true, title: '悬浮球' },
+    },
+    {
+      path: '/popout/tasks',
+      name: 'popout-tasks',
+      component: () => import('../views/popout/PopoutTasks.vue'),
+      meta: { popout: true, title: '每日任务' },
+    },
+    {
+      path: '/popout/timer',
+      name: 'popout-timer',
+      component: () => import('../views/popout/PopoutTimer.vue'),
+      meta: { popout: true, title: '倒计时' },
+    },
+    {
+      path: '/popout/note/:id',
+      name: 'popout-note',
+      component: () => import('../views/popout/PopoutNote.vue'),
+      meta: { popout: true, title: '笔记' },
+    },
   ],
 })
 

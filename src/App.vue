@@ -3,7 +3,13 @@ import AppSidebar from './components/AppSidebar.vue'
 import AppHeader from './components/AppHeader.vue'
 import QuickNote from './components/QuickNote.vue'
 import SearchDialog from './components/SearchDialog.vue'
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+
+/** popout 窗口（悬挂/悬浮球）不渲染主布局 */
+const isPopout = computed(() => !!route.meta.popout)
 
 const sidebarCollapsed = ref(false)
 const showQuickNote = ref(false)
@@ -14,6 +20,7 @@ function toggleSidebar() {
 }
 
 function handleGlobalKeydown(e: KeyboardEvent) {
+  if (isPopout.value) return
   /* Ctrl+K → 搜索 */
   if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
     e.preventDefault()
@@ -34,28 +41,34 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKeydown))
 </script>
 
 <template>
-  <AppHeader
-    :sidebar-collapsed="sidebarCollapsed"
-    @toggle-sidebar="toggleSidebar"
-    @open-search="showSearch = true"
-    @open-quick-note="showQuickNote = true"
-  />
+  <!-- 悬挂窗口：纯净渲染，无侧边栏/顶栏 -->
+  <RouterView v-if="isPopout" />
 
-  <div class="app-layout">
-    <AppSidebar :collapsed="sidebarCollapsed" @collapse="sidebarCollapsed = true" />
+  <!-- 主窗口：完整布局 -->
+  <template v-else>
+    <AppHeader
+      :sidebar-collapsed="sidebarCollapsed"
+      @toggle-sidebar="toggleSidebar"
+      @open-search="showSearch = true"
+      @open-quick-note="showQuickNote = true"
+    />
 
-    <main class="app-main" :class="{ expanded: sidebarCollapsed }">
-      <RouterView v-slot="{ Component }">
-        <Transition name="page-fade" mode="out-in">
-          <component :is="Component" />
-        </Transition>
-      </RouterView>
-    </main>
-  </div>
+    <div class="app-layout">
+      <AppSidebar :collapsed="sidebarCollapsed" @collapse="sidebarCollapsed = true" />
 
-  <!-- 全局弹窗 -->
-  <QuickNote :open="showQuickNote" @close="showQuickNote = false" />
-  <SearchDialog :open="showSearch" @close="showSearch = false" />
+      <main class="app-main" :class="{ expanded: sidebarCollapsed }">
+        <RouterView v-slot="{ Component }">
+          <Transition name="page-fade" mode="out-in">
+            <component :is="Component" />
+          </Transition>
+        </RouterView>
+      </main>
+    </div>
+
+    <!-- 全局弹窗 -->
+    <QuickNote :open="showQuickNote" @close="showQuickNote = false" />
+    <SearchDialog :open="showSearch" @close="showSearch = false" />
+  </template>
 </template>
 
 <style scoped>

@@ -26,6 +26,13 @@ const taskTheme = ref(
 watch(taskDisplayMode, v => localStorage.setItem('omega-task-display', v))
 watch(taskTheme, v => localStorage.setItem('omega-task-theme', v))
 
+async function openPopout() {
+  try {
+    const { invoke } = await import('@tauri-apps/api/core')
+    await invoke('open_popout', { kind: 'tasks' })
+  } catch { /* browser fallback */ }
+}
+
 function handleAddTask() {
   if (!newTaskTitle.value.trim()) return
   store.addTask(
@@ -253,6 +260,13 @@ const timeDisplay = computed(() => {
               <button type="button" class="theme-pill" :class="{ active: taskTheme === 'minimal' }" @click="taskTheme = 'minimal'">简约</button>
               <button type="button" class="theme-pill" :class="{ active: taskTheme === 'colorful' }" @click="taskTheme = 'colorful'">彩色</button>
             </div>
+            <button type="button" class="view-btn" @click="openPopout" data-tooltip="悬挂窗口">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+            </button>
           </div>
         </div>
 
