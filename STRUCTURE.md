@@ -22,8 +22,8 @@ omega-v2/
 │   └── favicon.ico
 │
 ├── src/                        # 前端源代码
-│   ├── main.ts                 # 应用入口：挂载 Vue + Pinia + Router
-│   ├── App.vue                 # 根组件：Header + Sidebar + RouterView
+│   ├── main.ts                 # 应用入口：挂载 Vue + Pinia + Router；检测 ?popout_route= 跳转悬挂窗口路由
+│   ├── App.vue                 # 根组件：Header + Sidebar + RouterView；route.meta.popout 时纯净渲染（跳过布局）
 │   │
 │   ├── assets/                 # 项目资产
 │   │   └── styles/             # 全局样式
@@ -32,7 +32,7 @@ omega-v2/
 │   │
 │   ├── components/             # 全局/共享组件
 │   │   ├── AppHeader.vue       # 顶部导航栏（含搜索/快速笔记入口）
-│   │   ├── AppSidebar.vue      # 侧边栏导航（含收件箱徽标 + 快捷键面板）
+│   │   ├── AppSidebar.vue      # 侧边栏导航（收藏夹/最近/文件夹树/导入导出/快捷键面板/悬浮球&悬挂任务按钮）
 │   │   ├── MilkdownEditor.vue  # Markdown 编辑器外壳（提供 Provider）
 │   │   ├── MilkdownEditorCore.vue # 编辑器核心（Milkdown 插件注册）
 │   │   ├── MarkdownRenderer.vue # Markdown → HTML 渲染（阅读模式）
@@ -49,18 +49,23 @@ omega-v2/
 │   │
 │   ├── views/                  # 路由页面组件
 │   │   ├── HomeView.vue        # 主页指挥中心（问候 + 任务进度环 + 统计 + 快捷入口 + 最近更新）
-│   │   ├── NotesView.vue       # 知识库（搜索 + 分类筛选 + 卡片网格）
+│   │   ├── NotesView.vue       # 知识库（搜索 + 分类筛选 + 卡片网格 + 拖拽排序）
 │   │   ├── WriteView.vue       # 新建笔记（模板 + 编辑器 + 图片/链接 + 草稿自动保存）
-│   │   ├── NoteDetailView.vue  # 笔记详情（阅读/编辑/分屏 + 反向链接 + 4种阅读主题）
+│   │   ├── NoteDetailView.vue  # 笔记详情（阅读/编辑/分屏 + 反向链接 + 4种阅读主题 + 字体缩放 + 悬挂按钮）
 │   │   ├── TrashView.vue       # 回收站（恢复/永久删除/清空）
-│   │   ├── SettingsView.vue    # 设置页（外观/编辑器/数据/关于）
-│   │   └── TasksView.vue       # 日常管理（每日任务 + 跳过标记 + 倒计时 + 健康提醒）
+│   │   ├── SettingsView.vue    # 设置页（外观/编辑器/数据/关于/字体缩放）
+│   │   ├── TasksView.vue       # 日常管理（每日任务 + 卡片/列表视图 + 3种主题 + 一键完成 + 倒计时 + 健康提醒）
+│   │   └── popout/             # 桌面悬挂窗口（always-on-top 独立窗口）
+│   │       ├── FloatingBall.vue  # 桌面悬浮球（Ω 图标 → 快捷面板）
+│   │       ├── PopoutTasks.vue   # 悬挂任务窗口（精简列表 + 跨窗口同步）
+│   │       ├── PopoutTimer.vue   # 悬挂计时窗口（SVG 进度环 + 预设）
+│   │       └── PopoutNote.vue    # 悬挂笔记阅读窗口
 │   │
 │   ├── stores/                 # Pinia 状态仓库
 │   │   ├── theme.ts            # 主题管理（暗色/亮色 + 持久化）
 │   │   ├── notes.ts            # 笔记数据（async CRUD + 分类 + 搜索 + 排序 + 回收站）
 │   │   ├── settings.ts         # 应用设置（编辑器模式/字体/回收站清理 + localStorage）
-│   │   └── tasks.ts            # 日常任务（任务 CRUD + 跳过标记 + 倒计时 + 健康提醒 + 配置持久化）
+│   │   └── tasks.ts            # 日常任务（任务 CRUD + 跳过标记 + 一键完成分类 + 倒计时 + 健康提醒 + 配置持久化 + 导入/导出）
 │   │
 │   ├── composables/            # Vue Composable 函数
 │   │   ├── useEditorActions.ts # 编辑器共用操作（图片/链接/工具栏/粘贴）
@@ -79,7 +84,7 @@ omega-v2/
 │   │   └── index.ts            # Note / DailyTask / HealthReminder / CountdownState 等
 │   │
 │   └── router/                 # 路由配置
-│       └── index.ts            # 路由表 + 页面标题同步
+│       └── index.ts            # 路由表 + 页面标题同步；含 4 条 meta.popout 路由（/float / /popout/*）
 │
 └── src-tauri/                  # Tauri 后端（Rust）
     ├── Cargo.toml              # Rust 依赖配置
@@ -87,10 +92,10 @@ omega-v2/
     ├── build.rs                # Rust 构建脚本
     ├── src/
     │   ├── main.rs             # 桌面应用入口
-    │   └── lib.rs              # Rust 库入口
+    │   └── lib.rs              # async open_popout/resize_popout/close_popout commands；系统托盘
     ├── capabilities/           # Tauri 权限能力配置
-│   ├── default.json        # 默认权限（fs + global-shortcut + dialog）
-│   └── desktop.json        # 桌面平台专用权限
+    │   ├── default.json        # 默认权限（fs + global-shortcut + dialog + window + 5个窗口标签）
+    │   └── desktop.json        # 桌面平台专用权限
 └── icons/                  # 应用图标（各尺寸）
 ```
 
@@ -139,9 +144,14 @@ docs/
 | 页面 | 路由 | 依赖的 Store | 功能 |
 |---|---|---|---|
 | `HomeView.vue` | `/` | `notes` | 统计卡片（总笔记/分类/已收藏/已置顶）、快捷入口、最近更新列表 |
-| `NotesView.vue` | `/notes` | `notes` | 搜索框、分类药丸、面包屑（嵌套分类时）、标签云筛选（`?tag=`）、收藏夹/最近视图（`?view=`）、笔记卡片网格、**拖拽排序（useDraggable + SortableJS forceFallback）**、**Markdown 卡片预览** |
+| `NotesView.vue` | `/notes` | `notes` | 搜索框、分类药丸、面包屑（嵌套分类时）、标签云筛选（`?tag=`）、收藏夹/最近视图（`?view=`）、笔记卡片网格、**拖拽排序（SortableJS forceFallback + 归位动画修复）**、**Markdown 卡片预览** |
 | `WriteView.vue` | `/write` | `notes` | 模板选择器 → WYSIWYG/分屏编辑 + 图片插入 + `[[title]]` 链接插入 + 标题/分类/标签表单 |
-| `NoteDetailView.vue` | `/note/:id` | `notes` | 阅读模式 ↔ 编辑模式，收藏/置顶/删除，`[[title]]` 链接插入，自动记录到最近列表，反向链接面板 |
+| `NoteDetailView.vue` | `/note/:id` | `notes` | 阅读模式 ↔ 编辑模式，收藏/置顶/删除，`[[title]]` 链接插入，自动记录到最近列表，反向链接面板，**字体缩放控制**，**悬挂窗口按钮** |
+| `TasksView.vue` | `/tasks` | `tasks` | 每日任务 + **卡片/列表视图切换** + **3种主题（默认/简约/彩色）** + **分类一键完成** + 倒计时 + 健康提醒 + 悬挂任务按钮 |
+| `FloatingBall.vue` | `/float` | `tasks`, `notes` | 桌面悬浮球（popout，always-on-top）：Ω 圆形图标展开快捷面板 |
+| `PopoutTasks.vue` | `/popout/tasks` | `tasks` | 悬挂任务（popout，always-on-top）：精简任务列表 + 2s 轮询跨窗口同步 |
+| `PopoutTimer.vue` | `/popout/timer` | `tasks` | 悬挂倒计时（popout，always-on-top）：SVG 进度环 + 预设时长 |
+| `PopoutNote.vue` | `/popout/note/:id` | `notes` | 悬挂笔记（popout，always-on-top）：完整 Markdown 阅读 |
 | `TrashView.vue` | `/trash` | `notes` | 回收站：已删除笔记列表、恢复/永久删除、清空回收站确认 dialog |
 | `SettingsView.vue` | `/settings` | `theme`, `settings`, `notes` | 设置：外观（主题/字体）、编辑器（默认模式）、数据（存储位置/统计/回收站清理）、系统（开机自启）、关于 |
 
@@ -174,7 +184,7 @@ docs/
 | `theme.ts` | `theme: 'dark' \| 'light'` | `toggle()` | localStorage `omega-theme` |
 | `notes.ts` | `notes[]`, `currentCategory`, `searchQuery`, `isLoading`, `recentIds`, `noteMap`（computed Map 索引） | `init`, `addNote`, `updateNote`, `deleteNote`, `restoreNote`, `permanentlyDelete`, `emptyTrash`, `togglePin`, `toggleFavorite`, `recordOpen`, `importBatch`, `reorderNotes`, `moveNoteToCategory`, `getNoteById`, `findNoteByTitle`, `getBacklinks` | 委托 `storage.ts` + localStorage |
 | | 计算属性: `activeNotes`, `filteredNotes`, `categories`, `categoryTree`, `allTags`, `favoriteNotes`, `recentNotes`, `trashNotes`, `totalCount`, `pinnedCount`, `favoriteCount`, `trashCount` | | |
-| `settings.ts` | `settings`（单一状态源），computed getters: `defaultEditorMode`, `fontFamily`, `trashAutoCleanDays` | `setDefaultEditorMode`, `setFontFamily`, `setTrashAutoCleanDays`, `init` | localStorage `omega-settings` |
+| `settings.ts` | `settings`（单一状态源），computed getters: `defaultEditorMode`, `fontFamily`, `trashAutoCleanDays`, `zoomLevel` | `setDefaultEditorMode`, `setFontFamily`, `setTrashAutoCleanDays`, `setZoomLevel`, `init` | localStorage `omega-settings` |
 
 ### 路由层 (`src/router/`)
 
@@ -186,6 +196,10 @@ docs/
 | `/note/:id` | `note-detail` | `NoteDetailView` | 笔记详情 |
 | `/trash` | `trash` | `TrashView` | 回收站 |
 | `/settings` | `settings` | `SettingsView` | 设置 |
+| `/float` | `float` | `FloatingBall` | 桌面悬浮球（`meta.popout: true`） |
+| `/popout/tasks` | `popout-tasks` | `PopoutTasks` | 悬挂任务（`meta.popout: true`） |
+| `/popout/timer` | `popout-timer` | `PopoutTimer` | 悬挂计时（`meta.popout: true`） |
+| `/popout/note/:id` | `popout-note` | `PopoutNote` | 悬挂笔记（`meta.popout: true`） |
 
 路由使用 **Hash 模式** (`createWebHashHistory`)，Tauri 桌面应用中文件协议不支持 History 模式。
 
@@ -196,7 +210,7 @@ docs/
 | `tauri.conf.json` | 应用配置（窗口大小、标识、构建命令、安全策略） |
 | `Cargo.toml` | Rust 依赖声明 |
 | `src/main.rs` | Windows 下隐藏控制台窗口，调用 `lib.rs` |
-| `src/lib.rs` | Tauri 应用初始化：注册 fs/dialog/global-shortcut/log/autostart/single-instance 插件，系统托盘（右键菜单 + 左键恢复），关闭按钮最小化到托盘 |
+| `src/lib.rs` | Tauri 应用初始化：注册各插件；`async open_popout`（创建/聚焦悬挂窗口）/ `async resize_popout`（动态调整尺寸）/ `async close_popout`（销毁窗口）；系统托盘（右键菜单含悬挂入口 + 左键恢复）；主窗口关闭→最小化到托盘 |
 | `capabilities/` | 权限能力声明（fs + global-shortcut + dialog + autostart） |
 
 ## 数据流向
@@ -229,7 +243,8 @@ storage.ts 存储适配层
 | 你要做什么 | 放在哪里 |
 |---|---|
 | 新增全局/共享 UI 组件 | `src/components/` |
-| 新增路由页面 | `src/views/` + 在 `router/index.ts` 注册 |
+| 新增路由页面 | `src/views/` + 在 `router/index.ts` 注册；popout 窗口页加 `meta: { popout: true }` |
+| 新增悬挂窗口 | `src/views/popout/` + router 注册 + Rust `open_popout` 新增 kind 分支 + capabilities 窗口标签 |
 | 新增数据/状态管理 | `src/stores/` |
 | 新增全局 CSS | `src/assets/styles/` + 在 `main.ts` 引入 |
 | 新增页面级样式 | 对应 `.vue` 文件的 `<style scoped>` |
