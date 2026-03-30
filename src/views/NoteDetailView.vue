@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useNotesStore } from '../stores/notes'
 import { useSettingsStore } from '../stores/settings'
@@ -9,6 +9,8 @@ import EditorToolbar from '../components/EditorToolbar.vue'
 import WikiLinkPicker from '../components/WikiLinkPicker.vue'
 import SplitEditor from '../components/SplitEditor.vue'
 import BacklinksPanel from '../components/BacklinksPanel.vue'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
+import CategoryPicker from '../components/CategoryPicker.vue'
 import { useEditorActions } from '../composables/useEditorActions'
 import type { EditorMode } from '../types'
 
@@ -87,11 +89,55 @@ function saveEdit() {
   isEditing.value = false
 }
 
+const showDeleteConfirm = ref(false)
+const copySuccess = ref(false)
+
 function handleDelete() {
+  showDeleteConfirm.value = true
+}
+
+function confirmDelete() {
   if (!note.value) return
+  showDeleteConfirm.value = false
   notesStore.deleteNote(note.value.id)
   router.push('/notes')
 }
+
+function cancelDelete() {
+  showDeleteConfirm.value = false
+}
+
+async function copyContent() {
+  if (!note.value) return
+  try {
+    await navigator.clipboard.writeText(note.value.content)
+    copySuccess.value = true
+    setTimeout(() => { copySuccess.value = false }, 1500)
+  } catch {
+    /* 降级：textarea 方式 */
+    const ta = document.createElement('textarea')
+    ta.value = note.value.content
+    ta.style.position = 'fixed'
+    ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.select()
+    document.execCommand('copy')
+    document.body.removeChild(ta)
+    copySuccess.value = true
+    setTimeout(() => { copySuccess.value = false }, 1500)
+  }
+}
+
+/* ─── Ctrl+S 保存 ─── */
+function handleGlobalKey(e: KeyboardEvent) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault()
+    if (isEditing.value) saveEdit()
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', handleGlobalKey))
+onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
 
 function togglePin() {
   if (!note.value) return
@@ -179,6 +225,28 @@ const backlinks = computed(() => {
                   <path d="M12 19l7-7 3 3-7 7-3-3z" /><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="M2 2l7.586 7.586" /><circle cx="11" cy="11" r="2" />
                 </svg>
                 <span>笔墨</span>
+              </button>
+              <button
+                class="mode-btn"
+                :class="{ active: readingTheme === 'terminal' }"
+                @click="readingTheme = 'terminal'"
+                data-tooltip="终端模式"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" />
+                </svg>
+                <span>终端</span>
+              </button>
+              <button
+                class="mode-btn"
+                :class="{ active: readingTheme === 'parchment' }"
+                @click="readingTheme = 'parchment'"
+                data-tooltip="羊皮纸模式"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                </svg>
+                <span>羊皮纸</span>
               </button>
             </div>
           </template>
@@ -268,7 +336,7 @@ const backlinks = computed(() => {
           />
 
           <div class="edit-meta-row">
-            <input v-model="editCategory" type="text" class="edit-input" placeholder="分类">
+            <CategoryPicker v-model="editCategory" />
             <input v-model="editTags" type="text" class="edit-input" placeholder="标签（空格分隔）">
           </div>
           <div class="edit-actions">
@@ -298,6 +366,15 @@ const backlinks = computed(() => {
           </header>
 
           <div class="note-body">
+            <button class="copy-content-btn" :class="{ copied: copySuccess }" @click="copyContent" :data-tooltip="copySuccess ? '已复制' : '复制内容'">
+              <svg v-if="!copySuccess" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+              <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
             <MarkdownRenderer :content="note.content" />
           </div>
 
@@ -311,6 +388,17 @@ const backlinks = computed(() => {
       <p>笔记不存在</p>
       <RouterLink to="/notes" class="back-link">返回知识库</RouterLink>
     </div>
+
+    <!-- 删除确认弹窗 -->
+    <ConfirmDialog
+      :open="showDeleteConfirm"
+      title="确认删除笔记"
+      :message="`将把 <strong>${note?.title || '未命名笔记'}</strong> 移入回收站。`"
+      confirm-text="删除"
+      confirm-type="danger"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
   </div>
 </template>
 
@@ -607,9 +695,271 @@ const backlinks = computed(() => {
   background: var(--color-accent-muted);
 }
 
-.theme-ink .note-body :deep(.markdown-body) {
+.theme-ink .note-body :deep(.md-rendered) {
   padding-left: var(--space-6);
   line-height: 1.9;
+}
+
+/* =========================================
+   阅读模式 — 视觉方案：终端 (Terminal)
+   绿色等宽字体，深色背景，hacker 风格
+   ========================================= */
+.theme-terminal {
+  background: oklch(0.14 0.005 160);
+  border-radius: var(--radius-lg);
+  border: 1px solid oklch(0.25 0.04 145);
+  overflow: hidden;
+}
+
+.theme-terminal .note-hero {
+  padding: var(--space-6) var(--space-6) var(--space-4);
+  border-bottom: 1px solid oklch(0.25 0.04 145);
+}
+
+.theme-terminal .note-hero::before {
+  content: '> ';
+  color: oklch(0.7 0.18 145);
+  font-family: var(--font-mono);
+  font-size: 1rem;
+}
+
+.theme-terminal .note-title {
+  font-family: var(--font-mono);
+  font-size: clamp(1.1rem, 3vw, 1.5rem);
+  font-weight: 600;
+  color: oklch(0.85 0.18 145);
+  display: inline;
+}
+
+.theme-terminal .note-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: var(--space-3);
+}
+
+.theme-terminal .meta-category {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: oklch(0.7 0.12 200);
+  padding: 1px var(--space-2);
+  border: 1px solid oklch(0.35 0.08 200);
+  border-radius: var(--radius-sm);
+}
+
+.theme-terminal .meta-date {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: oklch(0.5 0.02 160);
+}
+
+.theme-terminal .note-tags {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: var(--space-2);
+}
+
+.theme-terminal .tag {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: oklch(0.6 0.1 80);
+  padding: 0 var(--space-1);
+}
+
+.theme-terminal .tag::before { content: '#'; }
+
+.theme-terminal .note-body {
+  padding: var(--space-4) var(--space-6) var(--space-8);
+}
+
+.theme-terminal .note-body :deep(.md-rendered) {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: oklch(0.78 0.06 145);
+}
+
+.theme-terminal .note-body :deep(.md-rendered h1),
+.theme-terminal .note-body :deep(.md-rendered h2),
+.theme-terminal .note-body :deep(.md-rendered h3) {
+  color: oklch(0.85 0.18 145);
+  border-bottom: 1px dashed oklch(0.3 0.04 145);
+  padding-bottom: var(--space-1);
+}
+
+.theme-terminal .note-body :deep(.md-rendered code) {
+  color: oklch(0.8 0.14 80);
+  background: oklch(0.18 0.005 160);
+}
+
+.theme-terminal .note-body :deep(.md-rendered a) {
+  color: oklch(0.7 0.15 200);
+  text-decoration: underline;
+}
+
+.theme-terminal .copy-content-btn {
+  background: oklch(0.18 0.005 160);
+  border-color: oklch(0.3 0.04 145);
+  color: oklch(0.6 0.1 145);
+}
+
+/* =========================================
+   阅读模式 — 视觉方案：羊皮纸 (Parchment)
+   暖色调，衬线字体，书卷气
+   ========================================= */
+.theme-parchment {
+  background: oklch(0.93 0.03 80);
+  border-radius: var(--radius-lg);
+  border: 1px solid oklch(0.82 0.04 75);
+  box-shadow: inset 0 0 40px oklch(0.85 0.03 70 / 0.5);
+  overflow: hidden;
+}
+
+.theme-parchment .note-hero {
+  padding: var(--space-8) var(--space-8) var(--space-6);
+  text-align: center;
+  border-bottom: 2px double oklch(0.75 0.04 70);
+}
+
+.theme-parchment .note-title {
+  font-family: 'Georgia', 'Noto Serif SC', serif;
+  font-size: clamp(1.5rem, 4vw, 2.2rem);
+  font-weight: 700;
+  color: oklch(0.3 0.04 50);
+  letter-spacing: 0.02em;
+  margin-bottom: var(--space-4);
+}
+
+.theme-parchment .note-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+
+.theme-parchment .meta-category {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: oklch(0.45 0.1 30);
+  padding: var(--space-1) var(--space-3);
+  background: oklch(0.88 0.04 60);
+  border-radius: var(--radius-full);
+}
+
+.theme-parchment .meta-date {
+  font-size: 0.8rem;
+  color: oklch(0.5 0.03 60);
+  font-style: italic;
+}
+
+.theme-parchment .note-tags {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.theme-parchment .tag {
+  font-size: 0.72rem;
+  color: oklch(0.5 0.06 50);
+  padding: var(--space-1) var(--space-2);
+  background: oklch(0.9 0.025 70);
+  border-radius: var(--radius-sm);
+}
+
+.theme-parchment .note-body {
+  padding: var(--space-6) var(--space-8) var(--space-12);
+}
+
+.theme-parchment .note-body :deep(.md-rendered) {
+  font-family: 'Georgia', 'Noto Serif SC', serif;
+  font-size: 1rem;
+  line-height: 2;
+  color: oklch(0.28 0.03 50);
+  text-align: justify;
+}
+
+.theme-parchment .note-body :deep(.md-rendered h1),
+.theme-parchment .note-body :deep(.md-rendered h2),
+.theme-parchment .note-body :deep(.md-rendered h3) {
+  color: oklch(0.3 0.06 40);
+  font-family: 'Georgia', 'Noto Serif SC', serif;
+}
+
+.theme-parchment .note-body :deep(.md-rendered blockquote) {
+  border-left-color: oklch(0.6 0.08 50);
+  background: oklch(0.9 0.03 75);
+  color: oklch(0.35 0.04 50);
+  font-style: italic;
+}
+
+.theme-parchment .note-body :deep(.md-rendered a) {
+  color: oklch(0.4 0.12 30);
+}
+
+.theme-parchment .copy-content-btn {
+  background: oklch(0.9 0.03 70);
+  border-color: oklch(0.78 0.04 65);
+  color: oklch(0.5 0.04 50);
+}
+
+/* 羊皮纸 暗色模式适配 */
+[data-theme='dark'] .theme-parchment {
+  background: oklch(0.22 0.02 60);
+  border-color: oklch(0.32 0.03 55);
+  box-shadow: inset 0 0 40px oklch(0.18 0.02 50 / 0.5);
+}
+
+[data-theme='dark'] .theme-parchment .note-hero {
+  border-bottom-color: oklch(0.35 0.03 55);
+}
+
+[data-theme='dark'] .theme-parchment .note-title {
+  color: oklch(0.82 0.05 60);
+}
+
+[data-theme='dark'] .theme-parchment .meta-category {
+  color: oklch(0.75 0.08 40);
+  background: oklch(0.28 0.03 50);
+}
+
+[data-theme='dark'] .theme-parchment .meta-date {
+  color: oklch(0.6 0.03 55);
+}
+
+[data-theme='dark'] .theme-parchment .tag {
+  color: oklch(0.65 0.04 55);
+  background: oklch(0.25 0.02 55);
+}
+
+[data-theme='dark'] .theme-parchment .note-body :deep(.md-rendered) {
+  color: oklch(0.78 0.02 60);
+}
+
+[data-theme='dark'] .theme-parchment .note-body :deep(.md-rendered h1),
+[data-theme='dark'] .theme-parchment .note-body :deep(.md-rendered h2),
+[data-theme='dark'] .theme-parchment .note-body :deep(.md-rendered h3) {
+  color: oklch(0.82 0.05 50);
+}
+
+[data-theme='dark'] .theme-parchment .note-body :deep(.md-rendered blockquote) {
+  border-left-color: oklch(0.45 0.06 50);
+  background: oklch(0.25 0.02 55);
+  color: oklch(0.7 0.03 55);
+}
+
+[data-theme='dark'] .theme-parchment .note-body :deep(.md-rendered a) {
+  color: oklch(0.7 0.1 40);
+}
+
+[data-theme='dark'] .theme-parchment .copy-content-btn {
+  background: oklch(0.25 0.02 55);
+  border-color: oklch(0.35 0.03 50);
+  color: oklch(0.6 0.04 55);
 }
 
 /* ─── 编辑表单 ─── */
@@ -686,9 +1036,68 @@ const backlinks = computed(() => {
 
 .back-link { color: var(--color-accent); }
 
-@media (max-width: 640px) {
-  .edit-meta-row { grid-template-columns: 1fr; }
+/* ─── 复制内容按钮 ─── */
+.note-body {
+  position: relative;
 }
 
+.copy-content-btn {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-tertiary);
+  opacity: 0;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: opacity var(--duration-fast) var(--ease-out),
+              background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
+}
 
+.note-body:hover .copy-content-btn {
+  opacity: 1;
+}
+
+.copy-content-btn.copied {
+  opacity: 1;
+  color: var(--color-success);
+  border-color: var(--color-success);
+  background: var(--color-success-muted, rgba(34, 197, 94, 0.1));
+}
+
+@media (hover: hover) {
+  .copy-content-btn:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+    transform: translateY(-1px);
+  }
+}
+
+.copy-content-btn:active {
+  transform: scale(0.95);
+}
+
+/* 笔墨主题下复制按钮位置调整 */
+.theme-ink .copy-content-btn {
+  right: var(--space-4);
+  top: var(--space-4);
+}
+
+@media (max-width: 640px) {
+  .edit-meta-row { grid-template-columns: 1fr; }
+
+  .copy-content-btn {
+    opacity: 1;
+  }
+}
 </style>

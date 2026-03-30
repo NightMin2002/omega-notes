@@ -42,25 +42,29 @@ omega-v2/
 │   │   ├── WikiLinkPicker.vue  # [[Wiki 链接]] 选择器下拉面板（WriteView/NoteDetailView 共享）
 │   │   ├── SplitEditor.vue     # 分屏 Markdown 编辑器（源码 + 工具栏 + 实时预览，共享）
 │   │   ├── BacklinksPanel.vue  # 反向链接面板（展示引用当前笔记的其他笔记）
-│   │   └── TimePicker.vue      # 自定义时间选择器（步进器 ▲▼ + Teleport 定位）
+│   │   ├── TimePicker.vue      # 自定义时间选择器（步进器 ▲▼ + Teleport 定位）
+│   │   ├── CategoryPicker.vue  # 分类选择器（搜索 + 键盘导航 + 子分类提示）
+│   │   ├── ConfirmDialog.vue   # 通用居中确认弹窗（Teleport 到 body）
+│   │   └── DraftToast.vue      # 草稿恢复提示 Toast（3秒自动消失）
 │   │
 │   ├── views/                  # 路由页面组件
-│   │   ├── HomeView.vue        # 主页（统计 + 快捷入口 + 最近更新）
+│   │   ├── HomeView.vue        # 主页指挥中心（问候 + 任务进度环 + 统计 + 快捷入口 + 最近更新）
 │   │   ├── NotesView.vue       # 知识库（搜索 + 分类筛选 + 卡片网格）
-│   │   ├── WriteView.vue       # 新建笔记（模板 + 编辑器 + 图片/链接插入）
-│   │   ├── NoteDetailView.vue  # 笔记详情（阅读/编辑/分屏 + 反向链接）
+│   │   ├── WriteView.vue       # 新建笔记（模板 + 编辑器 + 图片/链接 + 草稿自动保存）
+│   │   ├── NoteDetailView.vue  # 笔记详情（阅读/编辑/分屏 + 反向链接 + 4种阅读主题）
 │   │   ├── TrashView.vue       # 回收站（恢复/永久删除/清空）
 │   │   ├── SettingsView.vue    # 设置页（外观/编辑器/数据/关于）
-│   │   └── TasksView.vue       # 日常管理（每日任务 + 倒计时 + 健康提醒）
+│   │   └── TasksView.vue       # 日常管理（每日任务 + 跳过标记 + 倒计时 + 健康提醒）
 │   │
 │   ├── stores/                 # Pinia 状态仓库
 │   │   ├── theme.ts            # 主题管理（暗色/亮色 + 持久化）
 │   │   ├── notes.ts            # 笔记数据（async CRUD + 分类 + 搜索 + 排序 + 回收站）
 │   │   ├── settings.ts         # 应用设置（编辑器模式/字体/回收站清理 + localStorage）
-│   │   └── tasks.ts            # 日常任务（任务 CRUD + 倒计时 + 健康提醒 + 配置持久化）
+│   │   └── tasks.ts            # 日常任务（任务 CRUD + 跳过标记 + 倒计时 + 健康提醒 + 配置持久化）
 │   │
 │   ├── composables/            # Vue Composable 函数
-│   │   └── useEditorActions.ts # 编辑器共用操作（图片/链接/工具栏/粘贴）
+│   │   ├── useEditorActions.ts # 编辑器共用操作（图片/链接/工具栏/粘贴）
+│   │   └── useDraft.ts         # 草稿自动保存（防抖 localStorage + 恢复检测）
 │   │
 │   ├── utils/                  # 工具函数
 │   │   ├── markdown.ts         # stripMarkdown / truncateText

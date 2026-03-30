@@ -102,6 +102,8 @@ export interface DailyRecord {
   date: string
   /** 已完成的 taskId 集合 */
   completedIds: string[]
+  /** 今日跳过的 taskId 集合（手动标记"今天不做"） */
+  skippedIds?: string[]
 }
 
 /** 健康提醒配置（持久化） */

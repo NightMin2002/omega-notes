@@ -150,6 +150,7 @@ const timeDisplay = computed(() => {
   const d = currentTime.value
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`
 })
+
 </script>
 
 <template>
@@ -265,7 +266,7 @@ const timeDisplay = computed(() => {
               v-for="task in group.tasks"
               :key="task.id"
               class="task-row"
-              :class="{ completed: store.isCompleted(task.id) }"
+              :class="{ completed: store.isCompleted(task.id), skipped: store.isSkipped(task.id) }"
             >
               <!-- ── 编辑模式 ── -->
               <template v-if="editingId === task.id">
@@ -325,6 +326,16 @@ const timeDisplay = computed(() => {
                 </span>
 
                 <div class="task-actions">
+                  <button
+                    class="btn-icon" 
+                    :class="{ 'skip-active': store.isSkipped(task.id) }"
+                    @click="store.toggleSkip(task.id)" 
+                    :data-tooltip="store.isSkipped(task.id) ? '取消跳过' : '今天不做'"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+                    </svg>
+                  </button>
                   <button class="btn-icon" @click="startEdit(task)" data-tooltip="编辑">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -662,9 +673,9 @@ const timeDisplay = computed(() => {
    ═══════════════════════════════ */
 .tasks-grid {
   display: grid;
-  grid-template-columns: 1fr 340px;
+  grid-template-columns: 1fr 300px;
   grid-template-rows: auto auto;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
 .tasks-card { grid-row: 1 / 3; }
@@ -688,10 +699,10 @@ const timeDisplay = computed(() => {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: var(--space-4);
+  padding: var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .card-header {
@@ -800,8 +811,8 @@ const timeDisplay = computed(() => {
 .task-row {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-md);
   transition: background-color var(--duration-fast) var(--ease-out);
 }
@@ -814,6 +825,29 @@ const timeDisplay = computed(() => {
 .task-row.completed .task-name {
   text-decoration: line-through;
   color: var(--color-text-tertiary);
+}
+
+/* ── 跳过（今天不做）── */
+.task-row.skipped {
+  background: var(--color-danger-muted, oklch(0.35 0.08 25 / 0.1));
+  border-left: 3px solid var(--color-danger);
+  padding-left: calc(var(--space-2) - 3px);
+}
+
+.task-row.skipped .task-name {
+  text-decoration: line-through;
+  color: var(--color-danger);
+  opacity: 0.7;
+}
+
+.task-row.skipped .check-box {
+  border-color: var(--color-danger);
+  opacity: 0.5;
+}
+
+.btn-icon.skip-active {
+  color: var(--color-danger);
+  opacity: 1 !important;
 }
 
 /* ── Checkbox ── */

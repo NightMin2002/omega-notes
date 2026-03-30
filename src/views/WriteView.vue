@@ -1,26 +1,40 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useNotesStore } from '../stores/notes'
 import { useSettingsStore } from '../stores/settings'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import MilkdownEditor from '../components/MilkdownEditor.vue'
 import EditorToolbar from '../components/EditorToolbar.vue'
 import WikiLinkPicker from '../components/WikiLinkPicker.vue'
 import SplitEditor from '../components/SplitEditor.vue'
+import CategoryPicker from '../components/CategoryPicker.vue'
+import DraftToast from '../components/DraftToast.vue'
 import { getTemplates, type NoteTemplate } from '../utils/templates'
 import { useEditorActions } from '../composables/useEditorActions'
+import { useDraft } from '../composables/useDraft'
 import type { EditorMode } from '../types'
 
 const notesStore = useNotesStore()
 const settingsStore = useSettingsStore()
 const router = useRouter()
+const route = useRoute()
 
-const title = ref('')
-const content = ref('')
-const category = ref('')
-const tags = ref('')
+/* ─── 草稿系统 ─── */
+const {
+  draftTitle: title,
+  draftContent: content,
+  draftCategory: category,
+  draftTags: tags,
+  wasRestored: showDraftToast,
+  clearDraft,
+} = useDraft('write-new')
+
+/* 如果路由带有 ?category=xxx，预填分类（优先于草稿） */
+const prefillCat = route.query.category as string | undefined
+if (prefillCat) category.value = prefillCat
+
 const isSaving = ref(false)
-const showTemplates = ref(true)
+const showTemplates = ref(!title.value && !content.value)
 const hasSubmitted = ref(false)
 const templates = getTemplates()
 
@@ -71,6 +85,7 @@ async function handleSubmit() {
     })
 
     console.log('笔记已保存, id:', note.id)
+    clearDraft()
 
     /* 用 replace 而不是 push，避免返回到已清空的 write 页 */
     await router.replace(`/note/${note.id}`)
@@ -80,6 +95,17 @@ async function handleSubmit() {
     isSaving.value = false
   }
 }
+
+/* ─── Ctrl+S 保存 ─── */
+function handleGlobalKey(e: KeyboardEvent) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault()
+    if (!showTemplates.value) handleSubmit()
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', handleGlobalKey))
+onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
 
 </script>
 
@@ -224,16 +250,7 @@ async function handleSubmit() {
       <div class="write-meta">
         <div class="meta-field">
           <label class="meta-label">分类</label>
-          <input
-            v-model="category"
-            type="text"
-            class="meta-input"
-            placeholder="输入分类"
-            list="category-list"
-          >
-          <datalist id="category-list">
-            <option v-for="cat in notesStore.categories" :key="cat" :value="cat" />
-          </datalist>
+          <CategoryPicker v-model="category" />
         </div>
 
         <div class="meta-field">
@@ -261,6 +278,8 @@ async function handleSubmit() {
         </button>
       </div>
     </form>
+
+    <DraftToast :show="showDraftToast" @close="showDraftToast = false" />
   </div>
 </template>
 

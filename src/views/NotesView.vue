@@ -116,9 +116,16 @@ useDraggable(gridRef, draggableNotes, {
   fallbackClass: 'sortable-fallback',
   delay: 80,
   delayOnTouchOnly: true,
+  onStart() {
+    gridRef.value?.classList.add('is-dragging')
+  },
   onEnd() {
     const ids = draggableNotes.value.map(n => n.id)
     notesStore.reorderNotes(ids)
+    /* 延迟移除，避免 SortableJS 将元素放回 DOM 时 CSS transition 引发抽搐 */
+    requestAnimationFrame(() => {
+      setTimeout(() => gridRef.value?.classList.remove('is-dragging'), 60)
+    })
   },
 })
 </script>
@@ -174,6 +181,19 @@ useDraggable(gridRef, draggableNotes, {
       >
         {{ cat }}
       </button>
+
+      <!-- 在当前分类下新建笔记 -->
+      <RouterLink
+        v-if="notesStore.currentCategory !== 'all'"
+        :to="`/write?category=${encodeURIComponent(notesStore.currentCategory)}`"
+        class="category-pill cat-add-btn"
+        title="在此分类新建笔记"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        新建
+      </RouterLink>
     </div>
 
     <!-- 标签云（普通模式 + 有标签时显示） -->
@@ -411,6 +431,22 @@ useDraggable(gridRef, draggableNotes, {
   border-color: var(--color-accent);
 }
 
+.cat-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  border-style: dashed;
+  font-weight: 500;
+}
+
+@media (hover: hover) {
+  .cat-add-btn:hover {
+    background: var(--color-accent-muted);
+  }
+}
+
 /* ─── 笔记网格 ─── */
 .notes-grid {
   display: grid;
@@ -459,6 +495,11 @@ useDraggable(gridRef, draggableNotes, {
 /* chosen = 被选中的原始元素（拖拽开始前短暂可见） */
 .sortable-chosen {
   cursor: grabbing;
+}
+
+/* 拖拽过程中禁用卡片 transition，避免拖拽结束后抽搐拖动 */
+.is-dragging .note-card {
+  transition: none !important;
 }
 
 .card-badges {

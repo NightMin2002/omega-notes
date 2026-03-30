@@ -2,9 +2,10 @@
 import { ref } from 'vue'
 import { useNotesStore } from '../stores/notes'
 import { stripMarkdown, truncateText } from '../utils/markdown'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
 
 const notesStore = useNotesStore()
-const confirmEmptyDialog = ref<HTMLDialogElement | null>(null)
+const showEmptyConfirm = ref(false)
 
 function formatDate(iso: string) {
   if (!iso) return ''
@@ -35,13 +36,17 @@ async function handlePermanentDelete(id: string) {
   await notesStore.permanentlyDelete(id)
 }
 
-function showEmptyConfirm() {
-  confirmEmptyDialog.value?.showModal()
+function showEmptyConfirmDialog() {
+  showEmptyConfirm.value = true
 }
 
 async function confirmEmpty() {
   await notesStore.emptyTrash()
-  confirmEmptyDialog.value?.close()
+  showEmptyConfirm.value = false
+}
+
+function cancelEmpty() {
+  showEmptyConfirm.value = false
 }
 </script>
 
@@ -59,7 +64,7 @@ async function confirmEmpty() {
       <button
         v-if="notesStore.trashCount > 0"
         class="empty-btn"
-        @click="showEmptyConfirm"
+        @click="showEmptyConfirmDialog"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="3 6 5 6 21 6" />
@@ -124,24 +129,16 @@ async function confirmEmpty() {
       </TransitionGroup>
     </div>
 
-    <!-- 清空确认对话框 -->
-    <dialog ref="confirmEmptyDialog" class="confirm-dialog">
-      <div class="dialog-content">
-        <svg class="dialog-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <line x1="12" y1="8" x2="12" y2="12" />
-          <line x1="12" y1="16" x2="12.01" y2="16" />
-        </svg>
-        <h3 class="dialog-title">确认清空回收站</h3>
-        <p class="dialog-desc">
-          将永久删除 <strong>{{ notesStore.trashCount }}</strong> 条笔记，此操作不可撤销。
-        </p>
-        <div class="dialog-actions">
-          <button class="dialog-cancel" @click="confirmEmptyDialog?.close()">取消</button>
-          <button class="dialog-confirm" @click="confirmEmpty">确认清空</button>
-        </div>
-      </div>
-    </dialog>
+    <!-- 清空确认弹窗 -->
+    <ConfirmDialog
+      :open="showEmptyConfirm"
+      title="确认清空回收站"
+      :message="`将永久删除 <strong>${notesStore.trashCount}</strong> 条笔记，此操作不可撤销。`"
+      confirm-text="确认清空"
+      confirm-type="danger"
+      @confirm="confirmEmpty"
+      @cancel="cancelEmpty"
+    />
   </div>
 </template>
 
@@ -361,88 +358,6 @@ async function confirmEmpty() {
 
 .action-restore:active,
 .action-delete:active {
-  transform: scale(0.98);
-}
-
-/* ─── 确认对话框 ─── */
-.confirm-dialog {
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-xl);
-  background: var(--color-bg-elevated);
-  color: var(--color-text-primary);
-  padding: 0;
-  max-width: 400px;
-  width: 90vw;
-  box-shadow: var(--shadow-lg);
-}
-
-.confirm-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-
-.dialog-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: var(--space-8);
-  text-align: center;
-}
-
-.dialog-icon {
-  color: var(--color-warning);
-  margin-bottom: var(--space-4);
-}
-
-.dialog-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  margin-bottom: var(--space-2);
-}
-
-.dialog-desc {
-  font-size: 0.85rem;
-  color: var(--color-text-secondary);
-  margin-bottom: var(--space-6);
-  line-height: 1.5;
-}
-
-.dialog-actions {
-  display: flex;
-  gap: var(--space-3);
-  width: 100%;
-}
-
-.dialog-cancel,
-.dialog-confirm {
-  flex: 1;
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-md);
-  font-weight: 500;
-  font-size: 0.88rem;
-  transition: background-color var(--duration-fast) var(--ease-out),
-              transform var(--duration-fast) var(--ease-out);
-}
-
-.dialog-cancel {
-  background: var(--color-bg-tertiary);
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-}
-
-.dialog-confirm {
-  background: var(--color-danger);
-  color: var(--color-text-inverse);
-}
-
-@media (hover: hover) {
-  .dialog-cancel:hover { background: var(--color-bg-hover); }
-  .dialog-confirm:hover { filter: brightness(1.1); }
-}
-
-.dialog-cancel:active,
-.dialog-confirm:active {
   transform: scale(0.98);
 }
 

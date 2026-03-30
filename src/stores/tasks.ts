@@ -238,6 +238,35 @@ export const useTasksStore = defineStore('tasks', () => {
     persistRecords()
   }
 
+  /** 当日跳过 ID 集合 */
+  const todaySkippedIds = computed(() => {
+    const today = currentDayKey.value
+    const rec = records.value.find(r => r.date === today)
+    return new Set(rec?.skippedIds ?? [])
+  })
+
+  /** 切换跳过状态（今天不做） */
+  function toggleSkip(id: string) {
+    const today = currentDayKey.value
+    let rec = records.value.find(r => r.date === today)
+    if (!rec) {
+      rec = { date: today, completedIds: [], skippedIds: [] }
+      records.value.push(rec)
+    }
+    if (!rec.skippedIds) rec.skippedIds = []
+    const idx = rec.skippedIds.indexOf(id)
+    if (idx >= 0) {
+      rec.skippedIds.splice(idx, 1)
+    } else {
+      rec.skippedIds.push(id)
+    }
+    persistRecords()
+  }
+
+  function isSkipped(id: string): boolean {
+    return todaySkippedIds.value.has(id)
+  }
+
   /* ═══════════════════════════════════
      健康提醒
      ═══════════════════════════════════ */
@@ -354,6 +383,8 @@ export const useTasksStore = defineStore('tasks', () => {
     toggleComplete,
     isCompleted,
     cleanOldRecords,
+    toggleSkip,
+    isSkipped,
     // 健康提醒
     healthReminder,
     lastHealthTrigger,

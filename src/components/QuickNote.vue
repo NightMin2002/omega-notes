@@ -5,6 +5,7 @@
  */
 import { ref, computed, watch } from 'vue'
 import { useNotesStore } from '../stores/notes'
+import { useDraft } from '../composables/useDraft'
 
 const props = defineProps<{
   open: boolean
@@ -15,13 +16,25 @@ const emit = defineEmits<{
 }>()
 
 const notesStore = useNotesStore()
-const content = ref('')
+const { draftContent: draftQuick, clearDraft, wasRestored } = useDraft('quick-note')
+const content = ref(draftQuick.value)
 const isSaving = ref(false)
 const justSaved = ref(false)
+const showRestoredHint = ref(false)
+
+/* 同步 content → draft */
+watch(content, (v) => { draftQuick.value = v })
 
 watch(() => props.open, (val) => {
   if (val) {
-    content.value = ''
+    /* 如果有草稿则恢复，否则清空 */
+    if (wasRestored.value && draftQuick.value.trim()) {
+      content.value = draftQuick.value
+      showRestoredHint.value = true
+      setTimeout(() => { showRestoredHint.value = false }, 3000)
+    } else {
+      content.value = ''
+    }
     justSaved.value = false
   }
 })
@@ -62,6 +75,7 @@ async function save() {
   isSaving.value = false
   justSaved.value = true
   content.value = ''
+  clearDraft()
 
   setTimeout(() => {
     justSaved.value = false

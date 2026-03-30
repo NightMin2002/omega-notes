@@ -34,8 +34,9 @@ function tick() {
   const store = useTasksStore()
   const time = nowHHmm()
   const today = store.currentDayKey
+  let taskTriggeredThisMinute = false
 
-  // ─── 1. 每日任务提醒 ───
+  // ─── 1. 每日任务提醒（优先） ───
   const rec = store.records.find(r => r.date === today)
   const completedSet = new Set(rec?.completedIds ?? [])
 
@@ -45,11 +46,14 @@ function tick() {
       if (!triggeredKeys.has(key)) {
         triggeredKeys.add(key)
         store.notify('Ω Notes — 任务提醒', task.title)
+        taskTriggeredThisMinute = true
       }
     }
   }
 
-  // ─── 2. 健康提醒 ───
+  // ─── 2. 健康提醒（任务提醒同分钟触发时跳过） ───
+  if (taskTriggeredThisMinute) return
+
   const hr = store.healthReminder
   if (hr.enabled && hr.messages.length > 0) {
     if (!isInQuietPeriod(hr.quietStart, hr.quietEnd)) {
