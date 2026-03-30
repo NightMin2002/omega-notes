@@ -14,7 +14,7 @@ const listRef = ref<HTMLElement | null>(null)
 const wrapperRef = ref<HTMLElement | null>(null)
 
 const isOpen = ref(false)
-const searchText = ref('')
+const searchText = ref(model.value || '')
 const highlightIndex = ref(-1)
 
 /** 所有分类（来自 store） */
@@ -122,9 +122,10 @@ function handleClickOutside(e: MouseEvent) {
 onMounted(() => document.addEventListener('mousedown', handleClickOutside))
 onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
 
+/* Bug #9 fix: immediate: true 确保组件挂载时 searchText 就与 model 同步 */
 watch(model, (val) => {
   if (!isOpen.value) searchText.value = val
-})
+}, { immediate: true })
 </script>
 
 <template>
@@ -145,7 +146,7 @@ watch(model, (val) => {
         @input="handleInput"
         @keydown="handleKeydown"
       >
-      <button class="cat-toggle" tabindex="-1" @mousedown.prevent="isOpen ? closeDropdown() : openDropdown()">
+      <button type="button" class="cat-toggle" tabindex="-1" @mousedown.prevent="isOpen ? closeDropdown() : openDropdown()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :class="{ rotated: isOpen }">
           <polyline points="6 9 12 15 18 9" />
         </svg>
@@ -163,6 +164,7 @@ watch(model, (val) => {
         </div>
 
         <button
+          type="button"
           v-for="(cat, i) in filteredCategories"
           :key="cat"
           class="cat-option"
@@ -186,6 +188,7 @@ watch(model, (val) => {
 
         <!-- 新建分类选项 -->
         <button
+          type="button"
           v-if="isNewCategory"
           class="cat-option cat-new"
           :class="{ highlighted: highlightIndex === filteredCategories.length }"

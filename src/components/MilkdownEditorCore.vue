@@ -78,8 +78,9 @@ const smartPastePlugin = $prose((ctx) => new Plugin({
         }
 
         /* ── 场景 2：纯文本含 Markdown 语法 ── */
+        /* ── 场景 3（Bug #10 fix）：含换行的纯文本 → 同样走 parser，避免换行被吞 ── */
         const plainText = cd.getData('text/plain')
-        if (plainText && MD_PATTERN.test(plainText)) {
+        if (plainText && (MD_PATTERN.test(plainText) || plainText.includes('\n'))) {
           event.preventDefault()
           try {
             const parser = ctx.get(parserCtx)

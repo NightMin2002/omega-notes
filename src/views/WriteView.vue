@@ -63,7 +63,10 @@ const {
 function applyTemplate(tpl: NoteTemplate) {
   title.value = tpl.title
   content.value = tpl.content
-  category.value = tpl.category
+  /* Bug #6 fix: 如果 URL 带有 ?category= 预填分类，则保留；否则使用模板分类 */
+  if (!prefillCat || !category.value) {
+    category.value = tpl.category
+  }
   showTemplates.value = false
   if (tpl.content) {
     editorMode.value = 'split'
@@ -93,6 +96,25 @@ async function handleSubmit() {
     console.error('保存或跳转失败:', err)
     hasSubmitted.value = false
     isSaving.value = false
+  }
+}
+
+/* ─── Bug #2 fix: 取消按钮逻辑 ─── */
+function handleCancel() {
+  /* 如果正在编辑（非模板选择），先返回模板选择器 */
+  if (!showTemplates.value) {
+    showTemplates.value = true
+    title.value = ''
+    content.value = ''
+    category.value = prefillCat || ''
+    return
+  }
+  /* 已在模板选择器，导航离开 */
+  clearDraft()
+  if (window.history.length > 1) {
+    router.back()
+  } else {
+    router.replace('/notes')
   }
 }
 
@@ -265,7 +287,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
       </div>
 
       <div class="write-actions">
-        <button type="button" class="btn-secondary" @click="router.back()">取消</button>
+        <button type="button" class="btn-secondary" @click="handleCancel">取消</button>
         <button
           type="submit"
           class="btn-primary"
