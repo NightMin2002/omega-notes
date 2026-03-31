@@ -36,6 +36,7 @@ V1 的 CSS 设计系统和架构思路值得肯定，但 1200 行的 `ui.js` 手
 | 编辑器 | Milkdown (ProseMirror) | ^7.19 |
 | 数学公式 | KaTeX + @milkdown/plugin-math | ^0.16 / ^4.16 |
 | 渲染 | markdown-it + highlight.js + markdown-it-texmath + markdown-it-task-lists | ^14.1 / ^11.11 |
+| 图表 | Mermaid.js（流程图/序列图/甘特图等） | ^11.x |
 | 拖拽排序 | vue-draggable-plus (SortableJS) | ^0.6 |
 | 字体 | @fontsource/inter（内置，无网络依赖） | ^5.x |
 
@@ -79,8 +80,9 @@ npm run tauri build
 | Phase 8 | 视觉深度重构 — 多主题阅读 + 拖拽排序 + Markdown 卡片预览 + 按钮边框增强 | ✅ 完成 |
 | Phase 9 | UI/UX 大改造 — 草稿系统 + 分类选择器 + 主页指挥中心 + 任务增强 + 阅读主题 | ✅ 完成 |
 | Phase 10 | Bug 修复与功能增强 — 拖拽动画、任务导入导出、字体缩放、分类一键完成、卡片多主题 | ✅ 完成 |
-| Phase 11 | 桌面悬浮球 + 悬挂窗口 — 多窗口架构（Tauri always-on-top）+ 离线字体打包 | ✅ 完成 |
-| Phase 12+ | 知识管理 / 智能化 / 平台化 | 📋 规划中 |
+| Phase 11 | 桌面悬挂窗口 — 多窗口架构（Tauri always-on-top）+ 离线字体打包 | ✅ 完成 |
+| Phase 12 | 稳定性修复 — FLIP 拖拽动画 + 编辑器主题 + Mermaid 图表 + 交互任务 + 双重通知修复 | ✅ 完成 |
+| Phase 13+ | 知识管理 / 智能化 / 平台化 | 📋 规划中 |
 
 详细功能规划与优先级排序请参阅 [功能方向规划](./docs/04-功能方向规划.md)。
 
@@ -100,7 +102,6 @@ npm run tauri build
 
 | 入口 | 窗口 | 说明 |
 |---|---|---|
-| 侧边栏 → 🔮 | 悬浮球 | Ω 圆形图标，展开快捷面板（快速笔记/任务进度/计时器/悬挂入口） |
 | 侧边栏 → 📋 | 悬挂任务 | 始终置顶的精简任务列表，打勾实时同步主窗口数据 |
 | 任务页头部 | 悬挂任务 | 同上 |
 | 笔记详情工具栏 | 悬挂笔记 | 当前笔记的只读 Markdown 窗口，始终置顶 |
@@ -169,4 +170,4 @@ updatedAt: 2026-03-18T12:30:00.000Z
 
 ---
 
-*Created by Code Agent Ω — 2026.03.18 | Last updated: 2026.03.30 v2.6.0 桌面悬挂系统 + 离线字体*
+*Created by Code Agent Ω — 2026.03.18 | Last updated: 2026.03.31 v2.7.0 稳定性修复 + FLIP 拖拽动画 + 编辑器主题 + Mermaid 图表*

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, nextTick } from 'vue'
 import { useNotesStore } from '../stores/notes'
 import { useRouter, useRoute } from 'vue-router'
 import { previewHtml } from '../utils/markdown'
@@ -106,15 +106,64 @@ const gridRef = ref<HTMLElement | null>(null)
 const draggableNotes = ref<typeof displayedNotes.value>([])
 watch(displayedNotes, (val) => { draggableNotes.value = [...val] }, { immediate: true })
 
+/**
+ * FLIP 动画：记录拖拽前所有卡片位置，拖拽结束后
+ * 计算位移差值，用 CSS transform 动画平滑过渡。
+ */
+let flipMap = new Map<string, DOMRect>()
+
+function capturePositions() {
+  flipMap.clear()
+  if (!gridRef.value) return
+  const cards = gridRef.value.querySelectorAll<HTMLElement>('.note-card')
+  cards.forEach(card => {
+    const id = card.dataset.noteId
+    if (id) flipMap.set(id, card.getBoundingClientRect())
+  })
+}
+
+function playFlipAnimation() {
+  if (!gridRef.value || flipMap.size === 0) return
+  const cards = gridRef.value.querySelectorAll<HTMLElement>('.note-card')
+  cards.forEach(card => {
+    const id = card.dataset.noteId
+    if (!id) return
+    const first = flipMap.get(id)
+    if (!first) return
+    const last = card.getBoundingClientRect()
+    const dx = first.left - last.left
+    const dy = first.top - last.top
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return
+    /* Invert: 先让卡片视觉上停留在旧位置 */
+    card.style.transform = `translate(${dx}px, ${dy}px)`
+    card.style.transition = 'none'
+  })
+  /* Play: 下一帧移除 transform，触发 CSS transition 动画到新位置 */
+  requestAnimationFrame(() => {
+    cards.forEach(card => {
+      card.style.transition = 'transform 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+      card.style.transform = ''
+    })
+    /* 动画结束后清理内联样式 */
+    const cleanup = () => {
+      cards.forEach(card => {
+        card.style.transition = ''
+        card.style.transform = ''
+      })
+    }
+    setTimeout(cleanup, 280)
+  })
+  flipMap.clear()
+}
+
 useDraggable(gridRef, draggableNotes, {
-  animation: 200,
+  animation: 0,
   forceFallback: true,
   fallbackOnBody: true,
   fallbackTolerance: 3,
   ghostClass: 'sortable-ghost',
   chosenClass: 'sortable-chosen',
   fallbackClass: 'sortable-fallback',
-  /* CSS Grid 优化：降低交换灵敏度，防止拖拽时频繁抖动 */
   swapThreshold: 0.65,
   invertSwap: true,
   delay: 80,
@@ -123,18 +172,15 @@ useDraggable(gridRef, draggableNotes, {
     gridRef.value?.classList.add('is-dragging')
   },
   onEnd() {
+    /* 1. 在 DOM 真正更新前记录所有卡片的当前位置 */
+    capturePositions()
+    /* 2. 保存新顺序 → 触发 Vue 重渲染 */
     const ids = draggableNotes.value.map(n => n.id)
     notesStore.reorderNotes(ids)
-    /*
-     * 拖拽结束后 SortableJS 将元素放回 DOM 触发布局重排。
-     * 必须等到浏览器完成两次渲染帧（reflow + paint），
-     * 再移除 is-dragging 恢复正常样式，否则 transition 会
-     * 让元素从旧位置"飞"到新位置产生抽搐。
-     */
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        gridRef.value?.classList.remove('is-dragging')
-      })
+    /* 3. DOM 更新后播放 FLIP 动画 */
+    nextTick(() => {
+      playFlipAnimation()
+      gridRef.value?.classList.remove('is-dragging')
     })
   },
 })
@@ -457,14 +503,18 @@ useDraggable(gridRef, draggableNotes, {
   }
 }
 
-/* ─── 笔记网格 ─── */
+/* ─── 笔记网格（Flexbox — SortableJS 与 CSS Grid 不兼容，flex-wrap 是正解） ─── */
 .notes-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-4);
 }
 
 .note-card {
+  /* flex item 模拟 grid auto-fill minmax(280px, 1fr) */
+  flex: 1 1 280px;
+  max-width: calc(50% - var(--space-4) / 2);
+  min-width: 280px;
   position: relative;
   text-align: left;
   padding: var(--space-4);
@@ -473,19 +523,18 @@ useDraggable(gridRef, draggableNotes, {
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-lg);
-  /* hover 用独立 translate（不干扰 SortableJS 的 transform） */
+  /* hover 过渡（translate/box-shadow 不干扰 FLIP 的 transform） */
   transition: translate var(--duration-fast) var(--ease-out),
               box-shadow var(--duration-fast) var(--ease-out),
               border-color var(--duration-fast) var(--ease-out);
   cursor: grab;
   user-select: none;
   touch-action: none;
-  /* GPU 加速，减少拖拽时视觉闪烁 */
   will-change: transform;
 }
 
 @media (hover: hover) {
-  .note-card:hover {
+  .note-card:not(.sortable-chosen):hover {
     translate: 0 -3px;
     box-shadow: var(--shadow-md);
     border-color: var(--color-border-strong);
@@ -510,12 +559,18 @@ useDraggable(gridRef, draggableNotes, {
 }
 
 /*
- * 拖拽进行中：完全禁用卡片 transition + hover translate，
- * 避免 SortableJS 移动 DOM 节点时 CSS 过渡产生「抽搐」。
+ * 拖拽进行中：禁用 hover 过渡效果，
+ * 避免与 SortableJS 的 DOM 操作产生冲突。
+ * FLIP 动画使用内联 style.transition，不受此规则影响。
  */
 .is-dragging .note-card {
-  transition: none !important;
   translate: none !important;
+}
+
+@media (max-width: 640px) {
+  .note-card {
+    max-width: 100%;
+  }
 }
 
 .card-badges {
@@ -541,6 +596,7 @@ useDraggable(gridRef, draggableNotes, {
   margin-bottom: var(--space-2);
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

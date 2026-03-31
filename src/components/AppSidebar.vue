@@ -305,12 +305,6 @@ async function openPopout(kind: string) {
 
         <!-- 悬挂快捷 -->
         <div class="io-row popout-row">
-          <button class="io-btn popout-btn" @click="openPopout('float')" data-tooltip="悬浮球">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10" /><path d="M12 8v4l3 3" />
-            </svg>
-            <span>悬浮球</span>
-          </button>
           <button class="io-btn popout-btn" @click="openPopout('tasks')" data-tooltip="悬挂任务">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />

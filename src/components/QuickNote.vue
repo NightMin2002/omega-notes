@@ -48,14 +48,13 @@ const nextQuickIndex = computed(() => {
 })
 
 /**
- * 将 textarea 的单换行转换为 Markdown 段落分隔（双换行），
- * 避免 Milkdown 编辑器和 markdown-it 渲染时吞掉换行。
+ * 规范化换行：统一为 LF，压缩多余空行。
+ * 不做单换行→双换行的转换，让 markdown-it 的 breaks: true 自行处理。
  */
 function normalizeLineBreaks(text: string): string {
   return text
     .replace(/\r\n/g, '\n')          // 统一为 LF
     .replace(/\n{3,}/g, '\n\n')       // 3+ 换行压缩为 2
-    .replace(/(?<!\n)\n(?!\n)/g, '\n\n') // 单换行 → 双换行
 }
 
 async function save() {

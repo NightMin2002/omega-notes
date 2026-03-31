@@ -3,6 +3,7 @@
  * MilkdownEditor — 外壳组件
  * MilkdownProvider 在这里提供 inject，内层 Core 组件消费它
  */
+import { ref } from 'vue'
 import { MilkdownProvider } from '@milkdown/vue'
 import MilkdownEditorCore from './MilkdownEditorCore.vue'
 import '@milkdown/theme-nord/style.css'
@@ -18,6 +19,17 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: string]
 }>()
+
+const coreRef = ref<InstanceType<typeof MilkdownEditorCore> | null>(null)
+
+defineExpose({
+  wrapSelection: (prefix: string, suffix: string, placeholder?: string) => {
+    coreRef.value?.wrapSelection(prefix, suffix, placeholder)
+  },
+  insertAtCursor: (text: string) => {
+    coreRef.value?.insertAtCursor(text)
+  },
+})
 </script>
 
 <template>
@@ -27,6 +39,7 @@ const emit = defineEmits<{
       :class="{ readonly }"
     >
       <MilkdownEditorCore
+        ref="coreRef"
         :model-value="modelValue"
         @update:model-value="emit('update:modelValue', $event)"
       />

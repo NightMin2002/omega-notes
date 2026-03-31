@@ -12,6 +12,8 @@ const TASKS_KEY = 'omega-daily-tasks'
 const RECORDS_KEY = 'omega-daily-records'
 const REMINDER_KEY = 'omega-health-reminder'
 const CONFIG_KEY = 'omega-tasks-config'
+const COUNTDOWN_KEY = 'omega-countdown'
+const COUNTDOWN_NOTIFIED_KEY = 'omega-countdown-notified'
 
 /* ─── 任务配置 ─── */
 interface TasksConfig {
@@ -361,9 +363,26 @@ export const useTasksStore = defineStore('tasks', () => {
 
   let countdownTimer: ReturnType<typeof setInterval> | null = null
 
+  /**
+   * 倒计时结束时发通知（防重：只有第一个窗口写入 flag 的才发）
+   */
+  function notifyCountdownOnce() {
+    const flagKey = COUNTDOWN_NOTIFIED_KEY
+    const existing = localStorage.getItem(flagKey)
+    if (existing) {
+      const ts = parseInt(existing, 10)
+      // 5秒内的重复通知视为重复
+      if (Date.now() - ts < 5000) return
+    }
+    localStorage.setItem(flagKey, String(Date.now()))
+    const mins = Math.round(countdown.value.totalSeconds / 60)
+    notify('Ω Notes — 计时结束', `${mins} 分钟倒计时已结束！`)
+  }
+
   function startCountdown(minutes: number) {
     stopCountdown()
     countdownFinished.value = false
+    localStorage.removeItem(COUNTDOWN_NOTIFIED_KEY)
     const secs = minutes * 60
     countdown.value = {
       isRunning: true,
@@ -371,6 +390,7 @@ export const useTasksStore = defineStore('tasks', () => {
       totalSeconds: secs,
       remainingSeconds: secs,
     }
+    persistCountdown()
     countdownTimer = setInterval(() => {
       if (!countdown.value.isPaused && countdown.value.isRunning) {
         countdown.value.remainingSeconds--
@@ -379,9 +399,10 @@ export const useTasksStore = defineStore('tasks', () => {
           countdown.value.isRunning = false
           countdownFinished.value = true
           stopCountdown()
-          // ★ 直接发通知，零延迟
-          const mins = Math.round(countdown.value.totalSeconds / 60)
-          notify('Ω Notes — 计时结束', `${mins} 分钟倒计时已结束！`)
+          persistCountdown()
+          notifyCountdownOnce()
+        } else if (countdown.value.remainingSeconds % 5 === 0) {
+          persistCountdown()
         }
       }
     }, 1000)
@@ -389,6 +410,7 @@ export const useTasksStore = defineStore('tasks', () => {
 
   function pauseCountdown() {
     countdown.value.isPaused = !countdown.value.isPaused
+    persistCountdown()
   }
 
   function stopCountdown() {
@@ -407,12 +429,95 @@ export const useTasksStore = defineStore('tasks', () => {
       totalSeconds: countdown.value.totalSeconds,
       remainingSeconds: countdown.value.totalSeconds,
     }
+    persistCountdown()
+  }
+
+  /** 持久化倒计时状态 */
+  function persistCountdown() {
+    saveJSON(COUNTDOWN_KEY, {
+      ...countdown.value,
+      /** 存储时间戳，用于跨窗口同步剩余时间 */
+      savedAt: Date.now(),
+    })
+  }
+
+  /**
+   * 跨窗口同步：从 localStorage 重新读取所有状态
+   * 供主窗口和悬挂窗口共同使用
+   */
+  function syncFromStorage() {
+    try {
+      const rawTasks = localStorage.getItem(TASKS_KEY)
+      if (rawTasks) {
+        const fresh = JSON.parse(rawTasks)
+        if (JSON.stringify(tasks.value) !== rawTasks) {
+          tasks.value.splice(0, tasks.value.length, ...fresh)
+        }
+      }
+      const rawRecords = localStorage.getItem(RECORDS_KEY)
+      if (rawRecords) {
+        const fresh = JSON.parse(rawRecords)
+        if (JSON.stringify(records.value) !== rawRecords) {
+          records.value.splice(0, records.value.length, ...fresh)
+        }
+      }
+      const rawCd = localStorage.getItem(COUNTDOWN_KEY)
+      if (rawCd) {
+        const saved = JSON.parse(rawCd) as CountdownState & { savedAt?: number }
+        // 如果另一个窗口正在运行倒计时，计算已过去的时间
+        if (saved.isRunning && !saved.isPaused && saved.savedAt) {
+          const elapsed = Math.floor((Date.now() - saved.savedAt) / 1000)
+          saved.remainingSeconds = Math.max(0, saved.remainingSeconds - elapsed)
+          if (saved.remainingSeconds <= 0) {
+            saved.isRunning = false
+            saved.remainingSeconds = 0
+          }
+        }
+        countdown.value = {
+          isRunning: saved.isRunning,
+          isPaused: saved.isPaused,
+          totalSeconds: saved.totalSeconds,
+          remainingSeconds: saved.remainingSeconds,
+        }
+        // ★ 不在这里启动定时器！
+        // 同步窗口只更新显示值，避免多个窗口各自运行独立定时器导致多重通知。
+        // 定时器恢复仅在 init() 中执行（窗口刷新/重开时接管）。
+      }
+    } catch { /* ignore parse errors */ }
   }
 
   /* ─── 初始化 ─── */
   async function init() {
     cleanOldRecords()
+    syncFromStorage()
+
+    /* 窗口（重新）打开时，如果倒计时正在运行，接管定时器 */
+    if (countdown.value.isRunning && !countdownTimer) {
+      countdownTimer = setInterval(() => {
+        if (!countdown.value.isPaused && countdown.value.isRunning) {
+          countdown.value.remainingSeconds--
+          if (countdown.value.remainingSeconds <= 0) {
+            countdown.value.remainingSeconds = 0
+            countdown.value.isRunning = false
+            countdownFinished.value = true
+            stopCountdown()
+            persistCountdown()
+            notifyCountdownOnce()
+          } else if (countdown.value.remainingSeconds % 5 === 0) {
+            persistCountdown()
+          }
+        }
+      }, 1000)
+    }
+
     await ensureNotify()
+
+    /* 监听其他窗口的 localStorage 变化（storage 事件只在其他窗口触发） */
+    window.addEventListener('storage', (e) => {
+      if (e.key === TASKS_KEY || e.key === RECORDS_KEY || e.key === COUNTDOWN_KEY) {
+        syncFromStorage()
+      }
+    })
   }
 
   return {
@@ -454,6 +559,8 @@ export const useTasksStore = defineStore('tasks', () => {
     pauseCountdown,
     stopCountdown,
     resetCountdown,
+    // 跨窗口同步
+    syncFromStorage,
     // 通知（供 scheduler 复用）
     notify,
     // 初始化

@@ -14,6 +14,7 @@ export type { Note, FolderNode }
 
 const RECENT_KEY = 'omega-recent-notes'
 const RECENT_MAX = 20
+const CUSTOM_CATEGORIES_KEY = 'omega-custom-categories'
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
@@ -25,6 +26,16 @@ export const useNotesStore = defineStore('notes', () => {
   const searchQuery = ref<string>('')
   const isLoading = ref(true)
   const recentIds = ref<string[]>([])
+
+  /** 用户手动创建的分类（笔记保存前就可见） */
+  const customCategories = ref<string[]>(
+    (() => {
+      try {
+        const raw = localStorage.getItem(CUSTOM_CATEGORIES_KEY)
+        return raw ? JSON.parse(raw) : []
+      } catch { return [] }
+    })()
+  )
 
   /** ID → Note 映射表（O(1) 查找） */
   const noteMap = computed(() => {
@@ -95,11 +106,26 @@ export const useNotesStore = defineStore('notes', () => {
 
   const categories = computed<string[]>(() => {
     const set = new Set<string>()
+    /* 先加入笔记中已使用的分类 */
     for (const note of activeNotes.value) {
       if (note.category && note.category !== '回收站') set.add(note.category)
     }
+    /* 再加入用户手动创建的分类 */
+    for (const cat of customCategories.value) {
+      set.add(cat)
+    }
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))
   })
+
+  /** 添加自定义分类（立即持久化） */
+  function addCustomCategory(name: string) {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    if (!customCategories.value.includes(trimmed)) {
+      customCategories.value.push(trimmed)
+      localStorage.setItem(CUSTOM_CATEGORIES_KEY, JSON.stringify(customCategories.value))
+    }
+  }
 
   /** 从分类路径构建文件夹树 */
   const categoryTree = computed<FolderNode[]>(() => {
@@ -436,5 +462,6 @@ export const useNotesStore = defineStore('notes', () => {
     importBatch,
     reorderNotes,
     moveNoteToCategory,
+    addCustomCategory,
   }
 })

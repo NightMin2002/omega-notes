@@ -8,28 +8,11 @@ import { useTasksStore } from '../../stores/tasks'
 
 const store = useTasksStore()
 
-/* 跨窗口同步：定时重新读取 localStorage（比 storage event 更可靠） */
+/* 跨窗口同步：使用 store 内置的 syncFromStorage（包含 storage event 监听）
+   加一个轮询作为补充（storage event 不在同一窗口触发） */
 let syncTimer: ReturnType<typeof setInterval> | null = null
 onMounted(() => {
-  syncTimer = setInterval(() => {
-    try {
-      const raw = localStorage.getItem('omega-daily-records')
-      if (raw) {
-        const freshRecords = JSON.parse(raw)
-        // 只有数据变化时才更新（避免不必要的渲染）
-        if (JSON.stringify(store.records) !== raw) {
-          store.records.splice(0, store.records.length, ...freshRecords)
-        }
-      }
-      const rawTasks = localStorage.getItem('omega-daily-tasks')
-      if (rawTasks) {
-        const freshTasks = JSON.parse(rawTasks)
-        if (JSON.stringify(store.tasks) !== rawTasks) {
-          store.tasks.splice(0, store.tasks.length, ...freshTasks)
-        }
-      }
-    } catch { /* ignore */ }
-  }, 2000)
+  syncTimer = setInterval(() => store.syncFromStorage(), 2000)
 })
 onUnmounted(() => { if (syncTimer) clearInterval(syncTimer) })
 

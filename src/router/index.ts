@@ -48,13 +48,7 @@ const router = createRouter({
       component: () => import('../views/SettingsView.vue'),
       meta: { title: '设置' },
     },
-    /* ─── 悬挂窗口 / 悬浮球路由（独立窗口渲染，不含侧边栏） ─── */
-    {
-      path: '/float',
-      name: 'floating-ball',
-      component: () => import('../views/popout/FloatingBall.vue'),
-      meta: { popout: true, title: '悬浮球' },
-    },
+    /* ─── 悬挂窗口路由（独立窗口渲染，不含侧边栏） ─── */
     {
       path: '/popout/tasks',
       name: 'popout-tasks',

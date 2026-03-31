@@ -6,8 +6,13 @@
  * - Markdown 工具栏 insert / wrap
  * - 粘贴图片处理
  */
-import { ref, computed, type Ref } from 'vue'
+import { ref, computed, type Ref, type ShallowRef } from 'vue'
 import { useNotesStore } from '../stores/notes'
+
+interface MilkdownEditorExposed {
+  wrapSelection: (prefix: string, suffix: string, placeholder?: string) => void
+  insertAtCursor: (text: string) => void
+}
 
 interface UseEditorActionsOptions {
   /** 绑定的内容 ref（v-model 源） */
@@ -18,10 +23,12 @@ interface UseEditorActionsOptions {
   editorKey: Ref<number>
   /** 分屏模式 textarea ref */
   textareaRef: Ref<HTMLTextAreaElement | null>
+  /** MilkdownEditor 组件 ref（WYSIWYG 模式用） */
+  milkdownRef?: ShallowRef<MilkdownEditorExposed | null> | Ref<MilkdownEditorExposed | null>
 }
 
 export function useEditorActions(opts: UseEditorActionsOptions) {
-  const { content, editorMode, editorKey, textareaRef } = opts
+  const { content, editorMode, editorKey, textareaRef, milkdownRef } = opts
   const notesStore = useNotesStore()
 
   /* ─── 图片插入 ─── */
@@ -77,6 +84,12 @@ export function useEditorActions(opts: UseEditorActionsOptions) {
   /* ─── 工具栏操作 ─── */
   function handleToolbarInsert(text: string) {
     if (editorMode.value === 'wysiwyg') {
+      /* 优先通过 ProseMirror 在光标位置插入 */
+      if (milkdownRef?.value) {
+        milkdownRef.value.insertAtCursor(text)
+        return
+      }
+      /* 降级：直接追加（兼容旧行为） */
       if (content.value && !content.value.endsWith('\n')) {
         content.value += '\n'
       }
@@ -103,6 +116,12 @@ export function useEditorActions(opts: UseEditorActionsOptions) {
 
   function handleToolbarWrap(prefix: string, suffix: string) {
     if (editorMode.value === 'wysiwyg') {
+      /* 优先通过 ProseMirror 包裹选区 */
+      if (milkdownRef?.value) {
+        milkdownRef.value.wrapSelection(prefix, suffix)
+        return
+      }
+      /* 降级：直接追加（兼容旧行为） */
       if (content.value && !content.value.endsWith('\n')) {
         content.value += '\n'
       }
@@ -183,3 +202,4 @@ export function useEditorActions(opts: UseEditorActionsOptions) {
     handlePaste,
   }
 }
+

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUpdated, ref } from 'vue'
+import { computed, nextTick, onMounted, onUpdated, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
@@ -7,22 +7,52 @@ import texmath from 'markdown-it-texmath'
 import taskLists from 'markdown-it-task-lists'
 import katex from 'katex'
 import { useNotesStore } from '../stores/notes'
+import mermaid from 'mermaid'
 import 'highlight.js/styles/github-dark.min.css'
+
+/* Mermaid 初始化 */
+let mermaidInited = false
+function ensureMermaidInit() {
+  if (mermaidInited) return
+  mermaidInited = true
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default',
+    securityLevel: 'loose',
+    fontFamily: 'var(--font-sans)',
+  })
+}
 
 const props = defineProps<{
   content: string
+  /**
+   * 当提供此 prop 时，任务列表的 checkbox 可交互。
+   * 变更后通过 update:editableContent 回写。
+   */
+  editableContent?: string
+}>()
+
+const emit = defineEmits<{
+  'update:editableContent': [value: string]
 }>()
 
 const router = useRouter()
 const notesStore = useNotesStore()
 const containerRef = ref<HTMLElement | null>(null)
 
+let mermaidIdCounter = 0
+
 const md = new MarkdownIt({
   html: true,
   linkify: true,
   typographer: true,
   breaks: true,
-  highlight(str, lang) {
+  highlight(str, lang): string {
+    /* Mermaid 图表：输出占位 div，后续由 mermaid.run() 渲染 */
+    if (lang === 'mermaid') {
+      const id = `mermaid-${++mermaidIdCounter}`
+      return `<div class="mermaid-block" id="${id}">${md.utils.escapeHtml(str)}</div>`
+    }
     /* 只对 hljs 已注册的语言做高亮，其余原样输出 */
     if (lang && hljs.getLanguage(lang)) {
       try {
@@ -78,12 +108,71 @@ function handleClick(e: Event) {
   }
 }
 
-function bindClickHandler() {
-  containerRef.value?.addEventListener('click', handleClick)
+/**
+ * 可交互任务列表：启用 checkbox 并绑定 change 事件。
+ * 当 checkbox 状态变化时，找到源 Markdown 中对应的 `- [ ]` / `- [x]` 并切换。
+ */
+function enableInteractiveCheckboxes() {
+  const el = containerRef.value
+  if (!el || props.editableContent === undefined) return
+
+  const checkboxes = el.querySelectorAll('.task-list-item input[type="checkbox"]')
+  checkboxes.forEach((cb, index) => {
+    const input = cb as HTMLInputElement
+    input.disabled = false
+    input.style.cursor = 'pointer'
+    // 用 data 属性标记已绑定，避免重复
+    if (input.dataset.bound) return
+    input.dataset.bound = '1'
+    input.addEventListener('change', () => {
+      toggleTaskInSource(index, input.checked)
+    })
+  })
 }
 
-onMounted(bindClickHandler)
-onUpdated(bindClickHandler)
+/** 在 Markdown 源文本中切换第 N 个任务的完成状态 */
+function toggleTaskInSource(taskIndex: number, checked: boolean) {
+  const source = props.editableContent
+  if (source === undefined) return
+
+  const taskPattern = /^(\s*[-*+]\s*)\[( |x|X)\]/gm
+  let count = 0
+  const newContent = source.replace(taskPattern, (match, prefix: string, mark: string) => {
+    if (count++ === taskIndex) {
+      return `${prefix}[${checked ? 'x' : ' '}]`
+    }
+    return match
+  })
+
+  if (newContent !== source) {
+    emit('update:editableContent', newContent)
+  }
+}
+
+/** 渲染占位 div 中的 Mermaid 图表 */
+async function renderMermaidBlocks() {
+  const el = containerRef.value
+  if (!el) return
+  const blocks = el.querySelectorAll<HTMLElement>('.mermaid-block:not([data-mermaid-processed])')
+  if (blocks.length === 0) return
+  ensureMermaidInit()
+  // 根据当前主题更新 mermaid 配色
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+  mermaid.initialize({ theme: isDark ? 'dark' : 'default' })
+  blocks.forEach(b => b.setAttribute('data-mermaid-processed', '1'))
+  try {
+    await mermaid.run({ nodes: blocks })
+  } catch { /* 语法错误时显示原文 */ }
+}
+
+function bindHandlers() {
+  containerRef.value?.addEventListener('click', handleClick)
+  enableInteractiveCheckboxes()
+  nextTick(() => renderMermaidBlocks())
+}
+
+onMounted(bindHandlers)
+onUpdated(bindHandlers)
 </script>
 
 <template>
@@ -162,6 +251,22 @@ onUpdated(bindClickHandler)
   line-height: 1.6;
 }
 
+/* ─── Mermaid 图表 ─── */
+.md-rendered :deep(.mermaid-block) {
+  margin: var(--space-4) 0;
+  padding: var(--space-4);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  text-align: center;
+  overflow-x: auto;
+}
+
+.md-rendered :deep(.mermaid-block svg) {
+  max-width: 100%;
+  height: auto;
+}
+
 /* ─── 引用 ─── */
 .md-rendered :deep(blockquote) {
   border-left: 3px solid var(--color-accent);
@@ -207,9 +312,70 @@ onUpdated(bindClickHandler)
   padding-left: var(--space-2);
 }
 
+/* 重建 checkbox 外观（因全局 appearance:none 导致原生样式消失） */
 .md-rendered :deep(.task-list-item input[type="checkbox"]) {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-border-strong, var(--color-text-tertiary));
+  border-radius: 4px;
+  background: transparent;
+  vertical-align: middle;
   margin-right: var(--space-2);
-  accent-color: var(--color-accent);
+  cursor: pointer;
+  transition: background-color 200ms ease-out,
+              border-color 200ms ease-out,
+              box-shadow 200ms ease-out;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+/* 勾选标记 — 用伪元素画对勾 */
+.md-rendered :deep(.task-list-item input[type="checkbox"])::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  width: 6px;
+  height: 10px;
+  border: solid transparent;
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg) scale(0);
+  transition: transform 150ms ease-out,
+              border-color 150ms ease-out;
+}
+
+/* Checked 状态 */
+.md-rendered :deep(.task-list-item input[type="checkbox"]:checked) {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.md-rendered :deep(.task-list-item input[type="checkbox"]:checked)::after {
+  border-color: #fff;
+  transform: rotate(45deg) scale(1);
+}
+
+/* Hover */
+@media (hover: hover) {
+  .md-rendered :deep(.task-list-item input[type="checkbox"]:not(:checked):hover) {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-muted);
+  }
+}
+
+/* Focus-visible */
+.md-rendered :deep(.task-list-item input[type="checkbox"]:focus-visible) {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-accent-muted);
+}
+
+/* 已完成任务的文字变淡 + 删除线 */
+.md-rendered :deep(.task-list-item.checked) {
+  color: var(--color-text-tertiary);
+  text-decoration: line-through;
 }
 
 /* ─── 分割线 ─── */

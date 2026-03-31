@@ -32,10 +32,10 @@ omega-v2/
 │   │
 │   ├── components/             # 全局/共享组件
 │   │   ├── AppHeader.vue       # 顶部导航栏（含搜索/快速笔记入口）
-│   │   ├── AppSidebar.vue      # 侧边栏导航（收藏夹/最近/文件夹树/导入导出/快捷键面板/悬浮球&悬挂任务按钮）
+│   │   ├── AppSidebar.vue      # 侧边栏导航（收藏夹/最近/文件夹树/导入导出/快捷键面板/悬挂任务按钮）
 │   │   ├── MilkdownEditor.vue  # Markdown 编辑器外壳（提供 Provider）
 │   │   ├── MilkdownEditorCore.vue # 编辑器核心（Milkdown 插件注册）
-│   │   ├── MarkdownRenderer.vue # Markdown → HTML 渲染（阅读模式）
+│   │   ├── MarkdownRenderer.vue # Markdown → HTML 渲染（阅读模式）+ Mermaid 图表
 │   │   ├── QuickNote.vue       # Ctrl+Q 快速笔记弹窗
 │   │   ├── SearchDialog.vue    # Ctrl+K 全局搜索弹窗
 │   │   ├── EditorToolbar.vue   # Markdown 格式化工具栏（14 按钮，分屏/WYSIWYG 通用）
@@ -49,14 +49,13 @@ omega-v2/
 │   │
 │   ├── views/                  # 路由页面组件
 │   │   ├── HomeView.vue        # 主页指挥中心（问候 + 任务进度环 + 统计 + 快捷入口 + 最近更新）
-│   │   ├── NotesView.vue       # 知识库（搜索 + 分类筛选 + 卡片网格 + 拖拽排序）
+│   │   ├── NotesView.vue       # 知识库（搜索 + 分类筛选 + 卡片网格 + FLIP 拖拽动画）
 │   │   ├── WriteView.vue       # 新建笔记（模板 + 编辑器 + 图片/链接 + 草稿自动保存）
 │   │   ├── NoteDetailView.vue  # 笔记详情（阅读/编辑/分屏 + 反向链接 + 4种阅读主题 + 字体缩放 + 悬挂按钮）
 │   │   ├── TrashView.vue       # 回收站（恢复/永久删除/清空）
 │   │   ├── SettingsView.vue    # 设置页（外观/编辑器/数据/关于/字体缩放）
 │   │   ├── TasksView.vue       # 日常管理（每日任务 + 卡片/列表视图 + 3种主题 + 一键完成 + 倒计时 + 健康提醒）
 │   │   └── popout/             # 桌面悬挂窗口（always-on-top 独立窗口）
-│   │       ├── FloatingBall.vue  # 桌面悬浮球（Ω 图标 → 快捷面板）
 │   │       ├── PopoutTasks.vue   # 悬挂任务窗口（精简列表 + 跨窗口同步）
 │   │       ├── PopoutTimer.vue   # 悬挂计时窗口（SVG 进度环 + 预设）
 │   │       └── PopoutNote.vue    # 悬挂笔记阅读窗口
@@ -84,7 +83,7 @@ omega-v2/
 │   │   └── index.ts            # Note / DailyTask / HealthReminder / CountdownState 等
 │   │
 │   └── router/                 # 路由配置
-│       └── index.ts            # 路由表 + 页面标题同步；含 4 条 meta.popout 路由（/float / /popout/*）
+│       └── index.ts            # 路由表 + 页面标题同步；含 3 条 meta.popout 路由（/popout/*）
 │
 └── src-tauri/                  # Tauri 后端（Rust）
     ├── Cargo.toml              # Rust 依赖配置
@@ -117,7 +116,7 @@ docs/
 | 文件 | 职责 | 修改频率 |
 |---|---|---|
 | `variables.css` | 定义所有 Design Token：颜色、间距、圆角、阴影、动效参数、层叠上下文。暗色主题为默认，亮色主题通过 `[data-theme='light']` 覆盖 | 低 — 仅在调整全局视觉时修改 |
-| `reset.css` | 消灭浏览器默认样式。包含 `box-sizing`、滚动条定制、焦点样式、表单元素重置、`::selection`、`prefers-reduced-motion` 降级、**SortableJS 拖拽克隆体全局样式** | 极低 — 几乎不需要改 |
+| `reset.css` | 消灭浏览器默认样式。包含 `box-sizing`、滚动条定制、焦点样式、表单元素重置、`::selection`、`prefers-reduced-motion` 降级、**SortableJS 拖拽克隆体全局样式**、**底部定位 tooltip (`data-tooltip-pos`)** | 极低 — 几乎不需要改 |
 
 **加载顺序**：`main.ts` 中先 `import variables.css` 再 `import reset.css`，确保 Token 在重置规则可用。
 
@@ -129,7 +128,7 @@ docs/
 | `AppSidebar.vue` | 左侧导航。路由链接高亮、⭐ 收藏夹、🕐 最近打开、收件箱、📁 文件夹树（无限嵌套 + 展开/折叠）、导入/导出、快捷键面板 | Props: `collapsed` / Emits: `collapse` |
 | `MilkdownEditor.vue` | 编辑器外壳。提供 `MilkdownProvider` inject 上下文 | Props: `modelValue`, `readonly` / Emits: `update:modelValue` |
 | `MilkdownEditorCore.vue` | 编辑器核心。注册 commonmark/GFM/history/indent/clipboard/**math**/smartPaste 插件，监听 `markdownUpdated`。**智能粘贴**：DOM 层拦截粘贴事件，图片自动转 base64 image 节点，Markdown 文本自动解析为富文本 | Props: `modelValue` / Emits: `update:modelValue` |
-| `MarkdownRenderer.vue` | 只读渲染。markdown-it + highlight.js + **texmath (KaTeX)** + **task-lists**。支持 `[[title]]` 双向链接语法（渲染为可点击链接 + 跳转导航） | Props: `content` |
+| `MarkdownRenderer.vue` | 只读渲染。markdown-it + highlight.js + **texmath (KaTeX)** + **task-lists** + **Mermaid.js 图表**。支持 `[[title]]` 双向链接语法（渲染为可点击链接 + 跳转导航）。Mermaid 代码块自动渲染为 SVG，支持流程图/序列图/甘特图等 | Props: `content` |
 | `QuickNote.vue` | 快速笔记弹窗。`<dialog>` 模态框，Markdown 输入 + Ctrl+Enter 保存到收件箱 | Props: `visible` / Emits: `close` |
 | `SearchDialog.vue` | 全局搜索弹窗。全文搜索 + 关键词高亮 + 键盘导航（↑↓ Enter） | Props: `visible` / Emits: `close` |
 | `EditorToolbar.vue` | Markdown 格式化工具栏（14 按钮），分屏/WYSIWYG 通用 | Emits: `insert`, `wrap` |
@@ -144,11 +143,10 @@ docs/
 | 页面 | 路由 | 依赖的 Store | 功能 |
 |---|---|---|---|
 | `HomeView.vue` | `/` | `notes` | 统计卡片（总笔记/分类/已收藏/已置顶）、快捷入口、最近更新列表 |
-| `NotesView.vue` | `/notes` | `notes` | 搜索框、分类药丸、面包屑（嵌套分类时）、标签云筛选（`?tag=`）、收藏夹/最近视图（`?view=`）、笔记卡片网格、**拖拽排序（SortableJS forceFallback + 归位动画修复）**、**Markdown 卡片预览** |
+| `NotesView.vue` | `/notes` | `notes` | 搜索框、分类药丸、面包屑（嵌套分类时）、标签云筛选（`?tag=`）、收藏夹/最近视图（`?view=`）、笔记卡片网格、**FLIP 拖拽动画（Flexbox + capturePositions/playFlipAnimation）**、**Markdown 卡片预览** |
 | `WriteView.vue` | `/write` | `notes` | 模板选择器 → WYSIWYG/分屏编辑 + 图片插入 + `[[title]]` 链接插入 + 标题/分类/标签表单 |
-| `NoteDetailView.vue` | `/note/:id` | `notes` | 阅读模式 ↔ 编辑模式，收藏/置顶/删除，`[[title]]` 链接插入，自动记录到最近列表，反向链接面板，**字体缩放控制**，**悬挂窗口按钮** |
+| `NoteDetailView.vue` | `/note/:id` | `notes` | 阅读模式 ↔ 编辑模式，收藏/置顶/删除，`[[title]]` 链接插入，自动记录到最近列表，反向链接面板，**字体缩放控制**，**悬挂窗口按钮**，**4 种阅读主题 + 编辑器主题适配** |
 | `TasksView.vue` | `/tasks` | `tasks` | 每日任务 + **卡片/列表视图切换** + **3种主题（默认/简约/彩色）** + **分类一键完成** + 倒计时 + 健康提醒 + 悬挂任务按钮 |
-| `FloatingBall.vue` | `/float` | `tasks`, `notes` | 桌面悬浮球（popout，always-on-top）：Ω 圆形图标展开快捷面板 |
 | `PopoutTasks.vue` | `/popout/tasks` | `tasks` | 悬挂任务（popout，always-on-top）：精简任务列表 + 2s 轮询跨窗口同步 |
 | `PopoutTimer.vue` | `/popout/timer` | `tasks` | 悬挂倒计时（popout，always-on-top）：SVG 进度环 + 预设时长 |
 | `PopoutNote.vue` | `/popout/note/:id` | `notes` | 悬挂笔记（popout，always-on-top）：完整 Markdown 阅读 |
@@ -196,7 +194,6 @@ docs/
 | `/note/:id` | `note-detail` | `NoteDetailView` | 笔记详情 |
 | `/trash` | `trash` | `TrashView` | 回收站 |
 | `/settings` | `settings` | `SettingsView` | 设置 |
-| `/float` | `float` | `FloatingBall` | 桌面悬浮球（`meta.popout: true`） |
 | `/popout/tasks` | `popout-tasks` | `PopoutTasks` | 悬挂任务（`meta.popout: true`） |
 | `/popout/timer` | `popout-timer` | `PopoutTimer` | 悬挂计时（`meta.popout: true`） |
 | `/popout/note/:id` | `popout-note` | `PopoutNote` | 悬挂笔记（`meta.popout: true`） |
@@ -210,7 +207,7 @@ docs/
 | `tauri.conf.json` | 应用配置（窗口大小、标识、构建命令、安全策略） |
 | `Cargo.toml` | Rust 依赖声明 |
 | `src/main.rs` | Windows 下隐藏控制台窗口，调用 `lib.rs` |
-| `src/lib.rs` | Tauri 应用初始化：注册各插件；`async open_popout`（创建/聚焦悬挂窗口）/ `async resize_popout`（动态调整尺寸）/ `async close_popout`（销毁窗口）；系统托盘（右键菜单含悬挂入口 + 左键恢复）；主窗口关闭→最小化到托盘 |
+| `src/lib.rs` | Tauri 应用初始化：注册各插件；`async open_popout`（创建/聚焦悬挂窗口，支持 tasks/timer/note 三种）/ `async resize_popout` / `async close_popout`；系统托盘（右键菜单含悬挂入口 + 左键恢复）；主窗口关闭→最小化到托盘 |
 | `capabilities/` | 权限能力声明（fs + global-shortcut + dialog + autostart） |
 
 ## 数据流向

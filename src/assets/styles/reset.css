@@ -230,6 +230,25 @@ textarea::placeholder {
   transform: translateX(-50%) translateY(0);
 }
 
+/* ─── Tooltip 底部定位（用于顶部区域，防止被窗口标题栏裁剪） ─── */
+[data-tooltip-pos="bottom"]::after {
+  bottom: auto;
+  top: calc(100% + 6px);
+  transform: translateX(-50%) translateY(-4px);
+}
+
+@media (hover: hover) {
+  [data-tooltip-pos="bottom"]:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+[data-tooltip-pos="bottom"]:focus-visible::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-tooltip]::after {
     transition: none;

@@ -55,6 +55,11 @@ function confirmInput() {
   const val = searchText.value.trim()
   if (val) {
     model.value = val
+    searchText.value = val
+    /* 如果是新分类，立即注册到 store 使其在分类列表中可见 */
+    if (!allCategories.value.some(c => c.toLowerCase() === val.toLowerCase())) {
+      notesStore.addCustomCategory(val)
+    }
   }
   closeDropdown()
 }

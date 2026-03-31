@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
+import { computed, ref, shallowRef, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useNotesStore } from '../stores/notes'
 import { useSettingsStore } from '../stores/settings'
@@ -28,6 +28,7 @@ const editTags = ref('')
 const editorMode = ref<EditorMode>(settingsStore.defaultEditorMode)
 const detailTextareaRef = ref<HTMLTextAreaElement | null>(null)
 const editorKey = ref(0)
+const milkdownEditorRef = shallowRef<InstanceType<typeof MilkdownEditor> | null>(null)
 
 // 支持的阅读模式方案
 const readingTheme = ref(localStorage.getItem('omega-reading-theme') || 'aurora')
@@ -51,6 +52,7 @@ const {
   editorMode,
   editorKey,
   textareaRef: detailTextareaRef,
+  milkdownRef: milkdownEditorRef,
 })
 
 const note = computed(() => {
@@ -388,7 +390,7 @@ async function popoutNote() {
               @insert="handleToolbarInsert"
               @wrap="handleToolbarWrap"
             />
-            <MilkdownEditor :key="editorKey" v-model="editContent" />
+            <MilkdownEditor ref="milkdownEditorRef" :key="editorKey" v-model="editContent" />
           </template>
 
           <!-- 分屏模式 -->
@@ -448,7 +450,11 @@ async function popoutNote() {
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </button>
-            <MarkdownRenderer :content="note.content" />
+            <MarkdownRenderer
+              :content="note.content"
+              :editable-content="note.content"
+              @update:editable-content="(val: string) => { if (note) notesStore.updateNote(note.id, { content: val }) }"
+            />
           </div>
 
           <BacklinksPanel :backlinks="backlinks" />
@@ -1291,5 +1297,147 @@ async function popoutNote() {
   .copy-content-btn {
     opacity: 1;
   }
+}
+</style>
+
+<!-- 编辑器主题适配（非 scoped，穿透 MilkdownEditor 组件） -->
+<style>
+/* ── Aurora 编辑器 ── */
+.edit-form.theme-aurora .milkdown-wrapper {
+  background: var(--color-bg-primary);
+  border-color: rgba(99, 102, 241, 0.15);
+}
+
+.edit-form.theme-aurora .milkdown-wrapper:focus-within {
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* ── Ink 编辑器 ── */
+.edit-form.theme-ink .milkdown-wrapper {
+  border-radius: 0;
+  border-left: 2px solid var(--color-accent-muted);
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  background: transparent;
+}
+
+.edit-form.theme-ink .milkdown .ProseMirror {
+  line-height: 1.9 !important;
+}
+
+.edit-form.theme-ink .milkdown-wrapper:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: none;
+}
+
+/* ── Terminal 编辑器 ── */
+.edit-form.theme-terminal .milkdown-wrapper {
+  background: oklch(0.14 0.005 160);
+  border-color: oklch(0.25 0.04 145);
+}
+
+.edit-form.theme-terminal .milkdown-wrapper:focus-within {
+  border-color: oklch(0.5 0.15 145);
+  box-shadow: 0 0 0 3px oklch(0.3 0.08 145 / 0.3);
+}
+
+.edit-form.theme-terminal .milkdown .ProseMirror {
+  font-family: var(--font-mono) !important;
+  font-size: 0.88rem !important;
+  line-height: 1.7 !important;
+  color: oklch(0.78 0.06 145) !important;
+}
+
+.edit-form.theme-terminal .milkdown .ProseMirror h1,
+.edit-form.theme-terminal .milkdown .ProseMirror h2,
+.edit-form.theme-terminal .milkdown .ProseMirror h3 {
+  color: oklch(0.85 0.18 145) !important;
+  border-bottom: 1px dashed oklch(0.3 0.04 145);
+  padding-bottom: var(--space-1);
+}
+
+.edit-form.theme-terminal .milkdown .ProseMirror code {
+  color: oklch(0.8 0.14 80) !important;
+  background: oklch(0.18 0.005 160) !important;
+}
+
+.edit-form.theme-terminal .milkdown .ProseMirror pre {
+  background: oklch(0.12 0.005 160) !important;
+  border-color: oklch(0.25 0.04 145) !important;
+}
+
+.edit-form.theme-terminal .milkdown .ProseMirror a {
+  color: oklch(0.7 0.15 200) !important;
+}
+
+.edit-form.theme-terminal .milkdown .ProseMirror blockquote {
+  border-left-color: oklch(0.5 0.15 145) !important;
+  color: oklch(0.65 0.06 145) !important;
+}
+
+.edit-form.theme-terminal .milkdown .ProseMirror p.is-editor-empty:first-child::before {
+  color: oklch(0.4 0.04 145) !important;
+}
+
+/* ── Parchment 编辑器 ── */
+.edit-form.theme-parchment .milkdown-wrapper {
+  background: oklch(0.95 0.02 80);
+  border-color: oklch(0.82 0.04 75);
+}
+
+.edit-form.theme-parchment .milkdown-wrapper:focus-within {
+  border-color: oklch(0.6 0.08 50);
+  box-shadow: 0 0 0 3px oklch(0.7 0.06 60 / 0.2);
+}
+
+.edit-form.theme-parchment .milkdown .ProseMirror {
+  font-family: 'Georgia', 'Noto Serif SC', serif !important;
+  line-height: 2 !important;
+  color: oklch(0.28 0.03 50) !important;
+}
+
+.edit-form.theme-parchment .milkdown .ProseMirror h1,
+.edit-form.theme-parchment .milkdown .ProseMirror h2,
+.edit-form.theme-parchment .milkdown .ProseMirror h3 {
+  color: oklch(0.3 0.06 40) !important;
+  font-family: 'Georgia', 'Noto Serif SC', serif !important;
+}
+
+.edit-form.theme-parchment .milkdown .ProseMirror blockquote {
+  border-left-color: oklch(0.6 0.08 50) !important;
+  background: oklch(0.9 0.03 75) !important;
+  color: oklch(0.35 0.04 50) !important;
+}
+
+.edit-form.theme-parchment .milkdown .ProseMirror a {
+  color: oklch(0.4 0.12 30) !important;
+}
+
+.edit-form.theme-parchment .milkdown .ProseMirror p.is-editor-empty:first-child::before {
+  color: oklch(0.6 0.04 60) !important;
+}
+
+/* Parchment 暗色模式 */
+[data-theme='dark'] .edit-form.theme-parchment .milkdown-wrapper {
+  background: oklch(0.22 0.02 60);
+  border-color: oklch(0.32 0.03 55);
+}
+
+[data-theme='dark'] .edit-form.theme-parchment .milkdown .ProseMirror {
+  color: oklch(0.78 0.02 60) !important;
+}
+
+[data-theme='dark'] .edit-form.theme-parchment .milkdown .ProseMirror h1,
+[data-theme='dark'] .edit-form.theme-parchment .milkdown .ProseMirror h2,
+[data-theme='dark'] .edit-form.theme-parchment .milkdown .ProseMirror h3 {
+  color: oklch(0.82 0.05 50) !important;
+}
+
+[data-theme='dark'] .edit-form.theme-parchment .milkdown .ProseMirror blockquote {
+  border-left-color: oklch(0.45 0.06 50) !important;
+  background: oklch(0.25 0.02 55) !important;
+  color: oklch(0.7 0.03 55) !important;
 }
 </style>

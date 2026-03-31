@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, shallowRef, onMounted, onUnmounted } from 'vue'
 import { useNotesStore } from '../stores/notes'
 import { useSettingsStore } from '../stores/settings'
 import { useRouter, useRoute } from 'vue-router'
@@ -41,6 +41,7 @@ const templates = getTemplates()
 const editorMode = ref<EditorMode>(settingsStore.defaultEditorMode)
 const editorKey = ref(0)
 const sourceTextareaRef = ref<HTMLTextAreaElement | null>(null)
+const milkdownEditorRef = shallowRef<InstanceType<typeof MilkdownEditor> | null>(null)
 
 const {
   insertImageFromFile,
@@ -58,6 +59,7 @@ const {
   editorMode,
   editorKey,
   textareaRef: sourceTextareaRef,
+  milkdownRef: milkdownEditorRef,
 })
 
 function applyTemplate(tpl: NoteTemplate) {
@@ -249,7 +251,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
           @insert="handleToolbarInsert"
           @wrap="handleToolbarWrap"
         />
-        <MilkdownEditor :key="editorKey" v-model="content" />
+        <MilkdownEditor ref="milkdownEditorRef" :key="editorKey" v-model="content" />
       </template>
 
       <!-- 分屏模式 -->
