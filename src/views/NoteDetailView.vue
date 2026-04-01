@@ -178,7 +178,15 @@ async function popoutNote() {
     <template v-if="note">
       <!-- 顶部操作栏 -->
       <div class="detail-toolbar">
-        <button class="toolbar-btn" @click="router.push('/notes')">
+        <!-- 编辑模式：左侧“取消” / 阅读模式：“返回” -->
+        <button v-if="isEditing" class="toolbar-btn toolbar-btn--cancel" @click="cancelEdit">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+          <span>取消</span>
+        </button>
+        <button v-else class="toolbar-btn" @click="router.push('/notes')">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="19" y1="12" x2="5" y2="12" />
             <polyline points="12 19 5 12 12 5" />
@@ -235,6 +243,16 @@ async function popoutNote() {
                 </svg>
               </button>
             </div>
+
+            <!-- 编辑模式：顶栏保存按钮 -->
+            <button class="toolbar-btn toolbar-btn--save" :disabled="!editContent.trim()" @click="saveEdit">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                <polyline points="17 21 17 13 7 13 7 21" />
+                <polyline points="7 3 7 8 15 8" />
+              </svg>
+              <span>保存</span>
+            </button>
           </template>
           
           <template v-else>
@@ -554,6 +572,36 @@ async function popoutNote() {
   border-color: var(--color-accent);
 }
 
+/* ─── 顶栏编辑操作按钮 ─── */
+.toolbar-btn--cancel {
+  color: var(--color-text-tertiary);
+  border-color: var(--color-border);
+}
+
+.toolbar-btn--save {
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
+}
+
+.toolbar-btn--save:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (hover: hover) {
+  .toolbar-btn--cancel:hover {
+    color: var(--color-danger);
+    border-color: var(--color-danger);
+    background: var(--color-danger-muted);
+  }
+  .toolbar-btn--save:hover:not(:disabled) {
+    background: color-mix(in oklch, var(--color-accent), white 12%);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px var(--color-accent-muted);
+  }
+}
+
 /* ─── 模式切换 ─── */
 .mode-switcher {
   display: flex;
@@ -665,7 +713,9 @@ async function popoutNote() {
   background: var(--color-bg-tertiary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  position: relative;
+  /* #3: 粘性定位，紧跟顶栏下方 */
+  position: sticky;
+  top: 64px; /* 约为 detail-toolbar 高度 */
   z-index: var(--z-dropdown);
 }
 
