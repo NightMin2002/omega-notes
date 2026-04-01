@@ -32,7 +32,7 @@ omega-v2/
 │   │
 │   ├── components/             # 全局/共享组件
 │   │   ├── AppHeader.vue       # 顶部导航栏（含搜索/快速笔记入口）
-│   │   ├── AppSidebar.vue      # 侧边栏导航（收藏夹/最近/文件夹树/导入导出/快捷键面板/悬挂任务按钮）
+│   │   ├── AppSidebar.vue      # 侧边栏导航（收藏夹/最近/文件夹树/右键菜单/导入导出/快捷键面板/悬挂任务按钮）
 │   │   ├── MilkdownEditor.vue  # Markdown 编辑器外壳（提供 Provider）
 │   │   ├── MilkdownEditorCore.vue # 编辑器核心（Milkdown 插件注册）
 │   │   ├── MarkdownRenderer.vue # Markdown → HTML 渲染（阅读模式）+ Mermaid 图表
@@ -42,8 +42,9 @@ omega-v2/
 │   │   ├── WikiLinkPicker.vue  # [[Wiki 链接]] 选择器下拉面板（WriteView/NoteDetailView 共享）
 │   │   ├── SplitEditor.vue     # 分屏 Markdown 编辑器（源码 + 工具栏 + 实时预览，共享）
 │   │   ├── BacklinksPanel.vue  # 反向链接面板（展示引用当前笔记的其他笔记）
-│   │   ├── TimePicker.vue      # 自定义时间选择器（步进器 ▲▼ + Teleport 定位）
+│   │   ├── TimePicker.vue      # 自定义时间选择器（步进器 ▲▼ + 滚轮 + 直接输入 + Teleport 定位）
 │   │   ├── CategoryPicker.vue  # 分类选择器（搜索 + 键盘导航 + 子分类提示）
+│   │   ├── ContextMenu.vue     # 通用右键上下文菜单（Teleport + fixed，支持菜单项数组）
 │   │   ├── ConfirmDialog.vue   # 通用居中确认弹窗（Teleport 到 body）
 │   │   └── DraftToast.vue      # 草稿恢复提示 Toast（3秒自动消失）
 │   │

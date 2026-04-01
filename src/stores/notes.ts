@@ -127,6 +127,23 @@ export const useNotesStore = defineStore('notes', () => {
     }
   }
 
+  /** 删除分类：将该分类（及其子分类）下的笔记移到「未分类」，然后移除自定义分类 */
+  async function deleteCategory(categoryPath: string) {
+    // 将该分类及子分类下的笔记移到「未分类」
+    for (const note of notes.value) {
+      if (note.category === categoryPath || note.category.startsWith(categoryPath + '/')) {
+        note.category = '未分类'
+        note.updatedAt = new Date().toISOString()
+        await saveNote(note)
+      }
+    }
+    // 从 customCategories 中移除该分类及其子分类
+    customCategories.value = customCategories.value.filter(
+      c => c !== categoryPath && !c.startsWith(categoryPath + '/')
+    )
+    localStorage.setItem(CUSTOM_CATEGORIES_KEY, JSON.stringify(customCategories.value))
+  }
+
   /** 从分类路径构建文件夹树 */
   const categoryTree = computed<FolderNode[]>(() => {
     /* 统计每个精确路径的直接笔记数 */
@@ -463,5 +480,6 @@ export const useNotesStore = defineStore('notes', () => {
     reorderNotes,
     moveNoteToCategory,
     addCustomCategory,
+    deleteCategory,
   }
 })

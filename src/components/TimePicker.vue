@@ -73,6 +73,39 @@ function decHour() { hour.value = (hour.value - 1 + 24) % 24 }
 function incMinute() { minute.value = (minute.value + props.minuteStep) % 60 }
 function decMinute() { minute.value = (minute.value - props.minuteStep + 60) % 60 }
 
+/** 滚轮调整小时/分钟 */
+function onWheelHour(e: WheelEvent) {
+  e.preventDefault()
+  if (e.deltaY < 0) incHour()
+  else decHour()
+}
+function onWheelMinute(e: WheelEvent) {
+  e.preventDefault()
+  if (e.deltaY < 0) incMinute()
+  else decMinute()
+}
+
+/** 直接输入小时 */
+function onHourInput(e: Event) {
+  const val = parseInt((e.target as HTMLInputElement).value, 10)
+  if (!isNaN(val)) hour.value = Math.max(0, Math.min(23, val))
+}
+/** 直接输入分钟 */
+function onMinuteInput(e: Event) {
+  const val = parseInt((e.target as HTMLInputElement).value, 10)
+  if (!isNaN(val)) minute.value = Math.max(0, Math.min(59, val))
+}
+/** 失焦时修正显示 */
+function onDigitBlur(e: Event) {
+  const input = e.target as HTMLInputElement
+  // 强制刷新显示值
+  input.value = input.value.padStart(2, '0')
+}
+/** 聚焦时全选 */
+function onDigitFocus(e: Event) {
+  (e.target as HTMLInputElement).select()
+}
+
 function confirm() {
   const h = String(hour.value).padStart(2, '0')
   const m = String(minute.value).padStart(2, '0')
@@ -127,13 +160,22 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onClickOutside))
           :style="panelStyle"
         >
           <div class="tp-steppers">
-            <div class="tp-col">
+            <div class="tp-col" @wheel.prevent="onWheelHour">
               <button type="button" class="tp-arrow" @click="incHour">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="18 15 12 9 6 15" />
                 </svg>
               </button>
-              <span class="tp-digit">{{ formattedHour }}</span>
+              <input
+                class="tp-digit"
+                type="text"
+                inputmode="numeric"
+                maxlength="2"
+                :value="formattedHour"
+                @input="onHourInput"
+                @blur="onDigitBlur"
+                @focus="onDigitFocus"
+              >
               <button type="button" class="tp-arrow" @click="decHour">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="6 9 12 15 18 9" />
@@ -143,13 +185,22 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onClickOutside))
 
             <span class="tp-sep">:</span>
 
-            <div class="tp-col">
+            <div class="tp-col" @wheel.prevent="onWheelMinute">
               <button type="button" class="tp-arrow" @click="incMinute">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="18 15 12 9 6 15" />
                 </svg>
               </button>
-              <span class="tp-digit">{{ formattedMinute }}</span>
+              <input
+                class="tp-digit"
+                type="text"
+                inputmode="numeric"
+                maxlength="2"
+                :value="formattedMinute"
+                @input="onMinuteInput"
+                @blur="onDigitBlur"
+                @focus="onDigitFocus"
+              >
               <button type="button" class="tp-arrow" @click="decMinute">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="6 9 12 15 18 9" />
@@ -294,7 +345,16 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onClickOutside))
   background: var(--color-bg-tertiary);
   border-radius: var(--radius-md);
   padding: var(--space-2) 0;
-  user-select: none;
+  border: 2px solid transparent;
+  outline: none;
+  cursor: text;
+  transition: border-color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.tp-digit:focus-visible {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-muted);
 }
 
 .tp-sep {

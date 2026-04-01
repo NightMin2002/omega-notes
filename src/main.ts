@@ -41,3 +41,29 @@ tasksStore.init()
 
 registerGlobalShortcuts(router)
 startScheduler()
+
+// ─── 全局禁用浏览器原生右键菜单 ───
+document.addEventListener('contextmenu', (e) => {
+  // 输入框/文本域保留右键（复制粘贴需要）
+  const tag = (e.target as HTMLElement).tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return
+  e.preventDefault()
+}, true)
+
+// ─── 全局拦截外部链接 ───
+// 防止任何外部 URL 在 WebView 内导航，统一用系统浏览器打开
+import { openUrl } from '@tauri-apps/plugin-opener'
+document.addEventListener('click', (e) => {
+  const anchor = (e.target as HTMLElement).closest('a') as HTMLAnchorElement | null
+  if (!anchor) return
+  const href = anchor.getAttribute('href') || anchor.href
+  if (href && /^https?:\/\//i.test(href)) {
+    e.preventDefault()
+    e.stopPropagation()
+    openUrl(href).catch((err) => {
+      console.error('[Omega] openUrl failed:', err, '→ fallback window.open')
+      window.open(href, '_blank')
+    })
+  }
+}, true) // capture phase，确保在任何组件之前拦截
+

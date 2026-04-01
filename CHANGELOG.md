@@ -6,6 +6,38 @@
 
 ---
 
+## [2.8.0] — 2026-04-01
+
+> UX 全面优化：10 项用户反馈需求一次性解决。
+
+### 修复 (Bug Fix)
+
+- **分类选择器定位漂移** — `Teleport to="body"` + `getScrollParent()` 动态定位，解决嵌套容器裁剪和滚动不跟随
+- **回收站预览** — 改用 `previewHtml()` + `v-html` 渲染 Markdown 格式预览
+- **代码高亮覆盖** — 移除全局 `.hljs` 的 `!important` 覆盖，恢复主题控制权
+- **阅读主题适配** — 针对 4 个主题 × 3 种模式（阅读/分屏/WYSIWYG）全面覆盖 `.milkdown-theme-nord` 样式
+
+### 新增 (Feature)
+
+- **外部链接系统浏览器打开** — `MarkdownRenderer` 局部拦截 + `main.ts` capture phase 全局兜底，调用 `openUrl()` 打开系统浏览器
+- **侧边栏右键菜单** — 新建 `ContextMenu.vue` 通用组件，文件夹右键弹出「新建笔记」/「删除分类」
+- **`deleteCategory()` action** — 将分类下笔记迁移到「未分类」后清理 customCategories
+- **全局禁用浏览器右键菜单** — `main.ts` capture phase 拦截 `contextmenu`（保留 input/textarea）
+
+### 优化 (UX)
+
+- **顶栏取消/保存** — 编辑模式下左侧「返回」→「取消」，右侧追加 accent 色「保存」按钮
+- **工具栏 sticky 悬浮** — WYSIWYG `.editor-toolbar` + 分屏 `.pane-header` / `.editor-toolbar-strip` 分层 sticky
+- **TimePicker 交互增强** — 数字区域改为 `<input>`（支持直接输入 + 滚轮调整 + 聚焦全选 + 失焦补零）
+
+### 变更 (Changed)
+
+- `src-tauri/capabilities/default.json` — 新增 `opener:allow-open-url` + URL scope（`https://**`, `http://**`）
+- `SplitEditor.vue` — `overflow: hidden` → `overflow: clip`（不破坏 sticky）
+- `NoteDetailView.vue` — 新增 `.toolbar-btn--cancel` / `.toolbar-btn--save` 样式
+
+---
+
 ## [2.2.0] — 2026-03-29
 
 > Phase 7 — 日常管理系统：每日任务 + 倒计时 + 健康提醒 + 系统通知。

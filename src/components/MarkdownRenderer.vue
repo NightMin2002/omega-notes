@@ -7,6 +7,7 @@ import texmath from 'markdown-it-texmath'
 import taskLists from 'markdown-it-task-lists'
 import katex from 'katex'
 import { useNotesStore } from '../stores/notes'
+import { openUrl } from '@tauri-apps/plugin-opener'
 import mermaid from 'mermaid'
 import 'highlight.js/styles/github-dark.min.css'
 
@@ -92,19 +93,29 @@ function renderWikiLinks(html: string): string {
 
 const rendered = computed(() => renderWikiLinks(md.render(cleanContent(props.content))))
 
-/** 点击 wiki-link 导航到对应笔记 */
+/** 点击 wiki-link 导航到对应笔记，点击外部链接用系统浏览器打开 */
 function handleClick(e: Event) {
-  const target = e.target as HTMLElement
-  if (!target.classList.contains('wiki-link')) return
+  const target = (e.target as HTMLElement).closest('a') as HTMLAnchorElement | null
+  if (!target) return
 
-  e.preventDefault()
-  const title = target.getAttribute('data-wiki-title')
-  if (!title) return
+  /* wiki-link */
+  if (target.classList.contains('wiki-link')) {
+    e.preventDefault()
+    const title = target.getAttribute('data-wiki-title')
+    if (!title) return
+    const note = notesStore.findNoteByTitle(title)
+    if (note) {
+      notesStore.recordOpen(note.id)
+      router.push(`/note/${note.id}`)
+    }
+    return
+  }
 
-  const note = notesStore.findNoteByTitle(title)
-  if (note) {
-    notesStore.recordOpen(note.id)
-    router.push(`/note/${note.id}`)
+  /* 外部链接：拦截并用系统浏览器打开 */
+  const href = target.getAttribute('href')
+  if (href && /^https?:\/\//i.test(href)) {
+    e.preventDefault()
+    openUrl(href).catch(() => window.open(href, '_blank'))
   }
 }
 

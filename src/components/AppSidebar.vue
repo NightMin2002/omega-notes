@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useNotesStore } from '../stores/notes'
 import { useTasksStore } from '../stores/tasks'
 import { exportNotesAsJson, importNotesFromFiles } from '../utils/dataio'
+import ContextMenu from './ContextMenu.vue'
+import type { ContextMenuItem } from './ContextMenu.vue'
 
 defineProps<{
   collapsed: boolean
@@ -117,6 +119,47 @@ async function openPopout(kind: string) {
     await invoke('open_popout', { kind })
   } catch {
     // 浏览器环境不支持
+  }
+}
+
+/* ─── 右键菜单 ─── */
+const showContextMenu = ref(false)
+const contextMenuPos = ref({ x: 0, y: 0 })
+const contextMenuTarget = ref('')
+
+const contextMenuItems = computed<ContextMenuItem[]>(() => {
+  const target = contextMenuTarget.value
+  if (!target) return []
+  return [
+    { id: 'new-note', label: '新建笔记到此分类' },
+    { id: 'divider-1', label: '', divider: true },
+    { id: 'delete', label: '删除分类', danger: true },
+  ]
+})
+
+function handleFolderContextMenu(e: MouseEvent, folderPath: string) {
+  contextMenuTarget.value = folderPath
+  contextMenuPos.value = { x: e.clientX, y: e.clientY }
+  showContextMenu.value = true
+}
+
+async function handleContextMenuSelect(id: string) {
+  const target = contextMenuTarget.value
+  if (!target) return
+
+  if (id === 'new-note') {
+    const note = await notesStore.addNote({
+      title: '',
+      content: '',
+      category: target,
+    })
+    router.push(`/note/${note.id}?edit=1`)
+  } else if (id === 'delete') {
+    await notesStore.deleteCategory(target)
+    // 如果当前正在查看该分类，跳回全部笔记
+    if (route.query.category === target) {
+      router.push('/notes')
+    }
   }
 }
 </script>
@@ -264,6 +307,7 @@ async function openPopout(kind: string) {
               :class="{ active: route.query.category === f.fullPath }"
               :style="{ paddingLeft: `calc(var(--space-3) + ${f.depth * 16}px)` }"
               @click="navigateFolder(f.fullPath)"
+              @contextmenu.prevent="handleFolderContextMenu($event, f.fullPath)"
             >
               <button
                 v-if="f.hasChildren"
@@ -285,6 +329,13 @@ async function openPopout(kind: string) {
               <span class="folder-count">{{ f.totalCount }}</span>
             </button>
           </template>
+
+          <ContextMenu
+            v-model:show="showContextMenu"
+            :position="contextMenuPos"
+            :items="contextMenuItems"
+            @select="handleContextMenuSelect"
+          />
         </template>
       </nav>
 
