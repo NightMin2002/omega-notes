@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useNotesStore } from '../stores/notes'
-import { stripMarkdown, truncateText } from '../utils/markdown'
+import { previewHtml } from '../utils/markdown'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 
 const notesStore = useNotesStore()
@@ -101,7 +101,7 @@ function cancelEmpty() {
                 {{ daysAgo(note.deletedAt || '') }}
               </span>
             </div>
-            <p class="card-preview">{{ truncateText(note.content, 120) }}</p>
+            <p class="card-preview" v-html="previewHtml(note.content, 120)" />
             <div class="card-meta">
               <span class="card-category">{{ note.category }}</span>
               <span v-for="tag in note.tags.slice(0, 3)" :key="tag" class="card-tag">

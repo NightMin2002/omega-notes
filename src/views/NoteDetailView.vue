@@ -1059,6 +1059,79 @@ async function popoutNote() {
   color: oklch(0.4 0.12 30);
 }
 
+/* 羊皮纸：表格适配 */
+.theme-parchment .note-body :deep(.md-rendered table) {
+  border-collapse: collapse;
+}
+
+.theme-parchment .note-body :deep(.md-rendered th) {
+  background: oklch(0.88 0.035 70);
+  color: oklch(0.3 0.04 50);
+  border-color: oklch(0.78 0.04 65);
+}
+
+.theme-parchment .note-body :deep(.md-rendered td) {
+  border-color: oklch(0.82 0.035 70);
+  color: oklch(0.28 0.03 50);
+}
+
+.theme-parchment .note-body :deep(.md-rendered tr:nth-child(even)) {
+  background: oklch(0.91 0.025 75);
+}
+
+/* 羊皮纸：代码块适配 */
+.theme-parchment .note-body :deep(.md-rendered pre) {
+  background: oklch(0.96 0.015 75);
+  border-color: oklch(0.82 0.035 70);
+}
+
+.theme-parchment .note-body :deep(.md-rendered pre code) {
+  color: oklch(0.3 0.02 50);
+}
+
+.theme-parchment .note-body :deep(.md-rendered .hljs) {
+  background: oklch(0.96 0.015 75) !important;
+}
+
+/* highlight.js 语法色 — 羊皮纸浅色暖调 */
+.theme-parchment .note-body :deep(.hljs-keyword),
+.theme-parchment .note-body :deep(.hljs-selector-tag),
+.theme-parchment .note-body :deep(.hljs-built_in),
+.theme-parchment .note-body :deep(.hljs-type) {
+  color: oklch(0.45 0.18 310);
+}
+
+.theme-parchment .note-body :deep(.hljs-string),
+.theme-parchment .note-body :deep(.hljs-attr) {
+  color: oklch(0.42 0.14 25);
+}
+
+.theme-parchment .note-body :deep(.hljs-number),
+.theme-parchment .note-body :deep(.hljs-literal) {
+  color: oklch(0.48 0.15 55);
+}
+
+.theme-parchment .note-body :deep(.hljs-comment) {
+  color: oklch(0.55 0.02 60);
+  font-style: italic;
+}
+
+.theme-parchment .note-body :deep(.hljs-function),
+.theme-parchment .note-body :deep(.hljs-title) {
+  color: oklch(0.4 0.14 200);
+}
+
+/* 羊皮纸：行内代码适配 */
+.theme-parchment .note-body :deep(.md-rendered code) {
+  background: oklch(0.9 0.025 70);
+  color: oklch(0.38 0.1 30);
+}
+
+/* 羊皮纸：分割线 */
+.theme-parchment .note-body :deep(.md-rendered hr) {
+  border-top-color: oklch(0.78 0.04 65);
+}
+
 .theme-parchment .copy-content-btn {
   background: oklch(0.9 0.03 70);
   border-color: oklch(0.78 0.04 65);
@@ -1120,6 +1193,41 @@ async function popoutNote() {
   color: oklch(0.6 0.04 55);
 }
 
+/* 羊皮纸暗色：表格 */
+[data-theme='dark'] .theme-parchment .note-body :deep(.md-rendered th) {
+  background: oklch(0.28 0.025 55);
+  color: oklch(0.78 0.04 60);
+  border-color: oklch(0.35 0.03 50);
+}
+
+[data-theme='dark'] .theme-parchment .note-body :deep(.md-rendered td) {
+  border-color: oklch(0.32 0.025 55);
+  color: oklch(0.75 0.02 60);
+}
+
+[data-theme='dark'] .theme-parchment .note-body :deep(.md-rendered tr:nth-child(even)) {
+  background: oklch(0.24 0.018 55);
+}
+
+/* 羊皮纸暗色：代码块 */
+[data-theme='dark'] .theme-parchment .note-body :deep(.md-rendered pre) {
+  background: oklch(0.19 0.015 55);
+  border-color: oklch(0.32 0.025 50);
+}
+
+[data-theme='dark'] .theme-parchment .note-body :deep(.md-rendered .hljs) {
+  background: oklch(0.19 0.015 55) !important;
+}
+
+[data-theme='dark'] .theme-parchment .note-body :deep(.md-rendered code) {
+  background: oklch(0.25 0.02 55);
+  color: oklch(0.72 0.08 40);
+}
+
+[data-theme='dark'] .theme-parchment .note-body :deep(.md-rendered hr) {
+  border-top-color: oklch(0.35 0.03 55);
+}
+
 /* ─── 编辑表单 ─── */
 .edit-form {
   display: flex;
@@ -1166,6 +1274,114 @@ async function popoutNote() {
   background: oklch(0.22 0.02 55);
   border-color: oklch(0.35 0.03 50);
 }
+
+/* 编辑模式 — 羊皮纸主题：表格适配 */
+.edit-form.theme-parchment :deep(.md-rendered table) {
+  border-collapse: collapse;
+}
+
+.edit-form.theme-parchment :deep(.md-rendered th) {
+  background: oklch(0.88 0.035 70);
+  color: oklch(0.3 0.04 50);
+  border-color: oklch(0.78 0.04 65);
+}
+
+.edit-form.theme-parchment :deep(.md-rendered td) {
+  border-color: oklch(0.82 0.035 70);
+  color: oklch(0.28 0.03 50);
+  background: transparent;
+}
+
+.edit-form.theme-parchment :deep(.md-rendered tr:nth-child(even)) {
+  background: oklch(0.91 0.025 75);
+}
+
+/* 编辑模式 — 羊皮纸主题：代码块适配 */
+.edit-form.theme-parchment :deep(.md-rendered pre) {
+  background: oklch(0.96 0.015 75);
+  border-color: oklch(0.82 0.035 70);
+}
+
+.edit-form.theme-parchment :deep(.md-rendered pre code) {
+  color: oklch(0.3 0.02 50);
+}
+
+.edit-form.theme-parchment :deep(.md-rendered .hljs) {
+  background: oklch(0.96 0.015 75) !important;
+}
+
+/* highlight.js 语法色 — 编辑模式羊皮纸 */
+.edit-form.theme-parchment :deep(.hljs-keyword),
+.edit-form.theme-parchment :deep(.hljs-selector-tag),
+.edit-form.theme-parchment :deep(.hljs-built_in),
+.edit-form.theme-parchment :deep(.hljs-type) {
+  color: oklch(0.45 0.18 310);
+}
+
+.edit-form.theme-parchment :deep(.hljs-string),
+.edit-form.theme-parchment :deep(.hljs-attr) {
+  color: oklch(0.42 0.14 25);
+}
+
+.edit-form.theme-parchment :deep(.hljs-number),
+.edit-form.theme-parchment :deep(.hljs-literal) {
+  color: oklch(0.48 0.15 55);
+}
+
+.edit-form.theme-parchment :deep(.hljs-comment) {
+  color: oklch(0.55 0.02 60);
+  font-style: italic;
+}
+
+.edit-form.theme-parchment :deep(.hljs-function),
+.edit-form.theme-parchment :deep(.hljs-title) {
+  color: oklch(0.4 0.14 200);
+}
+
+/* 编辑模式 — 羊皮纸主题：行内代码 */
+.edit-form.theme-parchment :deep(.md-rendered code) {
+  background: oklch(0.9 0.025 70);
+  color: oklch(0.38 0.1 30);
+}
+
+/* 编辑模式 — 羊皮纸主题：分割线 */
+.edit-form.theme-parchment :deep(.md-rendered hr) {
+  border-top-color: oklch(0.78 0.04 65);
+}
+
+/* 暗色模式下编辑模式的羊皮纸 */
+[data-theme='dark'] .edit-form.theme-parchment :deep(.md-rendered th) {
+  background: oklch(0.28 0.025 55);
+  color: oklch(0.78 0.04 60);
+  border-color: oklch(0.35 0.03 50);
+}
+
+[data-theme='dark'] .edit-form.theme-parchment :deep(.md-rendered td) {
+  border-color: oklch(0.32 0.025 55);
+  color: oklch(0.75 0.02 60);
+  background: transparent;
+}
+
+[data-theme='dark'] .edit-form.theme-parchment :deep(.md-rendered tr:nth-child(even)) {
+  background: oklch(0.24 0.018 55);
+}
+
+[data-theme='dark'] .edit-form.theme-parchment :deep(.md-rendered pre) {
+  background: oklch(0.19 0.015 55);
+  border-color: oklch(0.32 0.025 50);
+}
+
+[data-theme='dark'] .edit-form.theme-parchment :deep(.md-rendered .hljs) {
+  background: oklch(0.19 0.015 55) !important;
+}
+
+[data-theme='dark'] .edit-form.theme-parchment :deep(.md-rendered code) {
+  background: oklch(0.25 0.02 55);
+  color: oklch(0.72 0.08 40);
+}
+
+/* WYSIWYG 羊皮纸覆盖已移至 MilkdownEditor.vue 的全局样式 */
+
 
 .edit-title {
   font-size: 1.2rem;

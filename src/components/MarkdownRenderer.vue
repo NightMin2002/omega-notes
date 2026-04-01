@@ -419,8 +419,9 @@ onUpdated(bindHandlers)
 /* ─── highlight.js 覆盖 ─── */
 .md-rendered :deep(.hljs) {
   background: var(--color-bg-tertiary) !important;
-  color: var(--color-text-primary) !important;
+  /* 不覆盖 color — 让 highlight.js 主题的 .hljs-keyword 等语法色正常生效 */
 }
+
 
 /* ─── KaTeX 公式 ─── */
 .md-rendered :deep(.katex-display) {

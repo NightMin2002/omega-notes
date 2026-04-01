@@ -2,6 +2,8 @@
 /**
  * CategoryPicker — 自定义分类选择器
  * 替代原生 <input> + <datalist>，支持搜索、创建、子分类提示
+ *
+ * Bug #2 fix: 使用 Teleport to="body" + position:fixed 避免被父容器 overflow 裁剪
  */
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useNotesStore } from '../stores/notes'
@@ -10,12 +12,16 @@ const model = defineModel<string>({ default: '' })
 
 const notesStore = useNotesStore()
 const inputRef = ref<HTMLInputElement | null>(null)
-const listRef = ref<HTMLElement | null>(null)
+const inputRowRef = ref<HTMLElement | null>(null)
+const panelRef = ref<HTMLElement | null>(null)
 const wrapperRef = ref<HTMLElement | null>(null)
 
 const isOpen = ref(false)
 const searchText = ref(model.value || '')
 const highlightIndex = ref(-1)
+
+/* 面板定位坐标 */
+const panelStyle = ref({ top: '0px', left: '0px', width: '300px' })
 
 /** 所有分类（来自 store） */
 const allCategories = computed(() => notesStore.categories)
@@ -34,15 +40,75 @@ const isNewCategory = computed(() => {
   return !allCategories.value.some(c => c.toLowerCase() === q.toLowerCase())
 })
 
-function openDropdown() {
+/** 查找真正的滚动祖先容器（如 .app-main） */
+function getScrollParent(el: HTMLElement | null): HTMLElement | null {
+  let parent = el?.parentElement || null
+  while (parent) {
+    const style = getComputedStyle(parent)
+    if (/(auto|scroll)/.test(style.overflowY)) return parent
+    parent = parent.parentElement
+  }
+  return null
+}
+
+let _scrollParent: HTMLElement | null = null
+
+/** 计算下拉面板位置（fixed 定位，锚定到输入行的视口坐标） */
+function calcPosition() {
+  const anchor = inputRowRef.value || wrapperRef.value
+  if (!anchor) return
+  const rect = anchor.getBoundingClientRect()
+  const panelH = panelRef.value?.offsetHeight || 240
+  const spaceBelow = window.innerHeight - rect.bottom
+  const top = spaceBelow >= panelH + 8
+    ? rect.bottom + 4
+    : rect.top - panelH - 4
+  panelStyle.value = {
+    top: `${Math.max(4, top)}px`,
+    left: `${rect.left}px`,
+    width: `${rect.width}px`,
+  }
+}
+
+/** 滚动/窗口变化时持续更新位置 */
+function onScrollOrResize() {
+  if (isOpen.value) calcPosition()
+}
+
+function bindScrollListeners() {
+  _scrollParent = getScrollParent(wrapperRef.value)
+  if (_scrollParent) _scrollParent.addEventListener('scroll', onScrollOrResize)
+  window.addEventListener('scroll', onScrollOrResize)
+  window.addEventListener('resize', onScrollOrResize)
+}
+
+function unbindScrollListeners() {
+  if (_scrollParent) _scrollParent.removeEventListener('scroll', onScrollOrResize)
+  _scrollParent = null
+  window.removeEventListener('scroll', onScrollOrResize)
+  window.removeEventListener('resize', onScrollOrResize)
+}
+
+async function openDropdown() {
   isOpen.value = true
   highlightIndex.value = -1
-  searchText.value = model.value || ''
+  searchText.value = ''
+  await nextTick()
+  calcPosition()
+  await nextTick()
+  calcPosition()
+  /* 滚动到当前选中项 */
+  if (model.value && panelRef.value) {
+    const selected = panelRef.value.querySelector('.selected')
+    if (selected) selected.scrollIntoView({ block: 'nearest' })
+  }
+  bindScrollListeners()
 }
 
 function closeDropdown() {
   isOpen.value = false
   highlightIndex.value = -1
+  unbindScrollListeners()
 }
 
 function selectCategory(cat: string) {
@@ -69,8 +135,16 @@ function handleFocus() {
 }
 
 function handleInput() {
-  if (!isOpen.value) isOpen.value = true
+  if (!isOpen.value) {
+    isOpen.value = true
+    bindScrollListeners()
+  }
   highlightIndex.value = -1
+  /* 过滤结果变化 → DOM 更新 → 面板高度变化 → 需要重新定位 */
+  nextTick(() => {
+    calcPosition()
+    nextTick(() => calcPosition())
+  })
 }
 
 function handleKeydown(e: KeyboardEvent) {
@@ -112,20 +186,24 @@ function handleKeydown(e: KeyboardEvent) {
 
 function scrollToHighlighted() {
   nextTick(() => {
-    const el = listRef.value?.querySelector('.highlighted')
+    const el = panelRef.value?.querySelector('.highlighted')
     if (el) el.scrollIntoView({ block: 'nearest' })
   })
 }
 
-/** 点击外部关闭 */
+/** 点击外部关闭（兼容 Teleport 后的 panelRef） */
 function handleClickOutside(e: MouseEvent) {
-  if (wrapperRef.value && !wrapperRef.value.contains(e.target as Node)) {
-    if (isOpen.value) confirmInput()
-  }
+  const target = e.target as Node
+  if (wrapperRef.value?.contains(target)) return
+  if (panelRef.value?.contains(target)) return
+  if (isOpen.value) confirmInput()
 }
 
 onMounted(() => document.addEventListener('mousedown', handleClickOutside))
-onUnmounted(() => document.removeEventListener('mousedown', handleClickOutside))
+onUnmounted(() => {
+  document.removeEventListener('mousedown', handleClickOutside)
+  unbindScrollListeners()
+})
 
 /* Bug #9 fix: immediate: true 确保组件挂载时 searchText 就与 model 同步 */
 watch(model, (val) => {
@@ -135,7 +213,7 @@ watch(model, (val) => {
 
 <template>
   <div ref="wrapperRef" class="cat-picker-wrapper">
-    <div class="cat-input-row">
+    <div ref="inputRowRef" class="cat-input-row">
       <svg class="cat-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
       </svg>
@@ -161,53 +239,60 @@ watch(model, (val) => {
     <!-- 子分类提示 -->
     <p class="cat-hint">💡 使用 <code>/</code> 创建子分类，如 <code>工作/项目A</code></p>
 
-    <!-- 下拉列表 -->
-    <Transition name="dropdown">
-      <div v-if="isOpen" ref="listRef" class="cat-dropdown">
-        <div v-if="filteredCategories.length === 0 && !isNewCategory" class="cat-empty">
-          暂无分类
+    <!-- 下拉列表 — Teleport 到 body 避免被父容器 overflow 裁剪 -->
+    <Teleport to="body">
+      <Transition name="cat-dropdown-anim">
+        <div
+          v-if="isOpen"
+          ref="panelRef"
+          class="cat-dropdown"
+          :style="panelStyle"
+        >
+          <div v-if="filteredCategories.length === 0 && !isNewCategory" class="cat-empty">
+            暂无分类
+          </div>
+
+          <button
+            type="button"
+            v-for="(cat, i) in filteredCategories"
+            :key="cat"
+            class="cat-option"
+            :class="{
+              highlighted: i === highlightIndex,
+              selected: cat === model,
+            }"
+            @mousedown.prevent="selectCategory(cat)"
+            @mouseenter="highlightIndex = i"
+          >
+            <span class="cat-option-name">
+              <template v-if="cat.includes('/')">
+                <span class="cat-parent">{{ cat.split('/').slice(0, -1).join('/') }}/</span>{{ cat.split('/').pop() }}
+              </template>
+              <template v-else>{{ cat }}</template>
+            </span>
+            <svg v-if="cat === model" class="cat-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </button>
+
+          <!-- 新建分类选项 -->
+          <button
+            type="button"
+            v-if="isNewCategory"
+            class="cat-option cat-new"
+            :class="{ highlighted: highlightIndex === filteredCategories.length }"
+            @mousedown.prevent="confirmInput()"
+            @mouseenter="highlightIndex = filteredCategories.length"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            <span>创建「<strong>{{ searchText.trim() }}</strong>」</span>
+          </button>
         </div>
-
-        <button
-          type="button"
-          v-for="(cat, i) in filteredCategories"
-          :key="cat"
-          class="cat-option"
-          :class="{
-            highlighted: i === highlightIndex,
-            selected: cat === model,
-          }"
-          @mousedown.prevent="selectCategory(cat)"
-          @mouseenter="highlightIndex = i"
-        >
-          <span class="cat-option-name">
-            <template v-if="cat.includes('/')">
-              <span class="cat-parent">{{ cat.split('/').slice(0, -1).join('/') }}/</span>{{ cat.split('/').pop() }}
-            </template>
-            <template v-else>{{ cat }}</template>
-          </span>
-          <svg v-if="cat === model" class="cat-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        </button>
-
-        <!-- 新建分类选项 -->
-        <button
-          type="button"
-          v-if="isNewCategory"
-          class="cat-option cat-new"
-          :class="{ highlighted: highlightIndex === filteredCategories.length }"
-          @mousedown.prevent="confirmInput()"
-          @mouseenter="highlightIndex = filteredCategories.length"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          <span>创建「<strong>{{ searchText.trim() }}</strong>」</span>
-        </button>
-      </div>
-    </Transition>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -309,13 +394,13 @@ watch(model, (val) => {
   border-radius: 3px;
   color: var(--color-accent-text);
 }
+</style>
 
-/* ─── Dropdown ─── */
+<!-- 全局样式：Teleport 到 body 的元素不能用 scoped -->
+<style>
+/* ─── Dropdown (Teleport 到 body) ─── */
 .cat-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
+  position: fixed;
   z-index: var(--z-dropdown, 100);
   max-height: 220px;
   overflow-y: auto;
@@ -397,21 +482,21 @@ watch(model, (val) => {
 }
 
 /* ─── Transition ─── */
-.dropdown-enter-active {
+.cat-dropdown-anim-enter-active {
   transition: opacity 0.15s var(--ease-out), transform 0.15s var(--ease-out);
 }
-.dropdown-leave-active {
+.cat-dropdown-anim-leave-active {
   transition: opacity 0.1s var(--ease-out), transform 0.1s var(--ease-out);
 }
-.dropdown-enter-from,
-.dropdown-leave-to {
+.cat-dropdown-anim-enter-from,
+.cat-dropdown-anim-leave-to {
   opacity: 0;
   transform: translateY(-4px);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dropdown-enter-active,
-  .dropdown-leave-active {
+  .cat-dropdown-anim-enter-active,
+  .cat-dropdown-anim-leave-active {
     transition: none;
   }
 }
