@@ -20,6 +20,17 @@ function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 }
 
+function addCategoryPathAndParents(target: Set<string>, category: string) {
+  const parts = category
+    .split('/')
+    .map(part => part.trim())
+    .filter(Boolean)
+
+  for (let i = 1; i <= parts.length; i++) {
+    target.add(parts.slice(0, i).join('/'))
+  }
+}
+
 export const useNotesStore = defineStore('notes', () => {
   const notes = ref<Note[]>([])
   const currentCategory = ref<string>('all')
@@ -153,13 +164,13 @@ export const useNotesStore = defineStore('notes', () => {
       countMap.set(cat, (countMap.get(cat) || 0) + 1)
     }
 
-    /* 收集所有路径（含中间路径） */
+    /* 收集所有路径（含中间路径 + 手动创建但暂未保存笔记的分类） */
     const allPaths = new Set<string>()
     for (const cat of countMap.keys()) {
-      const parts = cat.split('/')
-      for (let i = 1; i <= parts.length; i++) {
-        allPaths.add(parts.slice(0, i).join('/'))
-      }
+      addCategoryPathAndParents(allPaths, cat)
+    }
+    for (const cat of customCategories.value) {
+      addCategoryPathAndParents(allPaths, cat)
     }
 
     /* 构建树 */

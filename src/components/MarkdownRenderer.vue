@@ -44,7 +44,8 @@ const containerRef = ref<HTMLElement | null>(null)
 let mermaidIdCounter = 0
 
 const md = new MarkdownIt({
-  html: true,
+  /* 笔记正文默认按纯 Markdown 处理，避免 <select>/<input> 等文本被渲染成真实控件 */
+  html: false,
   linkify: true,
   typographer: true,
   breaks: true,
@@ -192,8 +193,10 @@ onUpdated(bindHandlers)
 
 <style scoped>
 .md-rendered {
-  line-height: 1.8;
-  color: var(--color-text-primary);
+  font-family: var(--md-font-family, inherit);
+  font-size: var(--md-font-size, 1rem);
+  line-height: var(--md-line-height, 1.8);
+  color: var(--md-text-color, var(--color-text-primary));
   word-break: break-word;
 }
 
