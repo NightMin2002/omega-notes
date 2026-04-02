@@ -785,6 +785,7 @@ async function popoutNote() {
 
 /* =========================================
    阅读模式 — 视觉方案：极光微光 (Aurora)
+   青绿渐变光晕、真实北极光色调
    ========================================= */
 .theme-aurora {
   display: flex;
@@ -793,33 +794,108 @@ async function popoutNote() {
 }
 
 .theme-aurora .note-hero {
-  border-bottom: 1px solid var(--color-border);
-  padding: var(--space-6) var(--space-8);
-  background: var(--color-bg-primary);
+  padding: var(--space-8) var(--space-8) var(--space-6);
+  background:
+    linear-gradient(135deg, oklch(0.25 0.06 170 / 0.18) 0%, transparent 50%),
+    linear-gradient(225deg, oklch(0.3 0.06 200 / 0.12) 0%, transparent 50%),
+    var(--color-bg-primary);
   border-radius: var(--radius-lg);
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08), 
-              0 0 0 1px rgba(99, 102, 241, 0.1);
-  transition: box-shadow 0.3s ease;
+  border: 1px solid oklch(0.5 0.08 170 / 0.15);
+  box-shadow:
+    0 4px 24px oklch(0.5 0.1 170 / 0.1),
+    0 0 0 1px oklch(0.5 0.06 170 / 0.08),
+    inset 0 1px 0 oklch(0.8 0.04 170 / 0.2);
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.4s ease, transform 0.3s ease;
+}
+
+/* 极光光带装饰 */
+.theme-aurora .note-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 200%;
+  height: 3px;
+  background: linear-gradient(90deg,
+    transparent,
+    oklch(0.65 0.18 170),
+    oklch(0.7 0.15 200),
+    oklch(0.6 0.16 140),
+    transparent
+  );
+  opacity: 0.6;
+  animation: aurora-shimmer 8s ease-in-out infinite;
+}
+
+@keyframes aurora-shimmer {
+  0%, 100% { transform: translateX(-20%); opacity: 0.4; }
+  50% { transform: translateX(20%); opacity: 0.8; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-aurora .note-hero::before { animation: none; opacity: 0.6; }
 }
 
 .theme-aurora .note-hero:hover {
-  box-shadow: 0 4px 24px rgba(99, 102, 241, 0.15), 
-              0 0 0 1px rgba(99, 102, 241, 0.2);
+  box-shadow:
+    0 8px 32px oklch(0.5 0.12 170 / 0.18),
+    0 0 0 1px oklch(0.5 0.08 170 / 0.15),
+    inset 0 1px 0 oklch(0.8 0.05 170 / 0.25);
+  transform: translateY(-1px);
 }
 
 .theme-aurora .note-body {
   background: var(--color-bg-primary);
   border-radius: var(--radius-lg);
   padding: var(--space-8);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05),
-              0 0 0 1px var(--color-border);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  position: relative;
 }
 
+/* note-body 顶部微光渐变 */
+.theme-aurora .note-body::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(
+    180deg,
+    oklch(0.5 0.05 170 / 0.06) 0%,
+    transparent 100%
+  );
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  pointer-events: none;
+}
+
+/* 渐变色标题 */
 .theme-aurora .note-title {
   font-size: clamp(1.5rem, 4vw, 2.2rem);
   font-weight: 800;
-  color: var(--color-text-primary);
+  background: linear-gradient(135deg,
+    oklch(0.7 0.15 170),
+    oklch(0.65 0.14 200),
+    oklch(0.7 0.16 140)
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
   margin-bottom: var(--space-4);
+}
+
+/* 浅色模式下标题渐变更深 */
+[data-theme='light'] .theme-aurora .note-title {
+  background: linear-gradient(135deg,
+    oklch(0.42 0.15 170),
+    oklch(0.38 0.14 200),
+    oklch(0.42 0.16 140)
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
 }
 
 .theme-aurora .note-meta {
@@ -830,13 +906,15 @@ async function popoutNote() {
   margin-bottom: var(--space-4);
 }
 
+/* 渐变分类药丸 */
 .theme-aurora .meta-category {
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--color-bg-primary);
-  padding: 2px var(--space-3);
-  background: var(--color-accent);
+  color: white;
+  padding: 3px var(--space-3);
+  background: linear-gradient(135deg, oklch(0.5 0.14 170), oklch(0.48 0.12 200));
   border-radius: var(--radius-full);
+  box-shadow: 0 2px 8px oklch(0.5 0.12 170 / 0.3);
 }
 
 .theme-aurora .meta-date {
@@ -852,15 +930,29 @@ async function popoutNote() {
 
 .theme-aurora .tag {
   font-size: 0.75rem;
-  color: var(--color-accent);
+  color: oklch(0.6 0.12 170);
   padding: var(--space-1) var(--space-2);
-  background: var(--color-accent-muted);
+  background: oklch(0.5 0.08 170 / 0.1);
+  border: 1px solid oklch(0.5 0.08 170 / 0.15);
   border-radius: var(--radius-sm);
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+[data-theme='light'] .theme-aurora .tag {
+  color: oklch(0.4 0.12 170);
+  background: oklch(0.5 0.08 170 / 0.08);
+  border-color: oklch(0.5 0.08 170 / 0.12);
+}
+
+@media (hover: hover) {
+  .theme-aurora .tag:hover {
+    background: oklch(0.5 0.08 170 / 0.2);
+  }
 }
 
 /* =========================================
    阅读模式 — 视觉方案：笔墨 (Ink)
-   极简层级，左侧边线 + 红线纸感
+   横线纸纹理 + 左侧红线 + 首字下沉
    ========================================= */
 .theme-ink {
   display: flex;
@@ -874,6 +966,7 @@ async function popoutNote() {
   position: relative;
 }
 
+/* 左侧红色竖线 */
 .theme-ink .note-hero::after {
   content: '';
   position: absolute;
@@ -881,7 +974,21 @@ async function popoutNote() {
   top: 0;
   bottom: 0;
   width: 2px;
-  background: var(--color-accent-muted);
+  background: oklch(0.65 0.2 25);
+}
+
+/* 页眉底部装饰线 */
+.theme-ink .note-hero::before {
+  content: '✦';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-primary);
+  padding: 0 var(--space-3);
+  z-index: 1;
 }
 
 .theme-ink .note-title {
@@ -935,8 +1042,19 @@ async function popoutNote() {
   padding: var(--space-6) var(--space-8) var(--space-12);
   position: relative;
   min-height: 300px;
+  /* 横线纸纹理 */
+  background-image: repeating-linear-gradient(
+    180deg,
+    transparent,
+    transparent 31px,
+    oklch(0.5 0.01 250 / 0.1) 31px,
+    oklch(0.5 0.01 250 / 0.1) 32px
+  );
+  background-size: 100% 32px;
+  background-position-y: 15px;
 }
 
+/* 左侧红色竖线延续 */
 .theme-ink .note-body::before {
   content: '';
   position: absolute;
@@ -944,35 +1062,91 @@ async function popoutNote() {
   top: 0;
   bottom: 0;
   width: 2px;
-  background: var(--color-accent-muted);
+  background: oklch(0.65 0.2 25);
 }
 
 .theme-ink .note-body :deep(.md-rendered) {
   padding-left: var(--space-6);
-  line-height: 1.9;
+  line-height: 2;  /* 与横线间距对齐 */
+}
+
+/* 浅色模式横线颜色 */
+[data-theme='light'] .theme-ink .note-body {
+  background-image: repeating-linear-gradient(
+    180deg,
+    transparent,
+    transparent 31px,
+    oklch(0.7 0.02 250 / 0.2) 31px,
+    oklch(0.7 0.02 250 / 0.2) 32px
+  );
 }
 
 /* =========================================
    阅读模式 — 视觉方案：终端 (Terminal)
-   绿色等宽字体，深色背景，hacker 风格
+   CRT 扫描线 + 窗口标题栏 + 打字光标
    ========================================= */
 .theme-terminal {
   background: oklch(0.14 0.005 160);
   border-radius: var(--radius-lg);
   border: 1px solid oklch(0.25 0.04 145);
   overflow: hidden;
+  position: relative;
 }
 
+/* CRT 扫描线效果 */
+.theme-terminal::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    oklch(0 0 0 / 0.03) 2px,
+    oklch(0 0 0 / 0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+  border-radius: var(--radius-lg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-terminal::after { opacity: 0.5; }
+}
+
+/* 窗口标题栏 */
 .theme-terminal .note-hero {
-  padding: var(--space-6) var(--space-6) var(--space-4);
+  padding: var(--space-2) var(--space-4) var(--space-4);
   border-bottom: 1px solid oklch(0.25 0.04 145);
+  position: relative;
+}
+
+/* 三色窗口按钮 */
+.theme-terminal .note-hero::after {
+  content: '● ● ●';
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-4);
+  font-size: 0.5rem;
+  letter-spacing: 4px;
+  background: linear-gradient(90deg,
+    oklch(0.65 0.2 25) 0%, oklch(0.65 0.2 25) 28%,
+    oklch(0.75 0.18 95) 28%, oklch(0.75 0.18 95) 61%,
+    oklch(0.65 0.15 145) 61%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .theme-terminal .note-hero::before {
-  content: '> ';
-  color: oklch(0.7 0.18 145);
+  content: '~/notes >';
+  color: oklch(0.5 0.08 145);
   font-family: var(--font-mono);
-  font-size: 1rem;
+  font-size: 0.72rem;
+  display: block;
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-2);
 }
 
 .theme-terminal .note-title {
@@ -981,6 +1155,24 @@ async function popoutNote() {
   font-weight: 600;
   color: oklch(0.85 0.18 145);
   display: inline;
+}
+
+/* 打字闪烁光标 */
+.theme-terminal .note-title::after {
+  content: '█';
+  font-weight: 400;
+  color: oklch(0.7 0.18 145);
+  animation: cursor-blink 1s step-end infinite;
+  margin-left: 2px;
+}
+
+@keyframes cursor-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-terminal .note-title::after { animation: none; }
 }
 
 .theme-terminal .note-meta {
@@ -1116,20 +1308,62 @@ async function popoutNote() {
 
 /* =========================================
    阅读模式 — 视觉方案：羊皮纸 (Parchment)
-   暖色调，衬线字体，书卷气
+   纸张做旧纹理 + 古典装饰 + 首字下沉
    ========================================= */
 .theme-parchment {
   background: oklch(0.93 0.03 80);
   border-radius: var(--radius-lg);
   border: 1px solid oklch(0.82 0.04 75);
-  box-shadow: inset 0 0 40px oklch(0.85 0.03 70 / 0.5);
+  box-shadow:
+    inset 0 0 60px oklch(0.85 0.03 70 / 0.4),
+    inset 0 0 120px oklch(0.8 0.02 65 / 0.2);
   overflow: hidden;
+  position: relative;
+}
+
+/* 纸张做旧肌理（角落深色渐变 + 噪点纹理） */
+.theme-parchment::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 0% 0%, oklch(0.7 0.04 60 / 0.18), transparent 50%),
+    radial-gradient(ellipse at 100% 100%, oklch(0.7 0.04 60 / 0.15), transparent 50%),
+    radial-gradient(ellipse at 100% 0%, oklch(0.72 0.03 55 / 0.08), transparent 40%),
+    radial-gradient(ellipse at 0% 100%, oklch(0.72 0.03 55 / 0.08), transparent 40%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 噪点纹理 — 模拟磨砂磨砗的古纸表面 */
+.theme-parchment::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: var(--radius-lg);
 }
 
 .theme-parchment .note-hero {
   padding: var(--space-8) var(--space-8) var(--space-6);
   text-align: center;
-  border-bottom: 2px double oklch(0.75 0.04 70);
+  border-bottom: none;
+  position: relative;
+  z-index: 1;
+}
+
+/* 装饰性分割线 */
+.theme-parchment .note-hero::after {
+  content: '— ✦ —';
+  display: block;
+  margin-top: var(--space-4);
+  font-size: 0.8rem;
+  color: oklch(0.6 0.06 60);
+  letter-spacing: 8px;
 }
 
 .theme-parchment .note-title {
@@ -1137,7 +1371,7 @@ async function popoutNote() {
   font-size: clamp(1.5rem, 4vw, 2.2rem);
   font-weight: 700;
   color: oklch(0.3 0.04 50);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.05em;
   margin-bottom: var(--space-4);
 }
 
@@ -1151,8 +1385,10 @@ async function popoutNote() {
 }
 
 .theme-parchment .meta-category {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 500;
+  font-variant: small-caps;
+  letter-spacing: 0.08em;
   color: oklch(0.45 0.1 30);
   padding: var(--space-1) var(--space-3);
   background: oklch(0.88 0.04 60);
@@ -1181,7 +1417,19 @@ async function popoutNote() {
 }
 
 .theme-parchment .note-body {
-  padding: var(--space-6) var(--space-8) var(--space-12);
+  padding: var(--space-8) var(--space-10) var(--space-12);
+  position: relative;
+  z-index: 1;
+}
+
+/* 页脚装饰 */
+.theme-parchment .note-body::after {
+  content: '❧';
+  display: block;
+  text-align: center;
+  margin-top: var(--space-8);
+  font-size: 1.5rem;
+  color: oklch(0.65 0.06 60);
 }
 
 .theme-parchment .note-body :deep(.md-rendered) {
@@ -1190,6 +1438,22 @@ async function popoutNote() {
   line-height: 2;
   color: oklch(0.28 0.03 50);
   text-align: justify;
+}
+
+/* 古典羊皮纸阅读域整体左缩进 */
+.theme-parchment .note-body :deep(.md-rendered) {
+  padding-left: clamp(1rem, 5vw, 3rem) !important;
+  padding-right: clamp(1rem, 5vw, 3rem) !important;
+}
+
+.theme-parchment .note-body :deep(.md-rendered blockquote) {
+  margin-left: -1rem; /* 让引用微微跳出排版网格，显出复古感 */
+}
+
+/* 列表缩进优化 */
+.theme-parchment .note-body :deep(.md-rendered ul),
+.theme-parchment .note-body :deep(.md-rendered ol) {
+  padding-left: 1.5rem;
 }
 
 .theme-parchment .note-body :deep(.md-rendered h1),
