@@ -6,6 +6,7 @@ import hljs from 'highlight.js'
 import texmath from 'markdown-it-texmath'
 import taskLists from 'markdown-it-task-lists'
 import katex from 'katex'
+import DOMPurify from 'dompurify'
 import { useNotesStore } from '../stores/notes'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import mermaid from 'mermaid'
@@ -44,8 +45,8 @@ const containerRef = ref<HTMLElement | null>(null)
 let mermaidIdCounter = 0
 
 const md = new MarkdownIt({
-  /* 笔记正文默认按纯 Markdown 处理，避免 <select>/<input> 等文本被渲染成真实控件 */
-  html: false,
+  /* 启用 HTML 以支持 <details>/<summary>/<br> 等安全标签，DOMPurify 负责过滤危险内容 */
+  html: true,
   linkify: true,
   typographer: true,
   breaks: true,
@@ -64,6 +65,25 @@ const md = new MarkdownIt({
     return `<pre class="hljs"><code>${md.utils.escapeHtml(str)}</code></pre>`
   },
 })
+
+/**
+ * DOMPurify 配置 —— 允许所有安全的 Markdown / HTML 标签，
+ * 同时抹除 <script>/<style>/<iframe>/<form>/<input>/<select> 等危险元素。
+ * DOMPurify 默认已禁用 script/style/iframe，此处通过 ADD_TAGS 显式添加
+ * Markdown 文档中常见的语义化扩展标签。
+ */
+const purifyConfig = {
+  /* 在 DOMPurify 默认白名单基础上额外允许的标签 */
+  /* input 必须保留：markdown-it-task-lists 生成 <input type="checkbox"> */
+  ADD_TAGS: ['details', 'summary', 'mark', 'kbd', 'abbr', 'ruby', 'rt', 'rp', 'var', 'samp', 'dfn', 'ins', 'input'],
+  /* 额外允许的属性（含 checkbox 所需的 type/checked/disabled） */
+  ADD_ATTR: ['open', 'class', 'id', 'data-wiki-title', 'data-mermaid-processed', 'type', 'checked', 'disabled', 'data-bound'],
+  /* 显式禁止的危险标签（DOMPurify 默认已禁止，此处做双重保险） */
+  FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'select', 'textarea', 'button'],
+  FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur'],
+  RETURN_DOM: false as const,
+  RETURN_DOM_FRAGMENT: false as const,
+}
 
 md.use(texmath, { engine: katex, delimiters: 'dollars' })
 md.use(taskLists, { enabled: true })
@@ -92,7 +112,11 @@ function renderWikiLinks(html: string): string {
   )
 }
 
-const rendered = computed(() => renderWikiLinks(md.render(cleanContent(props.content))))
+const rendered = computed(() => {
+  const rawHtml = md.render(cleanContent(props.content))
+  const safeHtml = DOMPurify.sanitize(rawHtml, purifyConfig) as string
+  return renderWikiLinks(safeHtml)
+})
 
 /** 点击 wiki-link 导航到对应笔记，点击外部链接用系统浏览器打开 */
 function handleClick(e: Event) {
@@ -387,9 +411,84 @@ onUpdated(bindHandlers)
 }
 
 /* 已完成任务的文字变淡 + 删除线 */
-.md-rendered :deep(.task-list-item.checked) {
+.md-rendered :deep(.task-list-item:has(input:checked)) {
   color: var(--color-text-tertiary);
   text-decoration: line-through;
+}
+
+/* ─── 折叠面板 (details/summary) ─── */
+.md-rendered :deep(details) {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin: var(--space-4) 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--color-bg-secondary);
+  transition: background-color 200ms ease-out,
+              border-color 200ms ease-out;
+}
+
+.md-rendered :deep(details[open]) {
+  background: var(--color-bg-primary, var(--color-bg-secondary));
+}
+
+.md-rendered :deep(details summary) {
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  transition: background-color 200ms ease-out,
+              color 200ms ease-out;
+}
+
+/* 移除默认三角 */
+.md-rendered :deep(details summary::-webkit-details-marker) {
+  display: none;
+}
+
+/* 自定义展开/收起箭头 */
+.md-rendered :deep(details summary)::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid var(--color-text-secondary);
+  border-bottom: 2px solid var(--color-text-secondary);
+  transform: rotate(-45deg);
+  transition: transform 200ms ease-out;
+  flex-shrink: 0;
+}
+
+.md-rendered :deep(details[open] > summary)::before {
+  transform: rotate(45deg);
+}
+
+@media (hover: hover) {
+  .md-rendered :deep(details summary:hover) {
+    background: var(--color-bg-tertiary);
+  }
+}
+
+.md-rendered :deep(details summary:focus-visible) {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-accent-muted);
+}
+
+/* details 内容区域 */
+.md-rendered :deep(details > *:not(summary)) {
+  padding-left: var(--space-4);
+  padding-right: var(--space-4);
+}
+
+.md-rendered :deep(details > p:last-child),
+.md-rendered :deep(details > ul:last-child),
+.md-rendered :deep(details > ol:last-child) {
+  padding-bottom: var(--space-3);
 }
 
 /* ─── 分割线 ─── */
@@ -397,6 +496,31 @@ onUpdated(bindHandlers)
   border: none;
   border-top: 1px solid var(--color-divider);
   margin: var(--space-6) 0;
+}
+
+/* ─── mark 高亮 ─── */
+.md-rendered :deep(mark) {
+  background: oklch(85% 0.15 85);
+  color: oklch(25% 0.02 85);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+}
+
+[data-theme='dark'] .md-rendered :deep(mark) {
+  background: oklch(45% 0.12 85);
+  color: oklch(92% 0.02 85);
+}
+
+/* ─── kbd 键盘按键 ─── */
+.md-rendered :deep(kbd) {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: 0.15em 0.5em;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-tertiary);
+  box-shadow: 0 1px 2px oklch(0% 0 0 / 0.1),
+              inset 0 -1px 0 oklch(0% 0 0 / 0.08);
 }
 
 /* ─── 表格 ─── */

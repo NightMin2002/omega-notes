@@ -149,11 +149,68 @@ defineExpose({
   margin: var(--space-3) 0 !important;
 }
 
-.milkdown .ProseMirror ul { list-style: disc !important; }
+/* 排除包含 task 项的列表，避免 disc 覆盖 checkbox */
+.milkdown .ProseMirror ul:not(:has(> li[data-item-type="task"])) { list-style: disc !important; }
 .milkdown .ProseMirror ol { list-style: decimal !important; }
 
 .milkdown .ProseMirror li {
   margin-bottom: var(--space-1) !important;
+}
+
+/* ─── 任务列表 (Milkdown GFM) ─── */
+.milkdown .ProseMirror li[data-item-type="task"] {
+  list-style: none !important;
+  position: relative;
+  padding-left: var(--space-6) !important;
+}
+
+/* 用伪元素画 checkbox 方框 */
+.milkdown .ProseMirror li[data-item-type="task"]::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.35em;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-border-strong, var(--color-text-tertiary));
+  border-radius: 4px;
+  background: transparent;
+  transition: background-color 200ms ease-out,
+              border-color 200ms ease-out;
+  box-sizing: border-box;
+}
+
+/* 选中状态：填充主题色 */
+.milkdown .ProseMirror li[data-item-type="task"][data-checked="true"]::before {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+/* 对勾标记 */
+.milkdown .ProseMirror li[data-item-type="task"][data-checked="true"]::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: calc(0.35em + 2px);
+  width: 6px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg);
+}
+
+/* 已完成任务的文字变淡 + 删除线 */
+.milkdown .ProseMirror li[data-item-type="task"][data-checked="true"] {
+  color: var(--color-text-tertiary) !important;
+  text-decoration: line-through;
+}
+
+/* Hover 效果 */
+@media (hover: hover) {
+  .milkdown .ProseMirror li[data-item-type="task"][data-checked="false"]:hover::before {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-muted);
+  }
 }
 
 .milkdown .ProseMirror hr {
