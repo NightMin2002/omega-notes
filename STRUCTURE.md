@@ -159,7 +159,7 @@ docs/
 | `PopoutTasks.vue` | `/popout/tasks` | `tasks` | (旧版) 悬挂任务 |
 | `PopoutTimer.vue` | `/popout/timer` | `tasks` | (旧版) 悬挂倒计时 |
 | `PopoutNote.vue` | `/popout/note/:id` | `notes` | 悬挂笔记（popout，always-on-top）：完整 Markdown 阅读 |
-| `PopoutProgress.vue` | `/popout/progress` | `tasks` | 全能时间枢纽 Hub：常驻时间进度横条，鼠标悬停可向上平滑展开集成面板（任务、番茄钟、人生进度条及显示设置） |
+| `PopoutProgress.vue` | `/popout/progress` | `tasks` | 全能时间枢纽 Hub：常驻时间进度横条，鼠标悬停可展开集成面板（任务、番茄钟、人生进度条及显示设置）；窗口几何基于 Tauri `currentMonitor().workArea` 做 Windows 多屏/DPI/任务栏安全定位，右侧贴边按右缘锚定展开；前端不再通过 `hide/show` 掩盖窗口变化，而是等待布局稳定后调用 Rust 端几何更新，避免触发 Windows 焦点链与任务栏闪动 |
 | `TrashView.vue` | `/trash` | `notes` | 回收站：已删除笔记列表、恢复/永久删除、清空回收站确认 dialog |
 | `SettingsView.vue` | `/settings` | `theme`, `settings`, `notes` | 设置：外观（主题/字体）、编辑器（默认模式）、数据（存储位置/统计/回收站清理）、系统（开机自启）、关于 |
 
@@ -217,7 +217,7 @@ docs/
 | `tauri.conf.json` | 应用配置（窗口大小、标识、构建命令、安全策略） |
 | `Cargo.toml` | Rust 依赖声明 |
 | `src/main.rs` | Windows 下隐藏控制台窗口，调用 `lib.rs` |
-| `src/lib.rs` | Tauri 应用初始化：注册各插件；`async open_popout`（创建/聚焦悬挂窗口，支持 tasks/timer/note 三种）/ `async resize_popout` / `async close_popout`；系统托盘（右键菜单含悬挂入口 + 左键恢复）；主窗口关闭→最小化到托盘 |
+| `src/lib.rs` | Tauri 应用初始化：注册各插件；`async open_popout`（创建/聚焦悬挂窗口，支持 tasks/timer/note 三种，`progress` 默认落在主显示器 `work_area` 右下且以非聚焦方式创建/恢复）/ `async resize_popout` / `async close_popout` / `async update_popout_geometry`（Windows 下使用单次 `SetWindowPos` 同时移动+缩放并附带 `SWP_NOACTIVATE`，其他平台保留顺序型更新）；系统托盘（右键菜单含悬挂入口 + 左键恢复）；主窗口关闭→最小化到托盘 |
 | `capabilities/` | 权限能力声明（fs + global-shortcut + dialog + autostart） |
 
 ## 数据流向
