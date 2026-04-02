@@ -50,18 +50,6 @@ const router = createRouter({
     },
     /* ─── 悬挂窗口路由（独立窗口渲染，不含侧边栏） ─── */
     {
-      path: '/popout/tasks',
-      name: 'popout-tasks',
-      component: () => import('../views/popout/PopoutTasks.vue'),
-      meta: { popout: true, title: '每日任务' },
-    },
-    {
-      path: '/popout/timer',
-      name: 'popout-timer',
-      component: () => import('../views/popout/PopoutTimer.vue'),
-      meta: { popout: true, title: '倒计时' },
-    },
-    {
       path: '/popout/note/:id',
       name: 'popout-note',
       component: () => import('../views/popout/PopoutNote.vue'),
@@ -71,7 +59,7 @@ const router = createRouter({
       path: '/popout/progress',
       name: 'popout-progress',
       component: () => import('../views/popout/PopoutProgress.vue'),
-      meta: { popout: true, title: '时间进度' },
+      meta: { popout: true, title: '时间枢纽' },
     },
   ],
 })

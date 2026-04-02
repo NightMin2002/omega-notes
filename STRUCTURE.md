@@ -59,10 +59,14 @@ omega-v2/
 │   │   ├── SettingsView.vue    # 设置页（外观/编辑器/数据/关于/字体缩放）
 │   │   ├── TasksView.vue       # 日常管理（每日任务 + 卡片/列表视图 + 3种主题 + 一键完成 + 倒计时 + 健康提醒）
 │   │   └── popout/             # 桌面悬挂窗口（always-on-top 独立窗口）
-│   │       ├── PopoutTasks.vue   # 悬挂任务窗口（精简列表 + 跨窗口同步）
-│   │       ├── PopoutTimer.vue   # 悬挂计时窗口（SVG 进度环 + 预设）
-│   │       ├── PopoutProgress.vue# 悬挂时间进度小窗（横向药丸形，展示日/年时间流逝与周数）
-│   │       └── PopoutNote.vue    # 悬挂笔记阅读窗口
+│   │       ├── HubTasks.vue      # 悬挂任务列表子模块
+│   │       ├── HubTimer.vue      # 悬挂番茄钟子模块
+│   │       ├── HubLife.vue       # 悬挂人生进度条子模块
+│   │       ├── HubSettings.vue   # 悬挂设置聚合面板
+│   │       ├── PopoutTasks.vue   # (已弃用) 旧版独立悬挂任务窗口
+│   │       ├── PopoutTimer.vue   # (已弃用) 旧版独立悬挂计时窗口
+│   │       ├── PopoutProgress.vue# 悬挂多功能枢纽 (Hub)：集成 时间、任务、倒计时与人生进度
+│   │       └── PopoutNote.vue    # 悬挂笔记阅读桌面窗口
 │   │
 │   ├── stores/                 # Pinia 状态仓库
 │   │   ├── theme.ts            # 主题管理（暗色/亮色 + 持久化）
@@ -152,9 +156,10 @@ docs/
 | `WriteView.vue` | `/write` | `notes` | 模板选择器 → WYSIWYG/分屏编辑 + 图片插入 + `[[title]]` 链接插入 + 标题/分类/标签表单 |
 | `NoteDetailView.vue` | `/note/:id` | `notes` | **Flex 内部滚动架构**：detail-toolbar + editor-toolbar 固定不滚动，detail-content 独立滚动（分屏时 flex 填充，pane 独立滚动）；阅读/编辑/分屏切换，收藏/置顶/删除，`[[title]]` 链接，反向链接，**4 种阅读主题 + 编辑器主题适配**，字体缩放，悬挂窗口 |
 | `TasksView.vue` | `/tasks` | `tasks` | 每日任务 + **卡片/列表视图切换** + **3种主题（默认/简约/彩色）** + **分类一键完成** + 倒计时 + 健康提醒 + 悬挂任务按钮 |
-| `PopoutTasks.vue` | `/popout/tasks` | `tasks` | 悬挂任务（popout，always-on-top）：精简任务列表 + 2s 轮询跨窗口同步 |
-| `PopoutTimer.vue` | `/popout/timer` | `tasks` | 悬挂倒计时（popout，always-on-top）：SVG 进度环 + 预设时长 |
+| `PopoutTasks.vue` | `/popout/tasks` | `tasks` | (旧版) 悬挂任务 |
+| `PopoutTimer.vue` | `/popout/timer` | `tasks` | (旧版) 悬挂倒计时 |
 | `PopoutNote.vue` | `/popout/note/:id` | `notes` | 悬挂笔记（popout，always-on-top）：完整 Markdown 阅读 |
+| `PopoutProgress.vue` | `/popout/progress` | `tasks` | 全能时间枢纽 Hub：常驻时间进度横条，鼠标悬停可向上平滑展开集成面板（任务、番茄钟、人生进度条及显示设置） |
 | `TrashView.vue` | `/trash` | `notes` | 回收站：已删除笔记列表、恢复/永久删除、清空回收站确认 dialog |
 | `SettingsView.vue` | `/settings` | `theme`, `settings`, `notes` | 设置：外观（主题/字体）、编辑器（默认模式）、数据（存储位置/统计/回收站清理）、系统（开机自启）、关于 |
 

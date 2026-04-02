@@ -9,8 +9,6 @@ use tauri::{
 #[tauri::command]
 async fn open_popout(app: tauri::AppHandle, kind: String, note_id: Option<String>) -> Result<(), String> {
     let (label, route, w, h, decorations, resizable) = match kind.as_str() {
-        "tasks" => ("popout-tasks", "/popout/tasks".to_string(), 340.0, 520.0, true, true),
-        "timer" => ("popout-timer", "/popout/timer".to_string(), 240.0, 280.0, true, false),
         "progress" => ("popout-progress", "/popout/progress".to_string(), 420.0, 48.0, false, false),
         "note"  => {
             let id = note_id.unwrap_or_default();
@@ -107,12 +105,10 @@ pub fn run() {
             #[cfg(desktop)]
             {
                 let show = MenuItemBuilder::with_id("show", "显示 Ω Notes").build(app)?;
-                let float_tasks = MenuItemBuilder::with_id("float-tasks", "📋 悬挂任务").build(app)?;
-                let float_timer = MenuItemBuilder::with_id("float-timer", "⏱ 悬挂计时").build(app)?;
-                let float_progress = MenuItemBuilder::with_id("float-progress", "🕒 悬挂时间").build(app)?;
+                let float_progress = MenuItemBuilder::with_id("float-progress", "🚀 时间枢纽").build(app)?;
                 let quit = MenuItemBuilder::with_id("quit", "退出").build(app)?;
                 let menu = MenuBuilder::new(app)
-                    .items(&[&show, &float_tasks, &float_timer, &float_progress, &quit])
+                    .items(&[&show, &float_progress, &quit])
                     .build()?;
 
                 TrayIconBuilder::new()
@@ -126,18 +122,6 @@ pub fn run() {
                                 let _ = window.unminimize();
                                 let _ = window.set_focus();
                             }
-                        }
-                        "float-tasks" => {
-                            let handle = app.clone();
-                            tauri::async_runtime::spawn(async move {
-                                let _ = open_popout(handle, "tasks".into(), None).await;
-                            });
-                        }
-                        "float-timer" => {
-                            let handle = app.clone();
-                            tauri::async_runtime::spawn(async move {
-                                let _ = open_popout(handle, "timer".into(), None).await;
-                            });
                         }
                         "float-progress" => {
                             let handle = app.clone();

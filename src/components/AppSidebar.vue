@@ -380,17 +380,11 @@ function handleInputConfirm(val: string) {
 
         <!-- 悬挂快捷 -->
         <div class="io-row popout-row">
-          <button class="io-btn popout-btn" @click="openPopout('tasks')" data-tooltip="悬挂任务">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-            </svg>
-            <span>任务</span>
-          </button>
-          <button class="io-btn popout-btn" @click="openPopout('progress')" data-tooltip="时间进度">
+          <button class="io-btn popout-btn" @click="openPopout('progress')" data-tooltip="桌面时间枢纽，内置倒计时与任务管理">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
             </svg>
-            <span>进度</span>
+            <span>时间枢纽</span>
           </button>
         </div>
 

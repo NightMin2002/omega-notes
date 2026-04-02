@@ -29,7 +29,7 @@ watch(taskTheme, v => localStorage.setItem('omega-task-theme', v))
 async function openPopout() {
   try {
     const { invoke } = await import('@tauri-apps/api/core')
-    await invoke('open_popout', { kind: 'tasks' })
+    await invoke('open_popout', { kind: 'progress' })
   } catch { /* browser fallback */ }
 }
 
