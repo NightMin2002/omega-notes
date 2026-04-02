@@ -438,10 +438,6 @@ async function popoutNote() {
             <CategoryPicker v-model="editCategory" />
             <input v-model="editTags" type="text" class="edit-input" placeholder="标签（空格分隔）">
           </div>
-          <div class="edit-actions">
-            <button type="button" class="btn-cancel" @click="cancelEdit">取消</button>
-            <button type="submit" class="btn-save" :disabled="!editContent.trim()">保存</button>
-          </div>
         </form>
         </template>
 
@@ -1385,58 +1381,6 @@ async function popoutNote() {
   color: var(--color-text-tertiary);
 }
 
-/* ── 操作按钮 ── */
-.edit-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-3);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--color-divider);
-}
-
-.btn-save,
-.btn-cancel {
-  padding: var(--space-2) var(--space-6);
-  border-radius: var(--radius-md);
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-out),
-              opacity var(--duration-fast) var(--ease-out),
-              transform var(--duration-fast) var(--ease-out),
-              box-shadow var(--duration-fast) var(--ease-out);
-}
-
-.btn-save {
-  background: var(--color-accent);
-  color: var(--color-text-inverse);
-  border: 1px solid var(--color-accent);
-}
-
-.btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
-
-@media (hover: hover) {
-  .btn-save:hover:not(:disabled) {
-    background: var(--color-accent-hover);
-    border-color: var(--color-accent-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px oklch(from var(--color-accent) l c h / 0.25);
-  }
-  .btn-cancel:hover {
-    background: var(--color-bg-hover);
-    border-color: var(--color-border-strong);
-    transform: translateY(-1px);
-  }
-}
-
-.btn-save:active, .btn-cancel:active {
-  transform: scale(0.97);
-}
-
-.btn-cancel {
-  background: var(--color-bg-tertiary);
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border-button);
-}
 
 /* ════════════════════════════════════════════════
    编辑模式 — 主题适配
@@ -1466,9 +1410,6 @@ async function popoutNote() {
   border-color: rgba(99, 102, 241, 0.1);
 }
 
-.edit-form.theme-aurora .edit-actions {
-  border-top-color: rgba(99, 102, 241, 0.1);
-}
 
 .edit-form.theme-aurora :deep(.split-editor) {
   border-color: rgba(99, 102, 241, 0.15);
@@ -1509,9 +1450,6 @@ async function popoutNote() {
   border-radius: 0;
 }
 
-.edit-form.theme-ink .edit-actions {
-  border-top-color: var(--color-border);
-}
 
 .edit-form.theme-ink :deep(.split-editor) {
   border-radius: var(--radius-sm);
@@ -1558,22 +1496,6 @@ async function popoutNote() {
   color: oklch(0.4 0.04 145);
 }
 
-.edit-form.theme-terminal .edit-actions {
-  border-top-color: oklch(0.3 0.03 160);
-}
-
-.edit-form.theme-terminal .btn-save {
-  background: oklch(0.4 0.15 160);
-  border-color: oklch(0.5 0.15 160);
-  font-family: var(--font-mono);
-}
-
-.edit-form.theme-terminal .btn-cancel {
-  background: oklch(0.2 0.01 250);
-  border-color: oklch(0.3 0.03 160);
-  color: oklch(0.6 0.06 145);
-  font-family: var(--font-mono);
-}
 
 .edit-form.theme-terminal :deep(.split-editor) {
   border-color: oklch(0.3 0.03 160);
@@ -1629,20 +1551,6 @@ async function popoutNote() {
   color: oklch(0.3 0.03 50);
 }
 
-.edit-form.theme-parchment .edit-actions {
-  border-top-color: oklch(0.82 0.035 70);
-}
-
-.edit-form.theme-parchment .btn-save {
-  background: oklch(0.5 0.1 50);
-  border-color: oklch(0.5 0.1 50);
-}
-
-.edit-form.theme-parchment .btn-cancel {
-  background: oklch(0.9 0.02 75);
-  border-color: oklch(0.8 0.03 70);
-  color: oklch(0.45 0.03 55);
-}
 
 .edit-form.theme-parchment :deep(.split-editor) {
   border-color: oklch(0.82 0.035 70);
@@ -1685,20 +1593,6 @@ async function popoutNote() {
   color: oklch(0.78 0.03 60);
 }
 
-[data-theme='dark'] .edit-form.theme-parchment .edit-actions {
-  border-top-color: oklch(0.32 0.025 50);
-}
-
-[data-theme='dark'] .edit-form.theme-parchment .btn-save {
-  background: oklch(0.45 0.08 50);
-  border-color: oklch(0.45 0.08 50);
-}
-
-[data-theme='dark'] .edit-form.theme-parchment .btn-cancel {
-  background: oklch(0.25 0.015 55);
-  border-color: oklch(0.35 0.025 50);
-  color: oklch(0.6 0.03 55);
-}
 
 [data-theme='dark'] .edit-form.theme-parchment :deep(.split-editor) {
   border-color: oklch(0.32 0.025 50);
