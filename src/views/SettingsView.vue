@@ -3,12 +3,15 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useThemeStore } from '../stores/theme'
 import { useSettingsStore } from '../stores/settings'
 import { useNotesStore } from '../stores/notes'
+import { useTasksStore } from '../stores/tasks'
 import { isTauri } from '../utils/storage'
+import InputDialog from '../components/InputDialog.vue'
 import type { EditorMode, FontFamily } from '../types'
 
 const themeStore = useThemeStore()
 const settingsStore = useSettingsStore()
 const notesStore = useNotesStore()
+const tasksStore = useTasksStore()
 
 const isTauriEnv = isTauri()
 const storagePath = ref('')
@@ -105,6 +108,31 @@ function handleClickOutside(e: MouseEvent) {
 
 onMounted(() => document.addEventListener('click', handleClickOutside, true))
 onUnmounted(() => document.removeEventListener('click', handleClickOutside, true))
+
+/* ─── 恢复出厂设置 ─── */
+const showResetDialog = ref(false)
+
+async function handleFactoryResetConfirm(val: string) {
+  if (val === '确认重置') {
+    // 1. Delete all notes
+    const allIds = notesStore.notes.map(n => n.id)
+    for (const id of allIds) {
+      await notesStore.permanentlyDelete(id)
+    }
+
+    // 2. Clear tasks
+    tasksStore.tasks = []
+    tasksStore.records = []
+    
+    // 3. Clear localStorage
+    localStorage.clear()
+
+    // 4. Reload window
+    window.location.reload()
+  } else {
+    showResetDialog.value = false
+  }
+}
 </script>
 
 <template>
@@ -357,6 +385,19 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside, true
           </Transition>
         </div>
       </div>
+
+      <div class="setting-item danger-zone">
+        <div class="setting-info">
+          <span class="setting-label text-danger">恢复出厂设置</span>
+          <span class="setting-desc">彻底清除所有笔记、任务、偏好设置和缓存数据。此操作不可逆！</span>
+        </div>
+        <button
+          class="danger-btn"
+          @click="showResetDialog = true"
+        >
+          清空所有数据
+        </button>
+      </div>
     </section>
 
     <!-- ═══ 系统（仅桌面） ═══ -->
@@ -425,6 +466,20 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside, true
         </div>
       </div>
     </section>
+
+    <!-- 弹窗 -->
+    <InputDialog
+      :open="showResetDialog"
+      title="高危操作确认"
+      description="如确定清除，请输入「确认重置」"
+      placeholder="确认重置"
+      requiredMatch="确认重置"
+      confirmText="彻底清除"
+      cancelText="取消"
+      confirmType="danger"
+      @confirm="handleFactoryResetConfirm"
+      @cancel="showResetDialog = false"
+    />
   </div>
 </template>
 
@@ -797,6 +852,40 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside, true
   word-break: break-all;
   margin-top: 2px;
   opacity: 0.8;
+}
+
+/* ═══ 危险区域 ═══ */
+.danger-zone {
+  border-top: 1px dashed var(--color-danger);
+  background: rgba(239, 68, 68, 0.05); /* danger color faded */
+}
+
+.text-danger {
+  color: var(--color-danger) !important;
+}
+
+.danger-btn {
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .danger-btn:hover {
+    background: var(--color-danger);
+    color: var(--color-text-inverse);
+  }
+}
+
+.danger-btn:active {
+  transform: scale(0.97);
 }
 
 .storage-actions {

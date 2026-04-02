@@ -401,7 +401,7 @@ watch(model, (val) => {
 /* ─── Dropdown (Teleport 到 body) ─── */
 .cat-dropdown {
   position: fixed;
-  z-index: var(--z-dropdown, 100);
+  z-index: var(--z-dropdown-top, 10000);
   max-height: 220px;
   overflow-y: auto;
   background: var(--color-bg-elevated, var(--color-bg-primary));

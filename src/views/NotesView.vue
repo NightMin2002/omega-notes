@@ -4,6 +4,10 @@ import { useNotesStore } from '../stores/notes'
 import { useRouter, useRoute } from 'vue-router'
 import { previewHtml } from '../utils/markdown'
 import { useDraggable } from 'vue-draggable-plus'
+import ContextMenu from '../components/ContextMenu.vue'
+import type { ContextMenuItem } from '../components/ContextMenu.vue'
+import InputDialog from '../components/InputDialog.vue'
+import CategoryDialog from '../components/CategoryDialog.vue'
 
 const notesStore = useNotesStore()
 const router = useRouter()
@@ -184,6 +188,65 @@ useDraggable(gridRef, draggableNotes, {
     })
   },
 })
+
+/* ─── 卡片右键菜单 ─── */
+const showContextMenu = ref(false)
+const contextMenuPos = ref({ x: 0, y: 0 })
+const contextMenuTarget = ref<string | null>(null)
+
+const contextMenuItems = computed<ContextMenuItem[]>(() => [
+  { id: 'rename', label: '重命名' },
+  { id: 'move', label: '移动到分类...' },
+  { id: 'divider', label: '', divider: true },
+  { id: 'delete', label: '删除', danger: true },
+])
+
+function handleCardContextMenu(e: MouseEvent, noteId: string) {
+  contextMenuTarget.value = noteId
+  contextMenuPos.value = { x: e.clientX, y: e.clientY }
+  showContextMenu.value = true
+}
+
+const showRenameDialog = ref(false)
+const renameTargetId = ref('')
+const renameInitialValue = ref('')
+
+const showMoveDialog = ref(false)
+const moveTargetId = ref('')
+const moveInitialCategory = ref('')
+
+async function handleContextMenuSelect(id: string) {
+  const noteId = contextMenuTarget.value
+  if (!noteId) return
+  const note = notesStore.getNoteById(noteId)
+  if (!note) return
+
+  if (id === 'rename') {
+    renameTargetId.value = noteId
+    renameInitialValue.value = note.title
+    showRenameDialog.value = true
+  } else if (id === 'move') {
+    moveTargetId.value = noteId
+    moveInitialCategory.value = note.category
+    showMoveDialog.value = true
+  } else if (id === 'delete') {
+    await notesStore.deleteNote(noteId)
+  }
+}
+
+function handleRenameConfirm(newTitle: string) {
+  showRenameDialog.value = false
+  if (renameTargetId.value) {
+    notesStore.updateNote(renameTargetId.value, { title: newTitle || '未命名笔记' })
+  }
+}
+
+function handleMoveConfirm(newCategory: string) {
+  showMoveDialog.value = false
+  if (moveTargetId.value && newCategory) {
+    notesStore.moveNoteToCategory(moveTargetId.value, newCategory)
+  }
+}
 </script>
 
 <template>
@@ -289,6 +352,7 @@ useDraggable(gridRef, draggableNotes, {
         tabindex="0"
         @click="openNote(note.id)"
         @keydown.enter="openNote(note.id)"
+        @contextmenu.prevent="handleCardContextMenu($event, note.id)"
       >
         <div class="card-badges">
           <svg v-if="note.isFavorite" class="fav-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -317,6 +381,32 @@ useDraggable(gridRef, draggableNotes, {
       <p>还没有笔记</p>
       <RouterLink to="/write" class="empty-action">创建第一篇</RouterLink>
     </div>
+
+    <!-- UI 组件 -->
+    <ContextMenu
+      v-model:show="showContextMenu"
+      :position="contextMenuPos"
+      :items="contextMenuItems"
+      @select="handleContextMenuSelect"
+    />
+
+    <InputDialog
+      :open="showRenameDialog"
+      title="重命名笔记"
+      placeholder="留空默认为「未命名笔记」"
+      :initialValue="renameInitialValue"
+      :allowEmpty="true"
+      @confirm="handleRenameConfirm"
+      @cancel="showRenameDialog = false"
+    />
+
+    <CategoryDialog
+      :open="showMoveDialog"
+      title="移动到分类"
+      :initialCategory="moveInitialCategory"
+      @confirm="handleMoveConfirm"
+      @cancel="showMoveDialog = false"
+    />
   </div>
 </template>
 

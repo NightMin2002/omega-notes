@@ -6,6 +6,7 @@ import { useTasksStore } from '../stores/tasks'
 import { exportNotesAsJson, importNotesFromFiles } from '../utils/dataio'
 import ContextMenu from './ContextMenu.vue'
 import type { ContextMenuItem } from './ContextMenu.vue'
+import InputDialog from './InputDialog.vue'
 
 defineProps<{
   collapsed: boolean
@@ -132,6 +133,7 @@ const contextMenuItems = computed<ContextMenuItem[]>(() => {
   if (!target) return []
   return [
     { id: 'new-note', label: '新建笔记到此分类' },
+    { id: 'new-sub', label: '新建子分类' },
     { id: 'divider-1', label: '', divider: true },
     { id: 'delete', label: '删除分类', danger: true },
   ]
@@ -142,6 +144,9 @@ function handleFolderContextMenu(e: MouseEvent, folderPath: string) {
   contextMenuPos.value = { x: e.clientX, y: e.clientY }
   showContextMenu.value = true
 }
+
+const showInputDialog = ref(false)
+const inputDialogTitle = ref('')
 
 async function handleContextMenuSelect(id: string) {
   const target = contextMenuTarget.value
@@ -154,12 +159,23 @@ async function handleContextMenuSelect(id: string) {
       category: target,
     })
     router.push(`/note/${note.id}?edit=1`)
+  } else if (id === 'new-sub') {
+    inputDialogTitle.value = `在 "${target.split('/').pop()}" 下新建子分类`
+    showInputDialog.value = true
   } else if (id === 'delete') {
     await notesStore.deleteCategory(target)
     // 如果当前正在查看该分类，跳回全部笔记
     if (route.query.category === target) {
       router.push('/notes')
     }
+  }
+}
+
+function handleInputConfirm(val: string) {
+  const target = contextMenuTarget.value
+  showInputDialog.value = false
+  if (target && val) {
+    notesStore.addCustomCategory(`${target}/${val}`)
   }
 }
 </script>
@@ -336,6 +352,14 @@ async function handleContextMenuSelect(id: string) {
             :items="contextMenuItems"
             @select="handleContextMenuSelect"
           />
+
+          <InputDialog
+            :open="showInputDialog"
+            :title="inputDialogTitle"
+            placeholder="输入子分类名称..."
+            @confirm="handleInputConfirm"
+            @cancel="showInputDialog = false"
+          />
         </template>
       </nav>
 
@@ -360,7 +384,13 @@ async function handleContextMenuSelect(id: string) {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
             </svg>
-            <span>悬挂任务</span>
+            <span>任务</span>
+          </button>
+          <button class="io-btn popout-btn" @click="openPopout('progress')" data-tooltip="时间进度">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span>进度</span>
           </button>
         </div>
 

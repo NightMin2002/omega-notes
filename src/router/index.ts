@@ -67,6 +67,12 @@ const router = createRouter({
       component: () => import('../views/popout/PopoutNote.vue'),
       meta: { popout: true, title: '笔记' },
     },
+    {
+      path: '/popout/progress',
+      name: 'popout-progress',
+      component: () => import('../views/popout/PopoutProgress.vue'),
+      meta: { popout: true, title: '时间进度' },
+    },
   ],
 })
 

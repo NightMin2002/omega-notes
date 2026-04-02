@@ -46,6 +46,8 @@ omega-v2/
 │   │   ├── CategoryPicker.vue  # 分类选择器（搜索 + 键盘导航 + 子分类提示）
 │   │   ├── ContextMenu.vue     # 通用右键上下文菜单（Teleport + fixed，支持菜单项数组）
 │   │   ├── ConfirmDialog.vue   # 通用居中确认弹窗（Teleport 到 body）
+│   │   ├── InputDialog.vue     # 通用文本输入操作弹窗（带有验证和描述功能，替代原生 prompt）
+│   │   ├── CategoryDialog.vue  # 选择分类弹窗（封装 CategoryPicker）
 │   │   └── DraftToast.vue      # 草稿恢复提示 Toast（3秒自动消失）
 │   │
 │   ├── views/                  # 路由页面组件
@@ -59,6 +61,7 @@ omega-v2/
 │   │   └── popout/             # 桌面悬挂窗口（always-on-top 独立窗口）
 │   │       ├── PopoutTasks.vue   # 悬挂任务窗口（精简列表 + 跨窗口同步）
 │   │       ├── PopoutTimer.vue   # 悬挂计时窗口（SVG 进度环 + 预设）
+│   │       ├── PopoutProgress.vue# 悬挂时间进度小窗（横向药丸形，展示日/年时间流逝与周数）
 │   │       └── PopoutNote.vue    # 悬挂笔记阅读窗口
 │   │
 │   ├── stores/                 # Pinia 状态仓库
@@ -84,7 +87,7 @@ omega-v2/
 │   │   └── index.ts            # Note / DailyTask / HealthReminder / CountdownState 等
 │   │
 │   └── router/                 # 路由配置
-│       └── index.ts            # 路由表 + 页面标题同步；含 3 条 meta.popout 路由（/popout/*）
+│       └── index.ts            # 路由表 + 页面标题同步；含 4 条 meta.popout 路由（/popout/*）
 │
 └── src-tauri/                  # Tauri 后端（Rust）
     ├── Cargo.toml              # Rust 依赖配置
@@ -107,7 +110,8 @@ docs/
 ├── 02-V1和V2的对比与反思.md    # 架构对比分析
 ├── 03-数据存储机制详解.md      # Tauri fs + YAML frontmatter 存储方案
 ├── 04-功能方向规划.md          # 功能路线图与优先级
-└── 05-构建与安装指南.md        # 构建、打包、安装与常见问题
+├── 05-构建与安装指南.md        # 构建、打包、安装与常见问题
+└── 06-Markdown使用指南.md      # 高阶 MD 标记扩展详解（折叠面板/复选框等）
 ```
 
 ## 模块职责说明
