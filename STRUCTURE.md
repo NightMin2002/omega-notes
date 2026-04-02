@@ -23,7 +23,7 @@ omega-v2/
 │
 ├── src/                        # 前端源代码
 │   ├── main.ts                 # 应用入口：挂载 Vue + Pinia + Router；检测 ?popout_route= 跳转悬挂窗口路由
-│   ├── App.vue                 # 根组件：Header + Sidebar + RouterView；route.meta.popout 时纯净渲染（跳过布局）
+│   ├── App.vue                 # 根组件：Header + Sidebar + RouterView；route.meta.popout 时纯净渲染；定义 --app-main-padding CSS 变量供子页面负 margin 抵消
 │   │
 │   ├── assets/                 # 项目资产
 │   │   └── styles/             # 全局样式
@@ -40,7 +40,7 @@ omega-v2/
 │   │   ├── SearchDialog.vue    # Ctrl+K 全局搜索弹窗
 │   │   ├── EditorToolbar.vue   # Markdown 格式化工具栏（14 按钮，分屏/WYSIWYG 通用）
 │   │   ├── WikiLinkPicker.vue  # [[Wiki 链接]] 选择器下拉面板（WriteView/NoteDetailView 共享）
-│   │   ├── SplitEditor.vue     # 分屏 Markdown 编辑器（源码 + 工具栏 + 实时预览，共享）
+│   │   ├── SplitEditor.vue     # 分屏 Markdown 编辑器（源码 + 工具栏 + 实时预览，flex 填充父容器高度，pane 独立滚动）
 │   │   ├── BacklinksPanel.vue  # 反向链接面板（展示引用当前笔记的其他笔记）
 │   │   ├── TimePicker.vue      # 自定义时间选择器（步进器 ▲▼ + 滚轮 + 直接输入 + Teleport 定位）
 │   │   ├── CategoryPicker.vue  # 分类选择器（搜索 + 键盘导航 + 子分类提示）
@@ -52,7 +52,7 @@ omega-v2/
 │   │   ├── HomeView.vue        # 主页指挥中心（问候 + 任务进度环 + 统计 + 快捷入口 + 最近更新）
 │   │   ├── NotesView.vue       # 知识库（搜索 + 分类筛选 + 卡片网格 + FLIP 拖拽动画）
 │   │   ├── WriteView.vue       # 新建笔记（模板 + 编辑器 + 图片/链接 + 草稿自动保存）
-│   │   ├── NoteDetailView.vue  # 笔记详情（阅读/编辑/分屏 + 反向链接 + 4种阅读主题 + 字体缩放 + 悬挂按钮）
+│   │   ├── NoteDetailView.vue  # 笔记详情（Flex 内部滚动架构：工具栏固定 + 内容区独立滚动 + 分屏 flex 填充 + 阅读 4 主题 + 字体缩放 + 悬挂）
 │   │   ├── TrashView.vue       # 回收站（恢复/永久删除/清空）
 │   │   ├── SettingsView.vue    # 设置页（外观/编辑器/数据/关于/字体缩放）
 │   │   ├── TasksView.vue       # 日常管理（每日任务 + 卡片/列表视图 + 3种主题 + 一键完成 + 倒计时 + 健康提醒）
@@ -134,7 +134,7 @@ docs/
 | `SearchDialog.vue` | 全局搜索弹窗。全文搜索 + 关键词高亮 + 键盘导航（↑↓ Enter） | Props: `visible` / Emits: `close` |
 | `EditorToolbar.vue` | Markdown 格式化工具栏（14 按钮），分屏/WYSIWYG 通用 | Emits: `insert`, `wrap` |
 | `WikiLinkPicker.vue` | `[[Wiki 链接]]` 选择器下拉面板。从 WriteView/NoteDetailView 提取的共享组件 | Props: `show`, `search`, `candidates` / Emits: `toggle`, `update:search`, `select` |
-| `SplitEditor.vue` | 分屏 Markdown 编辑器（源码 + 工具栏 + 实时预览）。从两个 View 的重复代码提取 | v-model: `content`, `textareaRef` / Props: `showLinkPicker`, `linkSearch`, `linkCandidates` / Emits: 多个 |
+| `SplitEditor.vue` | 分屏 Markdown 编辑器（源码 + 工具栏 + 实时预览）。flex:1 填充父容器高度，每个 pane 独立 overflow-y 滚动，pane-header sticky | v-model: `content`, `textareaRef` / Props: `showLinkPicker`, `linkSearch`, `linkCandidates` / Emits: 多个 |
 | `BacklinksPanel.vue` | 反向链接面板。展示引用当前笔记的其他笔记列表 | Props: `backlinks` |
 
 **编辑器架构说明**：`MilkdownEditor` 和 `MilkdownEditorCore` 必须拆分为两个组件，因为 `useEditor()` 需要在 `MilkdownProvider` 的 inject 上下文内调用。如果合并为一个组件会导致 `Symbol(editorInfoCtxKey) not found` 错误。
@@ -146,7 +146,7 @@ docs/
 | `HomeView.vue` | `/` | `notes` | 统计卡片（总笔记/分类/已收藏/已置顶）、快捷入口、最近更新列表 |
 | `NotesView.vue` | `/notes` | `notes` | 搜索框、分类药丸、面包屑（嵌套分类时）、标签云筛选（`?tag=`）、收藏夹/最近视图（`?view=`）、笔记卡片网格、**FLIP 拖拽动画（Flexbox + capturePositions/playFlipAnimation）**、**Markdown 卡片预览** |
 | `WriteView.vue` | `/write` | `notes` | 模板选择器 → WYSIWYG/分屏编辑 + 图片插入 + `[[title]]` 链接插入 + 标题/分类/标签表单 |
-| `NoteDetailView.vue` | `/note/:id` | `notes` | 阅读模式 ↔ 编辑模式，收藏/置顶/删除，`[[title]]` 链接插入，自动记录到最近列表，反向链接面板，**字体缩放控制**，**悬挂窗口按钮**，**4 种阅读主题 + 编辑器主题适配** |
+| `NoteDetailView.vue` | `/note/:id` | `notes` | **Flex 内部滚动架构**：detail-toolbar + editor-toolbar 固定不滚动，detail-content 独立滚动（分屏时 flex 填充，pane 独立滚动）；阅读/编辑/分屏切换，收藏/置顶/删除，`[[title]]` 链接，反向链接，**4 种阅读主题 + 编辑器主题适配**，字体缩放，悬挂窗口 |
 | `TasksView.vue` | `/tasks` | `tasks` | 每日任务 + **卡片/列表视图切换** + **3种主题（默认/简约/彩色）** + **分类一键完成** + 倒计时 + 健康提醒 + 悬挂任务按钮 |
 | `PopoutTasks.vue` | `/popout/tasks` | `tasks` | 悬挂任务（popout，always-on-top）：精简任务列表 + 2s 轮询跨窗口同步 |
 | `PopoutTimer.vue` | `/popout/timer` | `tasks` | 悬挂倒计时（popout，always-on-top）：SVG 进度环 + 预设时长 |

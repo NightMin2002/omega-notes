@@ -83,7 +83,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKeydown))
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: var(--space-6);
+  --app-main-padding: var(--space-6);
+  padding: var(--app-main-padding);
   zoom: var(--content-zoom, 1);
   transition: margin-left var(--duration-slow) var(--ease-out);
 }
@@ -109,7 +110,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKeydown))
 /* ─── 响应式 ─── */
 @media (max-width: 768px) {
   .app-main {
-    padding: var(--space-4);
+    --app-main-padding: var(--space-4);
   }
 }
 </style>

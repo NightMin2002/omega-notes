@@ -374,42 +374,48 @@ async function popoutNote() {
         </div>
       </div>
 
-      <!-- 编辑模式 -->
-      <template v-if="isEditing">
-        <form class="edit-form" :class="`theme-${readingTheme}`" @submit.prevent="saveEdit" novalidate>
-          <input v-model="editTitle" type="text" class="edit-title" placeholder="笔记标题">
+      <!-- 编辑模式时的编辑器工具条（不随内容滚动） -->
+      <template v-if="isEditing && editorMode === 'wysiwyg'">
+        <div class="editor-toolbar">
+          <button type="button" class="pane-action" @click="insertImageFromFile">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+            </svg>
+            <span>插入图片</span>
+          </button>
+          <WikiLinkPicker
+            :show="showLinkPicker"
+            :search="linkSearch"
+            :candidates="linkCandidates"
+            @toggle="toggleLinkPicker"
+            @update:search="linkSearch = $event"
+            @select="insertWikiLink"
+          />
+          <button type="button" class="pane-action" :class="{ active: showFormatToolbar }" @click="showFormatToolbar = !showFormatToolbar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 7V4h16v3" /><path d="M9 20h6" /><path d="M12 4v16" />
+            </svg>
+            <span>格式</span>
+          </button>
+        </div>
+        <EditorToolbar
+          v-if="showFormatToolbar"
+          @insert="handleToolbarInsert"
+          @wrap="handleToolbarWrap"
+        />
+      </template>
 
-          <!-- WYSIWYG 模式 -->
-          <template v-if="editorMode === 'wysiwyg'">
-            <div class="editor-toolbar">
-              <button type="button" class="pane-action" @click="insertImageFromFile">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
-                </svg>
-                <span>插入图片</span>
-              </button>
-              <WikiLinkPicker
-                :show="showLinkPicker"
-                :search="linkSearch"
-                :candidates="linkCandidates"
-                @toggle="toggleLinkPicker"
-                @update:search="linkSearch = $event"
-                @select="insertWikiLink"
-              />
-              <button type="button" class="pane-action" :class="{ active: showFormatToolbar }" @click="showFormatToolbar = !showFormatToolbar">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M4 7V4h16v3" /><path d="M9 20h6" /><path d="M12 4v16" />
-                </svg>
-                <span>格式</span>
-              </button>
-            </div>
-            <EditorToolbar
-              v-if="showFormatToolbar"
-              @insert="handleToolbarInsert"
-              @wrap="handleToolbarWrap"
-            />
-            <MilkdownEditor ref="milkdownEditorRef" :key="editorKey" v-model="editContent" />
-          </template>
+      <!-- 内容区域（阅读/WYSIWYG 滚动，分屏时 flex 填充） -->
+      <div class="detail-content" :class="{ 'split-active': isEditing && editorMode === 'split' }">
+        <!-- 编辑模式 -->
+        <template v-if="isEditing">
+          <form class="edit-form" :class="`theme-${readingTheme}`" @submit.prevent="saveEdit" novalidate>
+            <input v-model="editTitle" type="text" class="edit-title" placeholder="笔记标题">
+
+            <!-- WYSIWYG 模式 -->
+            <template v-if="editorMode === 'wysiwyg'">
+              <MilkdownEditor ref="milkdownEditorRef" :key="editorKey" v-model="editContent" />
+            </template>
 
           <!-- 分屏模式 -->
           <SplitEditor
@@ -437,47 +443,48 @@ async function popoutNote() {
             <button type="submit" class="btn-save" :disabled="!editContent.trim()">保存</button>
           </div>
         </form>
-      </template>
+        </template>
 
-      <!-- 阅读模式 -->
-      <template v-else>
-        <article class="note-article" :class="`theme-${readingTheme}`">
-          <header class="note-hero">
-            <h1 class="note-title">{{ note.title || '未命名笔记' }}</h1>
+        <!-- 阅读模式 -->
+        <template v-else>
+          <article class="note-article" :class="`theme-${readingTheme}`">
+            <header class="note-hero">
+              <h1 class="note-title">{{ note.title || '未命名笔记' }}</h1>
 
-            <div class="note-meta">
-              <span class="meta-category">{{ note.category }}</span>
-              <span class="meta-date">创建于 {{ formatDate(note.createdAt) }}</span>
-              <span v-if="note.createdAt !== note.updatedAt" class="meta-date">
-                · 更新于 {{ formatDate(note.updatedAt) }}
-              </span>
+              <div class="note-meta">
+                <span class="meta-category">{{ note.category }}</span>
+                <span class="meta-date">创建于 {{ formatDate(note.createdAt) }}</span>
+                <span v-if="note.createdAt !== note.updatedAt" class="meta-date">
+                  · 更新于 {{ formatDate(note.updatedAt) }}
+                </span>
+              </div>
+
+              <div v-if="note.tags.length > 0" class="note-tags">
+                <span v-for="tag in note.tags" :key="tag" class="tag">{{ tag }}</span>
+              </div>
+            </header>
+
+            <div class="note-body">
+              <button class="copy-content-btn" :class="{ copied: copySuccess }" @click="copyContent" :data-tooltip="copySuccess ? '已复制' : '复制内容'">
+                <svg v-if="!copySuccess" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+                <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </button>
+              <MarkdownRenderer
+                :content="note.content"
+                :editable-content="note.content"
+                @update:editable-content="(val: string) => { if (note) notesStore.updateNote(note.id, { content: val }) }"
+              />
             </div>
 
-            <div v-if="note.tags.length > 0" class="note-tags">
-              <span v-for="tag in note.tags" :key="tag" class="tag">{{ tag }}</span>
-            </div>
-          </header>
-
-          <div class="note-body">
-            <button class="copy-content-btn" :class="{ copied: copySuccess }" @click="copyContent" :data-tooltip="copySuccess ? '已复制' : '复制内容'">
-              <svg v-if="!copySuccess" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="9" y="9" width="13" height="13" rx="2" />
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-              </svg>
-              <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </button>
-            <MarkdownRenderer
-              :content="note.content"
-              :editable-content="note.content"
-              @update:editable-content="(val: string) => { if (note) notesStore.updateNote(note.id, { content: val }) }"
-            />
-          </div>
-
-          <BacklinksPanel :backlinks="backlinks" />
-        </article>
-      </template>
+            <BacklinksPanel :backlinks="backlinks" />
+          </article>
+        </template>
+      </div>
     </template>
 
     <!-- 404 -->
@@ -501,31 +508,85 @@ async function popoutNote() {
 
 <style scoped>
 .detail-page {
-  max-width: 960px;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  /* 负 margin 抵消父级 .app-main 的 padding，避免页面切换时布局跳动 */
+  margin: calc(-1 * var(--app-main-padding));
+  height: calc(100% + 2 * var(--app-main-padding));
+  overflow: hidden;
 }
 
 .detail-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--space-6);
-  padding-bottom: var(--space-4);
-  padding-top: var(--space-4);
+  padding: var(--space-4) var(--space-6);
   border-bottom: 1px solid var(--color-divider);
   flex-wrap: wrap;
   gap: var(--space-3);
-  /* #15: 粘性定位 */
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  flex-shrink: 0;
   background: var(--color-glass);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  margin-left: calc(-1 * var(--space-6, 24px));
-  margin-right: calc(-1 * var(--space-6, 24px));
-  padding-left: var(--space-6, 24px);
-  padding-right: var(--space-6, 24px);
+  z-index: 10;
+}
+
+/* 编辑器工具条（不滚动） */
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-6);
+  background: var(--color-bg-tertiary);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+  z-index: var(--z-dropdown);
+}
+
+/* EditorToolbar 组件也不滚动 */
+.detail-page > :deep(.editor-toolbar-strip) {
+  flex-shrink: 0;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  padding-left: var(--space-6);
+  padding-right: var(--space-6);
+}
+
+/* 可滚动内容区域（阅读/WYSIWYG 模式） */
+.detail-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-6);
+  min-height: 0;
+}
+
+/* 分屏模式：不滚动，flex 填充高度，让 SplitEditor 内部管理滚动 */
+.detail-content.split-active {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-content.split-active > .edit-form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 内容区域内的表单/文章居中约束 */
+.detail-content > form,
+.detail-content > article {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* 分屏模式下不限制宽度 */
+.detail-content.split-active > .edit-form {
+  max-width: none;
 }
 
 .toolbar-actions {
@@ -704,20 +765,7 @@ async function popoutNote() {
   }
 }
 
-/* ─── 编辑器工具条 ─── */
-.editor-toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-2);
-  background: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  /* #3: 粘性定位，紧跟顶栏下方 */
-  position: sticky;
-  top: 64px; /* 约为 detail-toolbar 高度 */
-  z-index: var(--z-dropdown);
-}
+/* 编辑器工具条中的按钮 */
 
 .pane-action {
   display: flex;

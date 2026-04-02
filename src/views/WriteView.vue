@@ -173,135 +173,138 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
       </div>
     </div>
 
-    <!-- 模板选择器 -->
-    <div v-if="showTemplates" class="template-grid">
-      <button
-        v-for="tpl in templates"
-        :key="tpl.id"
-        class="template-card"
-        @click="applyTemplate(tpl)"
-      >
-        <!-- file -->
-        <svg v-if="tpl.icon === 'file'" class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-        </svg>
-        <!-- users -->
-        <svg v-else-if="tpl.icon === 'users'" class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-          <circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
-        </svg>
-        <!-- book -->
-        <svg v-else-if="tpl.icon === 'book'" class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-        </svg>
-        <!-- calendar -->
-        <svg v-else-if="tpl.icon === 'calendar'" class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
-        </svg>
-        <!-- lightbulb -->
-        <svg v-else-if="tpl.icon === 'lightbulb'" class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 18h6" /><path d="M10 22h4" />
-          <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
-        </svg>
-        <!-- check -->
-        <svg v-else-if="tpl.icon === 'check'" class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
-        </svg>
-        <span class="template-name">{{ tpl.name }}</span>
-        <span class="template-desc">{{ tpl.description }}</span>
-      </button>
-    </div>
-
-    <form v-else class="write-form" @submit.prevent="handleSubmit" novalidate>
-      <input
-        v-model="title"
-        type="text"
-        class="write-title"
-        placeholder="笔记标题（可选）"
-      >
-
-      <!-- WYSIWYG 模式 -->
-      <template v-if="editorMode === 'wysiwyg'">
-        <div class="editor-toolbar">
-          <button type="button" class="pane-action" @click="insertImageFromFile">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
-            </svg>
-            <span>插入图片</span>
-          </button>
-          <WikiLinkPicker
-            :show="showLinkPicker"
-            :search="linkSearch"
-            :candidates="linkCandidates"
-            @toggle="toggleLinkPicker"
-            @update:search="linkSearch = $event"
-            @select="insertWikiLink"
-          />
-          <button type="button" class="pane-action" :class="{ active: showFormatToolbar }" @click="showFormatToolbar = !showFormatToolbar">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 7V4h16v3" /><path d="M9 20h6" /><path d="M12 4v16" />
-            </svg>
-            <span>格式</span>
-          </button>
-        </div>
-        <EditorToolbar
-          v-if="showFormatToolbar"
-          @insert="handleToolbarInsert"
-          @wrap="handleToolbarWrap"
-        />
-        <MilkdownEditor ref="milkdownEditorRef" :key="editorKey" v-model="content" />
-      </template>
-
-      <!-- 分屏模式 -->
-      <SplitEditor
-        v-else
-        v-model:content="content"
-        v-model:textarea-ref="sourceTextareaRef"
-        :show-link-picker="showLinkPicker"
-        :link-search="linkSearch"
-        :link-candidates="linkCandidates"
-        @insert-image="insertImageFromFile"
-        @toggle-link-picker="toggleLinkPicker"
-        @update:link-search="linkSearch = $event"
-        @select-link="insertWikiLink"
-        @toolbar-insert="handleToolbarInsert"
-        @toolbar-wrap="handleToolbarWrap"
-        @paste="handlePaste"
-      />
-
-      <div class="write-meta">
-        <div class="meta-field">
-          <label class="meta-label">分类</label>
-          <CategoryPicker v-model="category" />
-        </div>
-
-        <div class="meta-field">
-          <label class="meta-label">标签</label>
-          <input
-            v-model="tags"
-            type="text"
-            class="meta-input"
-            placeholder="空格分隔"
-          >
-        </div>
-      </div>
-
-      <div class="write-actions">
-        <button type="button" class="btn-secondary" @click="handleCancel">取消</button>
+    <!-- 可滚动内容区域 -->
+    <div class="write-content">
+      <!-- 模板选择器 -->
+      <div v-if="showTemplates" class="template-grid">
         <button
-          type="submit"
-          class="btn-primary"
-          :class="{ 'is-loading': isSaving }"
-          :disabled="!content.trim() || isSaving || hasSubmitted"
+          v-for="tpl in templates"
+          :key="tpl.id"
+          class="template-card"
+          @click="applyTemplate(tpl)"
         >
-          <span v-if="hasSubmitted && !isSaving">已保存 ✓</span>
-          <span v-else-if="!isSaving">保存笔记</span>
-          <span v-else class="spinner" />
+          <!-- file -->
+          <svg v-if="tpl.icon === 'file'" class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+          </svg>
+          <!-- users -->
+          <svg v-else-if="tpl.icon === 'users'" class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          <!-- book -->
+          <svg v-else-if="tpl.icon === 'book'" class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+          </svg>
+          <!-- calendar -->
+          <svg v-else-if="tpl.icon === 'calendar'" class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+          <!-- lightbulb -->
+          <svg v-else-if="tpl.icon === 'lightbulb'" class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18h6" /><path d="M10 22h4" />
+            <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
+          </svg>
+          <!-- check -->
+          <svg v-else-if="tpl.icon === 'check'" class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
+          <span class="template-name">{{ tpl.name }}</span>
+          <span class="template-desc">{{ tpl.description }}</span>
         </button>
       </div>
-    </form>
+
+      <form v-else class="write-form" @submit.prevent="handleSubmit" novalidate>
+        <input
+          v-model="title"
+          type="text"
+          class="write-title"
+          placeholder="笔记标题（可选）"
+        >
+
+        <!-- WYSIWYG 模式 -->
+        <template v-if="editorMode === 'wysiwyg'">
+          <div class="editor-toolbar">
+            <button type="button" class="pane-action" @click="insertImageFromFile">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+              </svg>
+              <span>插入图片</span>
+            </button>
+            <WikiLinkPicker
+              :show="showLinkPicker"
+              :search="linkSearch"
+              :candidates="linkCandidates"
+              @toggle="toggleLinkPicker"
+              @update:search="linkSearch = $event"
+              @select="insertWikiLink"
+            />
+            <button type="button" class="pane-action" :class="{ active: showFormatToolbar }" @click="showFormatToolbar = !showFormatToolbar">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 7V4h16v3" /><path d="M9 20h6" /><path d="M12 4v16" />
+              </svg>
+              <span>格式</span>
+            </button>
+          </div>
+          <EditorToolbar
+            v-if="showFormatToolbar"
+            @insert="handleToolbarInsert"
+            @wrap="handleToolbarWrap"
+          />
+          <MilkdownEditor ref="milkdownEditorRef" :key="editorKey" v-model="content" />
+        </template>
+
+        <!-- 分屏模式 -->
+        <SplitEditor
+          v-else
+          v-model:content="content"
+          v-model:textarea-ref="sourceTextareaRef"
+          :show-link-picker="showLinkPicker"
+          :link-search="linkSearch"
+          :link-candidates="linkCandidates"
+          @insert-image="insertImageFromFile"
+          @toggle-link-picker="toggleLinkPicker"
+          @update:link-search="linkSearch = $event"
+          @select-link="insertWikiLink"
+          @toolbar-insert="handleToolbarInsert"
+          @toolbar-wrap="handleToolbarWrap"
+          @paste="handlePaste"
+        />
+
+        <div class="write-meta">
+          <div class="meta-field">
+            <label class="meta-label">分类</label>
+            <CategoryPicker v-model="category" />
+          </div>
+
+          <div class="meta-field">
+            <label class="meta-label">标签</label>
+            <input
+              v-model="tags"
+              type="text"
+              class="meta-input"
+              placeholder="空格分隔"
+            >
+          </div>
+        </div>
+
+        <div class="write-actions">
+          <button type="button" class="btn-secondary" @click="handleCancel">取消</button>
+          <button
+            type="submit"
+            class="btn-primary"
+            :class="{ 'is-loading': isSaving }"
+            :disabled="!content.trim() || isSaving || hasSubmitted"
+          >
+            <span v-if="hasSubmitted && !isSaving">已保存 ✓</span>
+            <span v-else-if="!isSaving">保存笔记</span>
+            <span v-else class="spinner" />
+          </button>
+        </div>
+      </form>
+    </div>
 
     <DraftToast :show="showDraftToast" @close="showDraftToast = false" />
   </div>
@@ -309,15 +312,38 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
 
 <style scoped>
 .write-page {
-  max-width: 960px;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  /* 负 margin 抵消父级 .app-main 的 padding，避免页面切换时布局跳动 */
+  margin: calc(-1 * var(--app-main-padding));
+  height: calc(100% + 2 * var(--app-main-padding));
+  overflow: hidden;
 }
 
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--space-6);
+  flex-shrink: 0;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-divider);
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* 可滚动内容区域 */
+.write-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-6);
+}
+
+.write-content > .template-grid,
+.write-content > .write-form {
+  max-width: 960px;
+  margin: 0 auto;
 }
 
 .header-actions {

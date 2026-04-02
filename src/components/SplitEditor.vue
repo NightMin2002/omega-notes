@@ -87,7 +87,8 @@ const textareaRef = defineModel<HTMLTextAreaElement | null>('textareaRef')
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   gap: 0;
-  min-height: 400px;
+  flex: 1;
+  min-height: 0; /* 允许在 flex 容器中收缩 */
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   /* 用 clip 代替 hidden，不创建滚动容器但仍裁剪圆角处溢出，确保子元素 sticky 能生效 */
@@ -104,6 +105,9 @@ const textareaRef = defineModel<HTMLTextAreaElement | null>('textareaRef')
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto; /* 每个 pane 独立滚动，sticky pane-header 在内部生效 */
+  overflow-x: hidden;
 }
 
 .pane-header {
@@ -113,9 +117,9 @@ const textareaRef = defineModel<HTMLTextAreaElement | null>('textareaRef')
   padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg-tertiary);
-  /* 粘性定位，跟随顶栏悬浮 */
+  /* 粘性定位，跟随容器顶部 */
   position: sticky;
-  top: 64px;
+  top: 0;
   z-index: 5;
 }
 
@@ -205,7 +209,7 @@ const textareaRef = defineModel<HTMLTextAreaElement | null>('textareaRef')
 /* 编辑器工具栏也粘性悬浮（紧跟 pane-header 下方） */
 .source-pane :deep(.editor-toolbar-strip) {
   position: sticky;
-  top: 98px; /* detail-toolbar(~64px) + pane-header(~34px) */
+  top: 34px; /* pane-header 高度 */
   z-index: 4;
 }
 </style>

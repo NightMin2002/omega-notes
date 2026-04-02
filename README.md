@@ -82,7 +82,7 @@ npm run tauri build
 | Phase 10 | Bug 修复与功能增强 — 拖拽动画、任务导入导出、字体缩放、分类一键完成、卡片多主题 | ✅ 完成 |
 | Phase 11 | 桌面悬挂窗口 — 多窗口架构（Tauri always-on-top）+ 离线字体打包 | ✅ 完成 |
 | Phase 12 | 稳定性修复 — FLIP 拖拽动画 + 编辑器主题 + Mermaid 图表 + 交互任务 + 双重通知修复 | ✅ 完成 |
-| Phase 13 | UX 全面优化 — 10 项反馈修复（右键菜单 + 外部链接 + 工具栏 sticky + TimePicker） | ✅ 完成 |
+| Phase 13 | UX 全面优化 — 右键菜单 + 外部链接 + 编辑器工具栏布局重构（Flex 内部滚动架构） + TimePicker | ✅ 完成 |
 | Phase 14+ | 知识管理 / 智能化 / 平台化 | 📋 规划中 |
 
 详细功能规划与优先级排序请参阅 [功能方向规划](./docs/04-功能方向规划.md)。
@@ -172,4 +172,4 @@ updatedAt: 2026-03-18T12:30:00.000Z
 
 ---
 
-*Created by Code Agent Ω — 2026.03.18 | Last updated: 2026.04.01 v2.8.0 UX 全面优化 — 10 项反馈修复*
+*Created by Code Agent Ω — 2026.03.18 | Last updated: 2026.04.02 v2.8.1 编辑器工具栏布局重构 — 彻底修复桌面端 sticky 定位失效*
