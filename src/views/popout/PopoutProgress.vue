@@ -20,6 +20,9 @@ let edgeCheckTimer: ReturnType<typeof setInterval>
 
 /* ─── Hub 状态 ─── */
 const isExpanded = ref(false)
+const expandDirection = ref<'up' | 'down'>('up')
+const isDockingAnim = ref(false)
+const dockOffset = ref({ x: 0, y: 0 })
 const activeTab = ref<'tasks' | 'timer' | 'life' | 'settings'>('tasks')
 const hubConfig = ref({
   showDay: true,
@@ -34,7 +37,7 @@ const FULL_WIDTH = 420
 const COLLAPSED_HEIGHT = 48
 const EXPANDED_HEIGHT = 380
 const DOCK_VISIBLE_PX = 10
-const EDGE_THRESHOLD = 80
+const EDGE_THRESHOLD = 15
 
 onMounted(() => {
   timer = setInterval(() => {
@@ -123,21 +126,32 @@ async function toggleExpand() {
     const pos = await win.outerPosition()
     
     if (isExpanded.value) {
-      // 折叠：窗口向下掉
+      // 折叠：先触发由于 isExpanded=false 带来的 max-height 收缩动画
       isExpanded.value = false
-      await win.setSize(new LogicalSize(FULL_WIDTH, COLLAPSED_HEIGHT))
-      await win.setPosition(new LogicalPosition(pos.x / sf, (pos.y / sf) + (EXPANDED_HEIGHT - COLLAPSED_HEIGHT)))
+      setTimeout(async () => {
+        // 等待 CSS 动画完毕后，无缝切换掉物理窗口尺寸
+        await win.setSize(new LogicalSize(FULL_WIDTH, COLLAPSED_HEIGHT))
+        if (expandDirection.value === 'up') {
+          await win.setPosition(new LogicalPosition(pos.x / sf, (pos.y / sf) + (EXPANDED_HEIGHT - COLLAPSED_HEIGHT)))
+        }
+      }, 250)
     } else {
-      // 展开：如果上面空间够，则保持底部不动，向上生长；如果不够，则原位张开
-      isExpanded.value = true
+      // 展开：判断方向
       let newY = (pos.y / sf) - (EXPANDED_HEIGHT - COLLAPSED_HEIGHT)
+      expandDirection.value = newY >= 0 ? 'up' : 'down'
       if (newY < 0) {
-        newY = pos.y / sf // 顶部空间不足，原位向下展开
+        newY = pos.y / sf // 顶部空间不足，向下展开
       }
       
-      // 先设置尺寸让页面流排开，同时调整位置
-      await win.setSize(new LogicalSize(FULL_WIDTH, EXPANDED_HEIGHT))
+      // 扩充物理窗口大小（此时底色仍受 max-height=48px 控制呈窄条）
+      // 利用 Flexbox 或 margin 等 CSS 对齐，如果是 up 扩展，它会沉在窗口底部。
       await win.setPosition(new LogicalPosition(pos.x / sf, newY))
+      await win.setSize(new LogicalSize(FULL_WIDTH, EXPANDED_HEIGHT))
+      
+      // 在同一帧触发 Vue 重新渲染应用
+      requestAnimationFrame(() => {
+        isExpanded.value = true
+      })
     }
   } catch (e) {
     console.error('Resize failed', e)
@@ -163,18 +177,34 @@ async function dockToEdge(edge: 'left' | 'right' | 'top') {
     preDockPosition = { x: pos.x / sf, y: pos.y / sf }
     const { width: mw } = monitor.size
 
+    isDockingAnim.value = true
+    
     if (edge === 'left') {
-      await win.setSize(new LogicalSize(DOCK_VISIBLE_PX, COLLAPSED_HEIGHT))
-      await win.setPosition(new LogicalPosition(0, pos.y / sf))
+      dockOffset.value = { x: -FULL_WIDTH + DOCK_VISIBLE_PX, y: 0 }
     } else if (edge === 'right') {
-      const logicalMw = mw / sf
-      await win.setSize(new LogicalSize(DOCK_VISIBLE_PX, COLLAPSED_HEIGHT))
-      await win.setPosition(new LogicalPosition(logicalMw - DOCK_VISIBLE_PX, pos.y / sf))
+      dockOffset.value = { x: FULL_WIDTH - DOCK_VISIBLE_PX, y: 0 }
     } else if (edge === 'top') {
-      await win.setSize(new LogicalSize(FULL_WIDTH, DOCK_VISIBLE_PX))
-      await win.setPosition(new LogicalPosition(pos.x / sf, 0))
+      dockOffset.value = { x: 0, y: -COLLAPSED_HEIGHT + DOCK_VISIBLE_PX }
     }
-    dockEdge.value = edge
+    
+    // Animate to edge then shrink physical window
+    setTimeout(async () => {
+      isDockingAnim.value = false
+      dockOffset.value = { x: 0, y: 0 }
+      dockEdge.value = edge
+      
+      if (edge === 'left') {
+        await win.setSize(new LogicalSize(DOCK_VISIBLE_PX, COLLAPSED_HEIGHT))
+        await win.setPosition(new LogicalPosition(0, pos.y / sf))
+      } else if (edge === 'right') {
+        const logicalMw = mw / sf
+        await win.setSize(new LogicalSize(DOCK_VISIBLE_PX, COLLAPSED_HEIGHT))
+        await win.setPosition(new LogicalPosition(logicalMw - DOCK_VISIBLE_PX, pos.y / sf))
+      } else if (edge === 'top') {
+        await win.setSize(new LogicalSize(FULL_WIDTH, DOCK_VISIBLE_PX))
+        await win.setPosition(new LogicalPosition(pos.x / sf, 0))
+      }
+    }, 250)
   } catch (e) {}
 }
 
@@ -194,9 +224,10 @@ async function undock() {
         const sf = monitor.scaleFactor
         const logicalMw = monitor.size.width / sf
         const logicalMh = monitor.size.height / sf
-        if (savedEdge === 'right') targetX = logicalMw - FULL_WIDTH - 50
-        else if (savedEdge === 'left') targetX = 50
-        if (savedEdge === 'top') targetY = 50
+        // 必须让小窗 Undock 的坐标依然囊括鼠标本身，故去掉原 `- 50` 边距偏离值使其完全吸附边界
+        if (savedEdge === 'right') targetX = logicalMw - FULL_WIDTH
+        else if (savedEdge === 'left') targetX = 0
+        if (savedEdge === 'top') targetY = 0
         else targetY = Math.min(targetY, logicalMh - COLLAPSED_HEIGHT - 50)
       }
     }
@@ -213,6 +244,23 @@ async function undock() {
 
     await win.setPosition(new LogicalPosition(targetX, targetY))
     await win.setSize(new LogicalSize(FULL_WIDTH, COLLAPSED_HEIGHT))
+
+    // 禁用变幻动画以让内容无缝瞬间切到边缘位（抵消系统物理窗口带来的突然扩大）
+    isDockingAnim.value = false
+    if (savedEdge === 'right') dockOffset.value = { x: FULL_WIDTH - DOCK_VISIBLE_PX, y: 0 }
+    else if (savedEdge === 'left') dockOffset.value = { x: -FULL_WIDTH + DOCK_VISIBLE_PX, y: 0 }
+    else if (savedEdge === 'top') dockOffset.value = { x: 0, y: -COLLAPSED_HEIGHT + DOCK_VISIBLE_PX }
+    
+    // 在下一帧，真正应用抽出到 0,0 的平滑 CSS 过度！
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        isDockingAnim.value = true
+        dockOffset.value = { x: 0, y: 0 }
+        setTimeout(() => {
+           isDockingAnim.value = false
+        }, 300)
+      })
+    })
   } catch (e) {}
 }
 
@@ -264,12 +312,21 @@ function startDrag(e: MouseEvent) {
 
 <template>
   <div
-    class="progress-wrapper"
-    :class="{ 'is-docked': dockEdge !== 'none', 'is-expanded': isExpanded }"
-    @mousedown="startDrag"
-    @mouseenter="handleMouseEnter"
-    @mouseleave="handleMouseLeave"
+    class="app-container"
+    :class="[`expand-${expandDirection}`]"
   >
+    <div
+      class="progress-wrapper"
+      :class="{ 
+        'is-docked': dockEdge !== 'none', 
+        'is-expanded': isExpanded, 
+        'docking-anim': isDockingAnim 
+      }"
+      :style="{ transform: `translate(${dockOffset.x}px, ${dockOffset.y}px)` }"
+      @mousedown="startDrag"
+      @mouseenter="handleMouseEnter"
+      @mouseleave="handleMouseLeave"
+    >
     <div v-if="dockEdge !== 'none'" class="dock-indicator">
       <div class="dock-pulse"></div>
     </div>
@@ -324,7 +381,7 @@ function startDrag(e: MouseEvent) {
       </div>
       
       <!-- 展开时的多功能区 -->
-      <div v-if="isExpanded" class="hub-body-area">
+      <div class="hub-body-area">
         <div class="hub-tabs">
           <button class="tab-btn" :class="{ active: activeTab === 'tasks' }" @click="activeTab = 'tasks'">任务</button>
           <button class="tab-btn" :class="{ active: activeTab === 'timer' }" @click="activeTab = 'timer'">番茄钟</button>
@@ -339,6 +396,7 @@ function startDrag(e: MouseEvent) {
         </div>
       </div>
     </template>
+    </div>
   </div>
 </template>
 
@@ -352,6 +410,17 @@ html, body {
 </style>
 
 <style scoped>
+.app-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-container.expand-up {
+  justify-content: flex-end;
+}
+
 .progress-wrapper {
   width: 100%;
   height: 100%;
@@ -368,11 +437,29 @@ html, body {
   position: relative;
   box-sizing: border-box;
   overflow: hidden;
-  transition: border-radius 200ms ease;
+  margin-top: 0;
+  transition: border-radius 250ms ease,
+              max-height 250ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.progress-wrapper.docking-anim {
+  transition: transform 250ms cubic-bezier(0.2, 0, 0, 1),
+              border-radius 250ms ease,
+              max-height 250ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .progress-wrapper.is-expanded {
   border-radius: 12px;
+  max-height: 380px;
+}
+
+.app-container.expand-up .progress-wrapper.is-expanded {
+  flex-direction: column-reverse;
+}
+
+.app-container.expand-up .hub-body-area {
+  border-top: none;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .hub-header-bar {

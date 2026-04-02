@@ -40,7 +40,9 @@ const tasksStore = useTasksStore()
 tasksStore.init()
 
 registerGlobalShortcuts(router)
-startScheduler()
+if (!popoutRoute) {
+  startScheduler()
+}
 
 // ─── 全局禁用浏览器原生右键菜单 ───
 document.addEventListener('contextmenu', (e) => {
