@@ -1926,11 +1926,15 @@ async function popoutNote() {
 
 [data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror {
   color: oklch(0.3 0.04 200) !important;
+  background: transparent !important;
 }
 
 [data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror h1,
 [data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror h2,
-[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror h3 {
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror h3,
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror h4,
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror h5,
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror h6 {
   color: oklch(0.3 0.12 160) !important;
   border-bottom-color: oklch(0.82 0.03 160);
 }
@@ -1945,6 +1949,11 @@ async function popoutNote() {
   border-color: oklch(0.82 0.03 200) !important;
 }
 
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror pre code {
+  background: transparent !important;
+  color: oklch(0.3 0.04 200) !important;
+}
+
 [data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror a {
   color: oklch(0.4 0.12 200) !important;
 }
@@ -1952,6 +1961,41 @@ async function popoutNote() {
 [data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror blockquote {
   border-left-color: oklch(0.45 0.12 160) !important;
   color: oklch(0.4 0.05 200) !important;
+  background: oklch(0.93 0.006 200) !important;
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror strong {
+  color: oklch(0.25 0.06 200) !important;
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror hr {
+  border-color: oklch(0.82 0.03 200) !important;
+}
+
+/* ProseMirror 表格浅色适配 */
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror table {
+  border-collapse: collapse !important;
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror th {
+  background: oklch(0.92 0.01 200) !important;
+  color: oklch(0.3 0.1 160) !important;
+  border-color: oklch(0.82 0.03 200) !important;
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror td {
+  background: transparent !important;
+  color: oklch(0.3 0.04 200) !important;
+  border-color: oklch(0.85 0.02 200) !important;
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror tr:nth-child(even) td {
+  background: oklch(0.94 0.006 200) !important;
+}
+
+/* ProseMirror 列表标记颜色 */
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror li::marker {
+  color: oklch(0.45 0.1 160) !important;
 }
 
 [data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror p.is-editor-empty:first-child::before {
