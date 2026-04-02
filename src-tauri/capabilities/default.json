@@ -4,7 +4,6 @@
   "description": "enables the default permissions",
   "windows": [
     "main",
-    "floating-ball",
     "popout-tasks",
     "popout-timer",
     "popout-note",

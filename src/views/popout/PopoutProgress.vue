@@ -1,31 +1,46 @@
 <script setup lang="ts">
 /**
  * PopoutProgress — 悬挂时间进度小窗
- * 无边框 (decorations: false), data-tauri-drag-region 允许拖拽移动窗口
+ * 无边框 (decorations: false), 拖拽移动窗口
+ *
+ * 核心改进：
+ * 1. 缩进(dock)时使用真实窗口尺寸调整 (win.setSize + win.setPosition)
+ *    替代 CSS transform 伪缩进，解决点击穿透问题
+ * 2. 使用 clip-path 裁剪四角，彻底消除透明泄露
+ * 3. 移除对 data-tauri-drag-region 的依赖，使用 startDragging() API
  */
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { currentMonitor } from '@tauri-apps/api/window'
+import { LogicalSize, LogicalPosition } from '@tauri-apps/api/dpi'
 
 const win = getCurrentWebviewWindow()
 const now = ref(new Date())
 let timer: ReturnType<typeof setInterval>
-let fallbackTimer: ReturnType<typeof setInterval>
+let edgeCheckTimer: ReturnType<typeof setInterval>
+
+/* ─── 窗口原始尺寸常量 ─── */
+const FULL_WIDTH = 420
+const FULL_HEIGHT = 48
+const DOCK_VISIBLE_PX = 10  // dock 后露出的像素宽度
+const EDGE_THRESHOLD = 80   // 边缘吸附阈值 (物理像素)
 
 onMounted(() => {
   timer = setInterval(() => {
     now.value = new Date()
   }, 1000)
-  
-  // 备用兜底检查：如果系统丢失了 mouseleave 事件，每 1.5 秒尝试检查一下
-  fallbackTimer = setInterval(() => {
-    checkEdgeAndDock()
+
+  // 每 1.5 秒兜底检查边缘吸附
+  edgeCheckTimer = setInterval(() => {
+    if (!isHovering.value && dockEdge.value === 'none') {
+      checkEdgeAndDock()
+    }
   }, 1500)
 })
 
 onUnmounted(() => {
   clearInterval(timer)
-  clearInterval(fallbackTimer)
+  clearInterval(edgeCheckTimer)
 })
 
 const year = computed(() => now.value.getFullYear())
@@ -64,39 +79,120 @@ const timeStr = computed(() => {
   return `${h}:${m}`
 })
 
-// 鼠标悬停及边缘吸附逻辑
+/* ─── 边缘吸附 (dock) 逻辑 ─── */
 const isHovering = ref(false)
-const dockEdge = ref<'none'|'left'|'right'|'top'>('none')
+const dockEdge = ref<'none' | 'left' | 'right' | 'top'>('none')
 let hideTimeout: ReturnType<typeof setTimeout>
+
+// 保存 dock 前的窗口位置，用于恢复
+let preDockPosition: { x: number; y: number } | null = null
+
+/**
+ * 真实缩进：通过调整窗口物理尺寸 + 位置来实现
+ * 窗口只保留 DOCK_VISIBLE_PX 宽度的条，其余部分真正"消失"
+ */
+async function dockToEdge(edge: 'left' | 'right' | 'top') {
+  try {
+    const pos = await win.outerPosition()
+    const monitor = await currentMonitor()
+    if (!monitor) return
+
+    const sf = monitor.scaleFactor
+    // 保存 dock 前位置（逻辑像素）
+    preDockPosition = { x: pos.x / sf, y: pos.y / sf }
+
+    const { width: mw } = monitor.size
+
+    if (edge === 'left') {
+      // 窗口移到屏幕最左，只留右侧 DOCK_VISIBLE_PX
+      await win.setSize(new LogicalSize(DOCK_VISIBLE_PX, FULL_HEIGHT))
+      await win.setPosition(new LogicalPosition(0, pos.y / sf))
+    } else if (edge === 'right') {
+      // 窗口移到屏幕最右，只留左侧 DOCK_VISIBLE_PX
+      const logicalMw = mw / sf
+      await win.setSize(new LogicalSize(DOCK_VISIBLE_PX, FULL_HEIGHT))
+      await win.setPosition(new LogicalPosition(logicalMw - DOCK_VISIBLE_PX, pos.y / sf))
+    } else if (edge === 'top') {
+      // 窗口移到屏幕最顶，只留底部 DOCK_VISIBLE_PX
+      await win.setSize(new LogicalSize(FULL_WIDTH, DOCK_VISIBLE_PX))
+      await win.setPosition(new LogicalPosition(pos.x / sf, 0))
+    }
+
+    dockEdge.value = edge
+  } catch (e) {
+    console.warn('[PopoutProgress] dock failed:', e)
+  }
+}
+
+/**
+ * 恢复到完整尺寸
+ * 关键：先移回安全位置，再恢复尺寸，避免在边缘展开时溢出屏幕
+ */
+async function undock() {
+  try {
+    const savedEdge = dockEdge.value
+    dockEdge.value = 'none'
+
+    // 计算恢复位置：如果有保存的位置就用它，否则根据当前 dock 边缘计算安全位置
+    let targetX = 100
+    let targetY = 100
+
+    if (preDockPosition) {
+      targetX = preDockPosition.x
+      targetY = preDockPosition.y
+      preDockPosition = null
+    } else {
+      // 没有保存位置时，根据 dock 边缘计算一个安全位置
+      const monitor = await currentMonitor()
+      if (monitor) {
+        const sf = monitor.scaleFactor
+        const logicalMw = monitor.size.width / sf
+        const logicalMh = monitor.size.height / sf
+        if (savedEdge === 'right') targetX = logicalMw - FULL_WIDTH - 50
+        else if (savedEdge === 'left') targetX = 50
+        if (savedEdge === 'top') targetY = 50
+        else targetY = Math.min(targetY, logicalMh - FULL_HEIGHT - 50)
+      }
+    }
+
+    // 屏幕边界校验：确保恢复后窗口完全在屏幕内
+    const monitor = await currentMonitor()
+    if (monitor) {
+      const sf = monitor.scaleFactor
+      const logicalMw = monitor.size.width / sf
+      const logicalMh = monitor.size.height / sf
+      targetX = Math.max(0, Math.min(targetX, logicalMw - FULL_WIDTH))
+      targetY = Math.max(0, Math.min(targetY, logicalMh - FULL_HEIGHT))
+    }
+
+    // 关键：先移到安全位置，再恢复尺寸
+    await win.setPosition(new LogicalPosition(targetX, targetY))
+    await win.setSize(new LogicalSize(FULL_WIDTH, FULL_HEIGHT))
+  } catch (e) {
+    console.warn('[PopoutProgress] undock failed:', e)
+  }
+}
 
 async function checkEdgeAndDock() {
   if (isHovering.value || dockEdge.value !== 'none') return
-  
+
   try {
     const pos = await win.outerPosition()
     const size = await win.outerSize()
     const monitor = await currentMonitor()
     if (!monitor) return
-    
+
     const { width: mw } = monitor.size
-    const THRESHOLD = 80 // 边缘 80 物理像素内自动吸附，增加容错区
-    
-    // 改变了 pos.x 和 y 之后，直接通过系统方法贴合边缘，并将内部 CSS transformed 出去
-    if (pos.y <= THRESHOLD) {
-      pos.y = 0
-      await win.setPosition(pos)
-      dockEdge.value = 'top'
-    } else if (pos.x <= THRESHOLD) {
-      pos.x = 0
-      await win.setPosition(pos)
-      dockEdge.value = 'left'
-    } else if (pos.x + size.width >= mw - THRESHOLD) {
-      pos.x = mw - size.width
-      await win.setPosition(pos)
-      dockEdge.value = 'right'
+
+    if (pos.y <= EDGE_THRESHOLD) {
+      await dockToEdge('top')
+    } else if (pos.x <= EDGE_THRESHOLD) {
+      await dockToEdge('left')
+    } else if (pos.x + size.width >= mw - EDGE_THRESHOLD) {
+      await dockToEdge('right')
     }
   } catch (e) {
-    console.warn('Edge detection failed', e)
+    console.warn('[PopoutProgress] edge detection failed:', e)
   }
 }
 
@@ -111,7 +207,7 @@ function handleMouseEnter() {
   isHovering.value = true
   clearTimeout(hideTimeout)
   if (dockEdge.value !== 'none') {
-    dockEdge.value = 'none'
+    undock()
   }
 }
 
@@ -120,57 +216,63 @@ async function closeWindow() {
     const { invoke } = await import('@tauri-apps/api/core')
     await invoke('close_popout', { label: 'popout-progress' })
   } catch {
-    window.close() // fallback
+    window.close()
   }
 }
 
 function startDrag(e: MouseEvent) {
-  // Only trigger on left click and ignore buttons
   if (e.button === 0 && !(e.target as HTMLElement).closest('button')) {
     try {
       getCurrentWebviewWindow().startDragging()
-    } catch {}
+    } catch { /* noop */ }
   }
 }
 </script>
 
 <template>
-  <!-- 外围包裹层，专门处理变宽溢出时的透明穿透，并将所有过渡绑定在这 -->
-  <div 
-    class="progress-bar-container" 
-    :class="`dock-${dockEdge}`"
+  <div
+    class="progress-wrapper"
+    :class="{ 'is-docked': dockEdge !== 'none' }"
     @mousedown="startDrag"
-    @mouseenter="handleMouseEnter" 
+    @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
   >
-    <div class="date-block">
-      <span class="time">{{ timeStr }}</span>
-      <span class="week-day">{{ weekDay }} • W{{ weekNumber }}</span>
+    <!-- dock 状态下的指示条 -->
+    <div v-if="dockEdge !== 'none'" class="dock-indicator">
+      <div class="dock-pulse"></div>
     </div>
 
-    <div class="progress-section">
-      <div class="track-row">
-        <span class="track-label">DAY</span>
-        <div class="track">
-          <div class="fill day-fill" :style="{ width: `${dayProgress * 100}%` }"></div>
-        </div>
+    <!-- dock 状态下不渲染主内容以避免溢出 -->
+    <template v-if="dockEdge === 'none'">
+      <div class="date-block">
+        <span class="time">{{ timeStr }}</span>
+        <span class="week-day">{{ weekDay }} • W{{ weekNumber }}</span>
       </div>
-      <div class="track-row">
-        <span class="track-label">YEAR</span>
-        <div class="track">
-          <div class="fill year-fill" :style="{ width: `${yearProgress * 100}%` }"></div>
-        </div>
-      </div>
-    </div>
 
-    <Transition name="fade">
-      <button v-if="isHovering" class="close-btn" @click="closeWindow">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </button>
-    </Transition>
+      <div class="progress-section">
+        <div class="track-row">
+          <span class="track-label">DAY</span>
+          <div class="track">
+            <div class="fill day-fill" :style="{ width: `${dayProgress * 100}%` }"></div>
+          </div>
+        </div>
+        <div class="track-row">
+          <span class="track-label">YEAR</span>
+          <div class="track">
+            <div class="fill year-fill" :style="{ width: `${yearProgress * 100}%` }"></div>
+          </div>
+        </div>
+      </div>
+
+      <Transition name="fade">
+        <button v-if="isHovering" class="close-btn" @click="closeWindow">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </Transition>
+    </template>
   </div>
 </template>
 
@@ -191,52 +293,68 @@ html, body {
 </style>
 
 <style scoped>
-.progress-bar-container {
+.progress-wrapper {
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   gap: 16px;
   padding: 0 16px;
-  background: var(--color-bg-elevated, rgba(30, 30, 33, 0.85));
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--color-bg-elevated, rgba(30, 30, 33, 0.92));
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
   color: var(--color-text-primary);
-  /* 圆角和阴影 */
+
+  /* 圆角 + overflow:hidden 裁剪所有子元素，消除四角透明泄露 */
   border-radius: 24px;
-  border: 1px solid var(--color-border);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05),
-              0 8px 24px rgba(0, 0, 0, 0.4);
-  /* 禁止选中文字 */
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  /* 透明窗口中只用 inset 阴影，外部阴影会泄露到四角透明区域 */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
   user-select: none;
   touch-action: none;
   cursor: grab;
   position: relative;
   box-sizing: border-box;
-  
-  /* 添加边缘隐藏的平滑过渡，这非常重要 */
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 0.4s ease;
+  overflow: hidden;
 }
 
-/* 边缘隐藏状态：直接将内部 DOM 移出视图范围，剩下几像素尾巴。
-   基于 Webview 是透明无边框的原理实现物理悬挂缩回效果。*/
-.progress-bar-container.dock-left {
-  transform: translateX(calc(-100% + 16px));
-  opacity: 0.8;
+/* dock 状态下窗口只有 10px 宽/高，无需内容渲染 */
+.progress-wrapper.is-docked {
+  padding: 0;
+  gap: 0;
+  border-radius: 0;
+  clip-path: none;
+  border: none;
+  background: var(--color-accent, #6366f1);
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+  cursor: pointer;
+  justify-content: center;
 }
 
-.progress-bar-container.dock-right {
-  transform: translateX(calc(100% - 16px));
-  opacity: 0.8;
+.dock-indicator {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
 }
 
-.progress-bar-container.dock-top {
-  transform: translateY(calc(-100% + 16px));
-  opacity: 0.8;
+.dock-pulse {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.8);
+  animation: pulse-glow 2s ease-in-out infinite;
 }
 
-.progress-bar-container:active {
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+.progress-wrapper:active {
   cursor: grabbing;
 }
 
@@ -248,7 +366,7 @@ html, body {
 }
 
 .time {
-  font-family: var(--font-mono);
+  font-family: var(--font-mono, 'JetBrains Mono', 'Fira Code', monospace);
   font-size: 14px;
   font-weight: 700;
   line-height: 1.1;
@@ -268,6 +386,7 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .track-row {
@@ -278,7 +397,7 @@ html, body {
 
 .track-label {
   font-size: 8px;
-  font-family: var(--font-mono);
+  font-family: var(--font-mono, 'JetBrains Mono', 'Fira Code', monospace);
   color: var(--color-text-tertiary);
   width: 20px;
   font-weight: 600;
@@ -287,7 +406,7 @@ html, body {
 .track {
   flex: 1;
   height: 4px;
-  background: var(--color-bg-tertiary);
+  background: var(--color-bg-tertiary, rgba(255, 255, 255, 0.08));
   border-radius: 2px;
   overflow: hidden;
   position: relative;
@@ -300,7 +419,7 @@ html, body {
 }
 
 .day-fill {
-  background: linear-gradient(90deg, #63b3ed, var(--color-accent));
+  background: linear-gradient(90deg, #63b3ed, var(--color-accent, #6366f1));
 }
 
 .year-fill {
@@ -318,18 +437,31 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-bg-tertiary);
+  background: var(--color-bg-tertiary, rgba(255, 255, 255, 0.1));
   color: var(--color-text-secondary);
   border: none;
   cursor: pointer;
   z-index: 10;
-  transition: background-color var(--duration-fast),
-              color var(--duration-fast);
+  appearance: none;
+  padding: 0;
+  transition: background-color 0.2s ease-out,
+              color 0.2s ease-out,
+              transform 0.2s ease-out;
 }
 
 .close-btn:hover {
-  background: var(--color-danger);
-  color: var(--color-text-inverse);
+  background: var(--color-danger, #f43f5e);
+  color: #fff;
+  transform: translateY(-50%) scale(1.1);
+}
+
+.close-btn:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.close-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-accent, #6366f1);
+  outline: none;
 }
 
 .fade-enter-active,
@@ -340,5 +472,14 @@ html, body {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dock-pulse {
+    animation: none;
+  }
+  .close-btn {
+    transition: none;
+  }
 }
 </style>

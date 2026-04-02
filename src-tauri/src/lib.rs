@@ -39,7 +39,7 @@ async fn open_popout(app: tauri::AppHandle, kind: String, note_id: Option<String
         .transparent(true);
         
     if !decorations {
-        builder = builder.shadow(false);
+        builder = builder.shadow(false).skip_taskbar(true);
     }
 
     builder.build().map_err(|e| e.to_string())?;
