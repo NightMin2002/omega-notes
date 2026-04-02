@@ -1057,6 +1057,63 @@ async function popoutNote() {
   color: oklch(0.6 0.1 145);
 }
 
+/* 终端主题 — 浅色模式适配 */
+[data-theme='light'] .theme-terminal {
+  background: oklch(0.96 0.008 200);
+  border-color: oklch(0.82 0.03 200);
+}
+
+[data-theme='light'] .theme-terminal .note-hero {
+  border-bottom-color: oklch(0.85 0.025 200);
+}
+
+[data-theme='light'] .theme-terminal .note-hero::before {
+  color: oklch(0.45 0.15 160);
+}
+
+[data-theme='light'] .theme-terminal .note-title {
+  color: oklch(0.3 0.12 160);
+}
+
+[data-theme='light'] .theme-terminal .meta-category {
+  color: oklch(0.4 0.1 200);
+  border-color: oklch(0.75 0.06 200);
+}
+
+[data-theme='light'] .theme-terminal .meta-date {
+  color: oklch(0.55 0.02 200);
+}
+
+[data-theme='light'] .theme-terminal .tag {
+  color: oklch(0.45 0.08 80);
+}
+
+[data-theme='light'] .theme-terminal .note-body :deep(.md-rendered) {
+  color: oklch(0.3 0.04 200);
+}
+
+[data-theme='light'] .theme-terminal .note-body :deep(.md-rendered h1),
+[data-theme='light'] .theme-terminal .note-body :deep(.md-rendered h2),
+[data-theme='light'] .theme-terminal .note-body :deep(.md-rendered h3) {
+  color: oklch(0.3 0.12 160);
+  border-bottom-color: oklch(0.82 0.03 160);
+}
+
+[data-theme='light'] .theme-terminal .note-body :deep(.md-rendered code) {
+  color: oklch(0.4 0.12 80);
+  background: oklch(0.92 0.01 200);
+}
+
+[data-theme='light'] .theme-terminal .note-body :deep(.md-rendered a) {
+  color: oklch(0.4 0.12 200);
+}
+
+[data-theme='light'] .theme-terminal .copy-content-btn {
+  background: oklch(0.93 0.008 200);
+  border-color: oklch(0.82 0.03 200);
+  color: oklch(0.5 0.08 160);
+}
+
 /* =========================================
    阅读模式 — 视觉方案：羊皮纸 (Parchment)
    暖色调，衬线字体，书卷气
@@ -1516,6 +1573,60 @@ async function popoutNote() {
   font-family: var(--font-mono);
 }
 
+/* 终端编辑模式 — 浅色适配 */
+[data-theme='light'] .edit-form.theme-terminal {
+  background: oklch(0.96 0.008 200);
+  border-color: oklch(0.82 0.03 200);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .edit-title {
+  color: oklch(0.3 0.12 160);
+  background: oklch(0.94 0.006 200);
+  border-color: oklch(0.82 0.03 200);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .edit-title:focus {
+  border-color: oklch(0.45 0.12 160);
+  box-shadow: 0 0 0 3px oklch(0.5 0.1 160 / 0.15);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .edit-title::placeholder {
+  color: oklch(0.6 0.03 200);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .edit-meta-row {
+  background: oklch(0.94 0.006 200);
+  border-color: oklch(0.82 0.03 200);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .edit-input {
+  background: oklch(0.97 0.004 200);
+  border-color: oklch(0.84 0.02 200);
+  color: oklch(0.3 0.04 200);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .edit-input::placeholder {
+  color: oklch(0.6 0.03 200);
+}
+
+[data-theme='light'] .edit-form.theme-terminal :deep(.split-editor) {
+  border-color: oklch(0.82 0.03 200);
+  background: oklch(0.94 0.006 200);
+}
+
+[data-theme='light'] .edit-form.theme-terminal :deep(.pane-header) {
+  background: oklch(0.92 0.008 200);
+  border-bottom-color: oklch(0.82 0.03 200);
+}
+
+[data-theme='light'] .edit-form.theme-terminal :deep(.pane-label) {
+  color: oklch(0.4 0.08 160);
+}
+
+[data-theme='light'] .edit-form.theme-terminal :deep(.source-textarea) {
+  color: oklch(0.3 0.04 200);
+}
+
 /* ── Parchment 羊皮纸 ── */
 .edit-form.theme-parchment {
   background: oklch(0.95 0.02 80);
@@ -1800,6 +1911,51 @@ async function popoutNote() {
 
 .edit-form.theme-terminal .milkdown .ProseMirror p.is-editor-empty:first-child::before {
   color: oklch(0.4 0.04 145) !important;
+}
+
+/* Terminal WYSIWYG — 浅色模式 */
+[data-theme='light'] .edit-form.theme-terminal .milkdown-wrapper {
+  background: oklch(0.96 0.008 200);
+  border-color: oklch(0.82 0.03 200);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown-wrapper:focus-within {
+  border-color: oklch(0.45 0.12 160);
+  box-shadow: 0 0 0 3px oklch(0.5 0.1 160 / 0.15);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror {
+  color: oklch(0.3 0.04 200) !important;
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror h1,
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror h2,
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror h3 {
+  color: oklch(0.3 0.12 160) !important;
+  border-bottom-color: oklch(0.82 0.03 160);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror code {
+  color: oklch(0.4 0.12 80) !important;
+  background: oklch(0.92 0.01 200) !important;
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror pre {
+  background: oklch(0.93 0.006 200) !important;
+  border-color: oklch(0.82 0.03 200) !important;
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror a {
+  color: oklch(0.4 0.12 200) !important;
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror blockquote {
+  border-left-color: oklch(0.45 0.12 160) !important;
+  color: oklch(0.4 0.05 200) !important;
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror p.is-editor-empty:first-child::before {
+  color: oklch(0.6 0.03 200) !important;
 }
 
 /* ── Parchment 编辑器 ── */
