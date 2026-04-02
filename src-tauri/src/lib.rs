@@ -40,6 +40,18 @@ async fn open_popout(app: tauri::AppHandle, kind: String, note_id: Option<String
         builder = builder.shadow(false).skip_taskbar(true);
     }
 
+    if kind.as_str() == "progress" {
+        if let Ok(Some(monitor)) = app.primary_monitor() {
+            let scale_factor = monitor.scale_factor();
+            let mf = scale_factor as f64;
+            let m_size = monitor.size();
+            let target_x = (m_size.width as f64 / mf) - w - 24.0;
+            // 贴近任务栏区域（约 48px 边距）
+            let target_y = (m_size.height as f64 / mf) - h - 60.0;
+            builder = builder.position(target_x, target_y);
+        }
+    }
+
     builder.build().map_err(|e| e.to_string())?;
     Ok(())
 }
