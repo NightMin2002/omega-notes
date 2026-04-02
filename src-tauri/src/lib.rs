@@ -8,13 +8,13 @@ use tauri::{
 
 #[tauri::command]
 async fn open_popout(app: tauri::AppHandle, kind: String, note_id: Option<String>) -> Result<(), String> {
-    let (label, route, w, h, decorations) = match kind.as_str() {
-        "tasks" => ("popout-tasks", "/popout/tasks".to_string(), 340.0, 520.0, true),
-        "timer" => ("popout-timer", "/popout/timer".to_string(), 240.0, 280.0, true),
-        "progress" => ("popout-progress", "/popout/progress".to_string(), 420.0, 48.0, false),
+    let (label, route, w, h, decorations, resizable) = match kind.as_str() {
+        "tasks" => ("popout-tasks", "/popout/tasks".to_string(), 340.0, 520.0, true, true),
+        "timer" => ("popout-timer", "/popout/timer".to_string(), 240.0, 280.0, true, false),
+        "progress" => ("popout-progress", "/popout/progress".to_string(), 420.0, 48.0, false, false),
         "note"  => {
             let id = note_id.unwrap_or_default();
-            ("popout-note", format!("/popout/note/{}", id), 520.0, 700.0, false)
+            ("popout-note", format!("/popout/note/{}", id), 520.0, 700.0, false, true)
         }
         _ => return Err("Unknown popout kind".into()),
     };
@@ -29,13 +29,18 @@ async fn open_popout(app: tauri::AppHandle, kind: String, note_id: Option<String
 
     // 用查询参数传递目标路由，前端 main.ts 读取后跳转
     let url = WebviewUrl::App(format!("index.html?popout_route={}", route).into());
-    let builder = WebviewWindowBuilder::new(&app, label, url)
+    let mut builder = WebviewWindowBuilder::new(&app, label, url)
         .title("Ω Notes")
         .inner_size(w, h)
         .always_on_top(true)
-        .resizable(true)
+        .resizable(resizable)
+        .maximizable(resizable)
         .decorations(decorations)
         .transparent(true);
+        
+    if !decorations {
+        builder = builder.shadow(false);
+    }
 
     builder.build().map_err(|e| e.to_string())?;
     Ok(())

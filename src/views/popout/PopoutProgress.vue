@@ -4,18 +4,28 @@
  * 无边框 (decorations: false), data-tauri-drag-region 允许拖拽移动窗口
  */
 import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
+import { currentMonitor } from '@tauri-apps/api/window'
 
+const win = getCurrentWebviewWindow()
 const now = ref(new Date())
 let timer: ReturnType<typeof setInterval>
+let fallbackTimer: ReturnType<typeof setInterval>
 
 onMounted(() => {
   timer = setInterval(() => {
     now.value = new Date()
   }, 1000)
+  
+  // 备用兜底检查：如果系统丢失了 mouseleave 事件，每 1.5 秒尝试检查一下
+  fallbackTimer = setInterval(() => {
+    checkEdgeAndDock()
+  }, 1500)
 })
 
 onUnmounted(() => {
   clearInterval(timer)
+  clearInterval(fallbackTimer)
 })
 
 const year = computed(() => now.value.getFullYear())
@@ -54,8 +64,56 @@ const timeStr = computed(() => {
   return `${h}:${m}`
 })
 
-// 鼠标悬停显示详细进度文本
+// 鼠标悬停及边缘吸附逻辑
 const isHovering = ref(false)
+const dockEdge = ref<'none'|'left'|'right'|'top'>('none')
+let hideTimeout: ReturnType<typeof setTimeout>
+
+async function checkEdgeAndDock() {
+  if (isHovering.value || dockEdge.value !== 'none') return
+  
+  try {
+    const pos = await win.outerPosition()
+    const size = await win.outerSize()
+    const monitor = await currentMonitor()
+    if (!monitor) return
+    
+    const { width: mw } = monitor.size
+    const THRESHOLD = 80 // 边缘 80 物理像素内自动吸附，增加容错区
+    
+    // 改变了 pos.x 和 y 之后，直接通过系统方法贴合边缘，并将内部 CSS transformed 出去
+    if (pos.y <= THRESHOLD) {
+      pos.y = 0
+      await win.setPosition(pos)
+      dockEdge.value = 'top'
+    } else if (pos.x <= THRESHOLD) {
+      pos.x = 0
+      await win.setPosition(pos)
+      dockEdge.value = 'left'
+    } else if (pos.x + size.width >= mw - THRESHOLD) {
+      pos.x = mw - size.width
+      await win.setPosition(pos)
+      dockEdge.value = 'right'
+    }
+  } catch (e) {
+    console.warn('Edge detection failed', e)
+  }
+}
+
+function handleMouseLeave() {
+  isHovering.value = false
+  hideTimeout = setTimeout(() => {
+    checkEdgeAndDock()
+  }, 1000)
+}
+
+function handleMouseEnter() {
+  isHovering.value = true
+  clearTimeout(hideTimeout)
+  if (dockEdge.value !== 'none') {
+    dockEdge.value = 'none'
+  }
+}
 
 async function closeWindow() {
   try {
@@ -65,30 +123,41 @@ async function closeWindow() {
     window.close() // fallback
   }
 }
+
+function startDrag(e: MouseEvent) {
+  // Only trigger on left click and ignore buttons
+  if (e.button === 0 && !(e.target as HTMLElement).closest('button')) {
+    try {
+      getCurrentWebviewWindow().startDragging()
+    } catch {}
+  }
+}
 </script>
 
 <template>
+  <!-- 外围包裹层，专门处理变宽溢出时的透明穿透，并将所有过渡绑定在这 -->
   <div 
     class="progress-bar-container" 
-    data-tauri-drag-region 
-    @mouseenter="isHovering = true" 
-    @mouseleave="isHovering = false"
+    :class="`dock-${dockEdge}`"
+    @mousedown="startDrag"
+    @mouseenter="handleMouseEnter" 
+    @mouseleave="handleMouseLeave"
   >
-    <div class="date-block" data-tauri-drag-region>
-      <span class="time" data-tauri-drag-region>{{ timeStr }}</span>
-      <span class="week-day" data-tauri-drag-region>{{ weekDay }} • W{{ weekNumber }}</span>
+    <div class="date-block">
+      <span class="time">{{ timeStr }}</span>
+      <span class="week-day">{{ weekDay }} • W{{ weekNumber }}</span>
     </div>
 
-    <div class="progress-section" data-tauri-drag-region>
-      <div class="track-row" data-tauri-drag-region>
-        <span class="track-label" data-tauri-drag-region>DAY</span>
-        <div class="track" data-tauri-drag-region>
+    <div class="progress-section">
+      <div class="track-row">
+        <span class="track-label">DAY</span>
+        <div class="track">
           <div class="fill day-fill" :style="{ width: `${dayProgress * 100}%` }"></div>
         </div>
       </div>
-      <div class="track-row" data-tauri-drag-region>
-        <span class="track-label" data-tauri-drag-region>YEAR</span>
-        <div class="track" data-tauri-drag-region>
+      <div class="track-row">
+        <span class="track-label">YEAR</span>
+        <div class="track">
           <div class="fill year-fill" :style="{ width: `${yearProgress * 100}%` }"></div>
         </div>
       </div>
@@ -144,6 +213,27 @@ html, body {
   cursor: grab;
   position: relative;
   box-sizing: border-box;
+  
+  /* 添加边缘隐藏的平滑过渡，这非常重要 */
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.4s ease;
+}
+
+/* 边缘隐藏状态：直接将内部 DOM 移出视图范围，剩下几像素尾巴。
+   基于 Webview 是透明无边框的原理实现物理悬挂缩回效果。*/
+.progress-bar-container.dock-left {
+  transform: translateX(calc(-100% + 16px));
+  opacity: 0.8;
+}
+
+.progress-bar-container.dock-right {
+  transform: translateX(calc(100% - 16px));
+  opacity: 0.8;
+}
+
+.progress-bar-container.dock-top {
+  transform: translateY(calc(-100% + 16px));
+  opacity: 0.8;
 }
 
 .progress-bar-container:active {
