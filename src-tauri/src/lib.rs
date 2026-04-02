@@ -1,19 +1,140 @@
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager, WindowEvent, WebviewUrl, WebviewWindowBuilder,
+    Manager, WebviewWindow, WindowEvent, WebviewUrl, WebviewWindowBuilder,
 };
 #[cfg(windows)]
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    SetWindowPos, SWP_ASYNCWINDOWPOS, SWP_NOACTIVATE, SWP_NOZORDER,
+    SetWindowPos, SWP_NOACTIVATE, SWP_NOZORDER,
 };
 
 /* ─── 悬挂窗口 ─── */
+const PROGRESS_LABEL: &str = "popout-progress";
+const PROGRESS_PANEL_LABEL: &str = "popout-progress-panel";
+const PROGRESS_ROUTE: &str = "/popout/progress";
+const PROGRESS_PANEL_ROUTE: &str = "/popout/progress-panel";
+const PROGRESS_WIDTH: f64 = 420.0;
+const PROGRESS_BAR_HEIGHT: f64 = 48.0;
+const PROGRESS_PANEL_HEIGHT: f64 = 332.0;
+
+fn build_popout_window(
+    app: &tauri::AppHandle,
+    label: &str,
+    route: String,
+    w: f64,
+    h: f64,
+    decorations: bool,
+    resizable: bool,
+    focused: bool,
+    visible: bool,
+    position: Option<(f64, f64)>,
+) -> Result<WebviewWindow, String> {
+    let url = WebviewUrl::App(format!("index.html?popout_route={}", route).into());
+    let mut builder = WebviewWindowBuilder::new(app, label, url)
+        .title("Ω Notes")
+        .inner_size(w, h)
+        .focused(focused)
+        .visible(visible)
+        .always_on_top(true)
+        .resizable(resizable)
+        .maximizable(resizable)
+        .decorations(decorations)
+        .transparent(true);
+
+    if !decorations {
+        builder = builder.shadow(false).skip_taskbar(true);
+    }
+
+    if let Some((x, y)) = position {
+        builder = builder.position(x, y);
+    }
+
+    builder.build().map_err(|e| e.to_string())
+}
+
+fn ensure_progress_panel_window(
+    app: &tauri::AppHandle,
+    x: f64,
+    y: f64,
+) -> Result<(), String> {
+    if app.get_webview_window(PROGRESS_PANEL_LABEL).is_some() {
+        return Ok(());
+    }
+
+    build_popout_window(
+        app,
+        PROGRESS_PANEL_LABEL,
+        PROGRESS_PANEL_ROUTE.to_string(),
+        PROGRESS_WIDTH,
+        PROGRESS_PANEL_HEIGHT,
+        false,
+        false,
+        false,
+        false,
+        Some((x, y)),
+    )?;
+
+    Ok(())
+}
+
+fn apply_window_geometry(
+    win: &WebviewWindow,
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
+    order: Option<&str>,
+) -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        let _ = order;
+        let hwnd = win.hwnd().map_err(|e| e.to_string())?;
+        let scale_factor = win.scale_factor().map_err(|e| e.to_string())?;
+        let width = ((w * scale_factor).round() as i32).max(1);
+        let height = ((h * scale_factor).round() as i32).max(1);
+        let x = x.round() as i32;
+        let y = y.round() as i32;
+        let result = unsafe {
+            SetWindowPos(
+                hwnd.0 as _,
+                std::ptr::null_mut(),
+                x,
+                y,
+                width,
+                height,
+                SWP_NOACTIVATE | SWP_NOZORDER,
+            )
+        };
+        if result == 0 {
+            return Err(std::io::Error::last_os_error().to_string());
+        }
+        Ok(())
+    }
+
+    #[cfg(not(windows))]
+    {
+        let position = tauri::PhysicalPosition::new(x.round() as i32, y.round() as i32);
+        let size = tauri::LogicalSize::new(w, h);
+
+        match order {
+            Some("size-first") => {
+                win.set_size(size).map_err(|e| e.to_string())?;
+                win.set_position(position).map_err(|e| e.to_string())?;
+            }
+            _ => {
+                win.set_position(position).map_err(|e| e.to_string())?;
+                win.set_size(size).map_err(|e| e.to_string())?;
+            }
+        }
+
+        Ok(())
+    }
+}
 
 #[tauri::command]
 async fn open_popout(app: tauri::AppHandle, kind: String, note_id: Option<String>) -> Result<(), String> {
     let (label, route, w, h, decorations, resizable) = match kind.as_str() {
-        "progress" => ("popout-progress", "/popout/progress".to_string(), 420.0, 48.0, false, false),
+        "progress" => (PROGRESS_LABEL, PROGRESS_ROUTE.to_string(), PROGRESS_WIDTH, PROGRESS_BAR_HEIGHT, false, false),
         "note"  => {
             let id = note_id.unwrap_or_default();
             ("popout-note", format!("/popout/note/{}", id), 520.0, 700.0, false, true)
@@ -31,22 +152,7 @@ async fn open_popout(app: tauri::AppHandle, kind: String, note_id: Option<String
         return Ok(());
     }
 
-    // 用查询参数传递目标路由，前端 main.ts 读取后跳转
-    let url = WebviewUrl::App(format!("index.html?popout_route={}", route).into());
-    let mut builder = WebviewWindowBuilder::new(&app, label, url)
-        .title("Ω Notes")
-        .inner_size(w, h)
-        .focused(kind.as_str() != "progress")
-        .always_on_top(true)
-        .resizable(resizable)
-        .maximizable(resizable)
-        .decorations(decorations)
-        .transparent(true);
-        
-    if !decorations {
-        builder = builder.shadow(false).skip_taskbar(true);
-    }
-
+    let mut position = None;
     if kind.as_str() == "progress" {
         if let Ok(Some(monitor)) = app.primary_monitor() {
             let scale_factor = monitor.scale_factor() as f64;
@@ -56,11 +162,61 @@ async fn open_popout(app: tauri::AppHandle, kind: String, note_id: Option<String
             // 使用 work area，避免被 Windows 任务栏或多屏偏移坐标干扰
             let target_y =
                 (work_area.position.y as f64 / scale_factor) + (work_area.size.height as f64 / scale_factor) - h - 12.0;
-            builder = builder.position(target_x, target_y);
+            position = Some((target_x, target_y));
         }
     }
 
-    builder.build().map_err(|e| e.to_string())?;
+    build_popout_window(
+        &app,
+        label,
+        route,
+        w,
+        h,
+        decorations,
+        resizable,
+        kind.as_str() != "progress",
+        true,
+        position,
+    )?;
+
+    if kind.as_str() == "progress" {
+        if let Some((x, y)) = position {
+            let panel_y = y - PROGRESS_PANEL_HEIGHT;
+            let _ = ensure_progress_panel_window(&app, x, panel_y);
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn show_progress_panel(app: tauri::AppHandle, x: f64, y: f64) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window(PROGRESS_PANEL_LABEL) {
+        apply_window_geometry(&win, x, y, PROGRESS_WIDTH, PROGRESS_PANEL_HEIGHT, Some("position-first"))?;
+        let _ = win.unminimize();
+        let _ = win.show();
+        return Ok(());
+    }
+
+    build_popout_window(
+        &app,
+        PROGRESS_PANEL_LABEL,
+        PROGRESS_PANEL_ROUTE.to_string(),
+        PROGRESS_WIDTH,
+        PROGRESS_PANEL_HEIGHT,
+        false,
+        false,
+        false,
+        true,
+        Some((x, y)),
+    )?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn hide_progress_panel(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window(PROGRESS_PANEL_LABEL) {
+        win.hide().map_err(|e| e.to_string())?;
+    }
     Ok(())
 }
 
@@ -87,53 +243,18 @@ async fn update_popout_geometry(
     _order: Option<String>,
 ) -> Result<(), String> {
     if let Some(win) = app.get_webview_window(&label) {
-        #[cfg(windows)]
-        {
-            let hwnd = win.hwnd().map_err(|e| e.to_string())?;
-            let scale_factor = win.scale_factor().map_err(|e| e.to_string())?;
-            let width = ((w * scale_factor).round() as i32).max(1);
-            let height = ((h * scale_factor).round() as i32).max(1);
-            let x = x.round() as i32;
-            let y = y.round() as i32;
-            let result = unsafe {
-                SetWindowPos(
-                    hwnd.0 as _,
-                    std::ptr::null_mut(),
-                    x,
-                    y,
-                    width,
-                    height,
-                    SWP_ASYNCWINDOWPOS | SWP_NOACTIVATE | SWP_NOZORDER,
-                )
-            };
-            if result == 0 {
-                return Err(std::io::Error::last_os_error().to_string());
-            }
-            return Ok(());
-        }
-
-        #[cfg(not(windows))]
-        {
-        let position = tauri::PhysicalPosition::new(x.round() as i32, y.round() as i32);
-        let size = tauri::LogicalSize::new(w, h);
-
-        match _order.as_deref() {
-            Some("size-first") => {
-                win.set_size(size).map_err(|e| e.to_string())?;
-                win.set_position(position).map_err(|e| e.to_string())?;
-            }
-            _ => {
-                win.set_position(position).map_err(|e| e.to_string())?;
-                win.set_size(size).map_err(|e| e.to_string())?;
-            }
-        }
-        }
+        apply_window_geometry(&win, x, y, w, h, _order.as_deref())?;
     }
     Ok(())
 }
 
 #[tauri::command]
 async fn close_popout(app: tauri::AppHandle, label: String) -> Result<(), String> {
+    if label == PROGRESS_LABEL {
+        if let Some(panel) = app.get_webview_window(PROGRESS_PANEL_LABEL) {
+            panel.destroy().map_err(|e| e.to_string())?;
+        }
+    }
     if let Some(win) = app.get_webview_window(&label) {
         win.destroy().map_err(|e| e.to_string())?;
     }
@@ -155,7 +276,14 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }))
-        .invoke_handler(tauri::generate_handler![open_popout, resize_popout, close_popout, update_popout_geometry])
+        .invoke_handler(tauri::generate_handler![
+            open_popout,
+            resize_popout,
+            close_popout,
+            update_popout_geometry,
+            hide_progress_panel,
+            show_progress_panel
+        ])
         .setup(|app| {
             // 开发模式日志
             if cfg!(debug_assertions) {

@@ -59,13 +59,13 @@ omega-v2/
 │   │   ├── SettingsView.vue    # 设置页（外观/编辑器/数据/关于/字体缩放）
 │   │   ├── TasksView.vue       # 日常管理（每日任务 + 卡片/列表视图 + 3种主题 + 一键完成 + 倒计时 + 健康提醒）
 │   │   └── popout/             # 桌面悬挂窗口（always-on-top 独立窗口）
+│   │       ├── HubExpandedBody.vue# 时间枢纽展开面板内容（任务/番茄钟/人生/设置 Tabs）
 │   │       ├── HubTasks.vue      # 悬挂任务列表子模块
 │   │       ├── HubTimer.vue      # 悬挂番茄钟子模块
 │   │       ├── HubLife.vue       # 悬挂人生进度条子模块
 │   │       ├── HubSettings.vue   # 悬挂设置聚合面板
-│   │       ├── PopoutTasks.vue   # (已弃用) 旧版独立悬挂任务窗口
-│   │       ├── PopoutTimer.vue   # (已弃用) 旧版独立悬挂计时窗口
-│   │       ├── PopoutProgress.vue# 悬挂多功能枢纽 (Hub)：集成 时间、任务、倒计时与人生进度
+│   │       ├── PopoutProgress.vue# 时间枢纽底部时间条窗口：拖拽/吸附/方向判断/面板调度
+│   │       ├── PopoutProgressPanel.vue# 时间枢纽独立展开面板窗口：承载 Tabs 内容区
 │   │       └── PopoutNote.vue    # 悬挂笔记阅读桌面窗口
 │   │
 │   ├── stores/                 # Pinia 状态仓库
@@ -91,7 +91,7 @@ omega-v2/
 │   │   └── index.ts            # Note / DailyTask / HealthReminder / CountdownState 等
 │   │
 │   └── router/                 # 路由配置
-│       └── index.ts            # 路由表 + 页面标题同步；含 4 条 meta.popout 路由（/popout/*）
+│       └── index.ts            # 路由表 + 页面标题同步；含 3 条 meta.popout 路由（/popout/*）
 │
 └── src-tauri/                  # Tauri 后端（Rust）
     ├── Cargo.toml              # Rust 依赖配置
@@ -99,7 +99,7 @@ omega-v2/
     ├── build.rs                # Rust 构建脚本
     ├── src/
     │   ├── main.rs             # 桌面应用入口
-    │   └── lib.rs              # async open_popout/resize_popout/close_popout commands；系统托盘
+    │   └── lib.rs              # 弹出窗命令：时间条/展开面板/笔记窗口创建、几何更新、隐藏与关闭；系统托盘
     ├── capabilities/           # Tauri 权限能力配置
     │   ├── default.json        # 默认权限（fs + global-shortcut + dialog + window + 5个窗口标签）
     │   └── desktop.json        # 桌面平台专用权限
@@ -156,10 +156,9 @@ docs/
 | `WriteView.vue` | `/write` | `notes` | 模板选择器 → WYSIWYG/分屏编辑 + 图片插入 + `[[title]]` 链接插入 + 标题/分类/标签表单 |
 | `NoteDetailView.vue` | `/note/:id` | `notes` | **Flex 内部滚动架构**：detail-toolbar + editor-toolbar 固定不滚动，detail-content 独立滚动（分屏时 flex 填充，pane 独立滚动）；阅读/编辑/分屏切换，收藏/置顶/删除，`[[title]]` 链接，反向链接，**4 种阅读主题 + 编辑器主题适配**，字体缩放，悬挂窗口 |
 | `TasksView.vue` | `/tasks` | `tasks` | 每日任务 + **卡片/列表视图切换** + **3种主题（默认/简约/彩色）** + **分类一键完成** + 倒计时 + 健康提醒 + 悬挂任务按钮 |
-| `PopoutTasks.vue` | `/popout/tasks` | `tasks` | (旧版) 悬挂任务 |
-| `PopoutTimer.vue` | `/popout/timer` | `tasks` | (旧版) 悬挂倒计时 |
 | `PopoutNote.vue` | `/popout/note/:id` | `notes` | 悬挂笔记（popout，always-on-top）：完整 Markdown 阅读 |
-| `PopoutProgress.vue` | `/popout/progress` | `tasks` | 全能时间枢纽 Hub：常驻时间进度横条，鼠标悬停可展开集成面板（任务、番茄钟、人生进度条及显示设置）；窗口几何基于 Tauri `currentMonitor().workArea` 做 Windows 多屏/DPI/任务栏安全定位，右侧贴边按右缘锚定展开；前端不再通过 `hide/show` 掩盖窗口变化，而是等待布局稳定后调用 Rust 端几何更新，避免触发 Windows 焦点链与任务栏闪动 |
+| `PopoutProgress.vue` | `/popout/progress` | `tasks` | 时间枢纽底部时间条窗口：常驻时间、拖拽、边缘吸附、按屏幕空间选择向上/向下展开，并调度独立展开面板窗口，避免透明 WebView 直接 resize 造成闪烁 |
+| `PopoutProgressPanel.vue` | `/popout/progress-panel` | `tasks` | 时间枢纽独立展开面板窗口：承载任务/番茄钟/人生/设置 Tabs 内容，支持隐藏预热与复用，减少首帧跳位 |
 | `TrashView.vue` | `/trash` | `notes` | 回收站：已删除笔记列表、恢复/永久删除、清空回收站确认 dialog |
 | `SettingsView.vue` | `/settings` | `theme`, `settings`, `notes` | 设置：外观（主题/字体）、编辑器（默认模式）、数据（存储位置/统计/回收站清理）、系统（开机自启）、关于 |
 
@@ -204,9 +203,9 @@ docs/
 | `/note/:id` | `note-detail` | `NoteDetailView` | 笔记详情 |
 | `/trash` | `trash` | `TrashView` | 回收站 |
 | `/settings` | `settings` | `SettingsView` | 设置 |
-| `/popout/tasks` | `popout-tasks` | `PopoutTasks` | 悬挂任务（`meta.popout: true`） |
-| `/popout/timer` | `popout-timer` | `PopoutTimer` | 悬挂计时（`meta.popout: true`） |
 | `/popout/note/:id` | `popout-note` | `PopoutNote` | 悬挂笔记（`meta.popout: true`） |
+| `/popout/progress` | `popout-progress` | `PopoutProgress` | 时间枢纽时间条（`meta.popout: true`） |
+| `/popout/progress-panel` | `popout-progress-panel` | `PopoutProgressPanel` | 时间枢纽展开面板（`meta.popout: true`） |
 
 路由使用 **Hash 模式** (`createWebHashHistory`)，Tauri 桌面应用中文件协议不支持 History 模式。
 
@@ -217,7 +216,7 @@ docs/
 | `tauri.conf.json` | 应用配置（窗口大小、标识、构建命令、安全策略） |
 | `Cargo.toml` | Rust 依赖声明 |
 | `src/main.rs` | Windows 下隐藏控制台窗口，调用 `lib.rs` |
-| `src/lib.rs` | Tauri 应用初始化：注册各插件；`async open_popout`（创建/聚焦悬挂窗口，支持 tasks/timer/note 三种，`progress` 默认落在主显示器 `work_area` 右下且以非聚焦方式创建/恢复）/ `async resize_popout` / `async close_popout` / `async update_popout_geometry`（Windows 下使用单次 `SetWindowPos` 同时移动+缩放并附带 `SWP_NOACTIVATE`，其他平台保留顺序型更新）；系统托盘（右键菜单含悬挂入口 + 左键恢复）；主窗口关闭→最小化到托盘 |
+| `src/lib.rs` | Tauri 应用初始化：注册各插件；`async open_popout`（创建/聚焦悬挂窗口，`progress` 为时间条窗口并预热隐藏的展开面板）/ `async show_progress_panel` / `async hide_progress_panel` / `async resize_popout` / `async close_popout` / `async update_popout_geometry`（Windows 下使用单次 `SetWindowPos` 同时移动+缩放并附带 `SWP_NOACTIVATE`，其他平台保留顺序型更新）；系统托盘（右键菜单含悬挂入口 + 左键恢复）；主窗口关闭→最小化到托盘 |
 | `capabilities/` | 权限能力声明（fs + global-shortcut + dialog + autostart） |
 
 ## 数据流向
