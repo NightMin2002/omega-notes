@@ -31,10 +31,10 @@ let unlistenCollapseRequest: (() => void) | null = null
 const isExpanded = ref(false)
 const expandDirection = ref<'up' | 'down'>('up')
 const isTransitioning = ref(false)
-const isGeometryHidden = ref(false) // 吸附/恢复时先隐藏，避免窄条中间帧可见
+const disableTransition = ref(false)
 const isHovering = ref(false)
 const dockEdge = ref<'none' | 'left' | 'right' | 'top'>('none')
-const visualDockEdge = ref<'none' | 'left' | 'right' | 'top'>('none') // 控制平滑出入场动画偏移
+const visualDockEdge = ref<'none' | 'left' | 'right' | 'top'>('none')
 
 /* ─── 配置同步 ─── */
 const defaultHubConfig = {
@@ -69,6 +69,12 @@ const FULL_WIDTH = 420
 const COLLAPSED_HEIGHT = 48
 const PANEL_HEIGHT = 380
 const DOCK_VISIBLE_PX = 10
+
+// 用于提取 CSS 脱框偏移量，确保无论常亮怎么变，无状态移位都高度绑定单源数据
+const cssVisualDockRight = `${FULL_WIDTH - DOCK_VISIBLE_PX}px`
+const cssVisualDockLeft = `-${FULL_WIDTH - DOCK_VISIBLE_PX}px`
+const cssVisualDockTop = `-${COLLAPSED_HEIGHT - DOCK_VISIBLE_PX}px`
+
 const EDGE_THRESHOLD = 15
 const WIN_LABEL = 'popout-progress'
 const PANEL_LABEL = 'popout-progress-panel'
@@ -330,13 +336,14 @@ async function dockToEdge(edge: 'left' | 'right' | 'top') {
       await new Promise(r => setTimeout(r, 40))
     }
 
-    // 第二步：开启动画偏移
+    // 第二步：开启动画偏移 (纯净完成滑动)
     visualDockEdge.value = edge
-    await new Promise(r => setTimeout(r, 350))
+    await new Promise(r => setTimeout(r, 450)) // 确保滑动彻底结束
 
-    // 第三步：动画结束后，遮盖变形闪烁，执行物理断腿
-    isGeometryHidden.value = true
+    // 第三步：强制切断所有过渡，瞬间贴上钢钉级的 is-docked 物理约束
+    disableTransition.value = true
     dockEdge.value = edge
+    visualDockEdge.value = 'none'
     await settleLayout()
 
     if (edge === 'left') {
@@ -347,17 +354,16 @@ async function dockToEdge(edge: 'left' | 'right' | 'top') {
       await updateGeometry(targetX, metrics.top, FULL_WIDTH, DOCK_VISIBLE_PX, 'size-first')
     }
 
-    // 第四步：物理变形完成，重置视窗并破除隐身
+    // 第四步：恢复过渡通道
     await new Promise(r => setTimeout(r, 50))
-    visualDockEdge.value = 'none'
-    isGeometryHidden.value = false
+    disableTransition.value = false
 
   } catch (e) {
     console.error('Dock failed', e)
     dockEdge.value = previousEdge
     visualDockEdge.value = 'none'
     preDockPosition = previousPreDock
-    isGeometryHidden.value = false
+    disableTransition.value = false
   } finally {
     isTransitioning.value = false
   }
@@ -368,17 +374,12 @@ async function undock() {
   isTransitioning.value = true
   const previousEdge = dockEdge.value
   const previousPreDock = preDockPosition ? { ...preDockPosition } : null
-  const previousGeometryHidden = isGeometryHidden.value
+  const previousDisableTransition = disableTransition.value
 
   try {
     const savedEdge = dockEdge.value
-    if (savedEdge !== 'none') {
-      isGeometryHidden.value = true
-      dockEdge.value = 'none'
-      visualDockEdge.value = savedEdge // 准备：用 CSS 平移强行把完整视窗挤落界外
-      await settleLayout()
-    }
-
+    
+    // 我们必须先计算出复原后，完整的 420 宽的 Tauri 窗体应该摆放的基准位置
     const pos = await win.outerPosition()
     let targetX = preDockPosition?.x ?? pos.x
     let targetY = preDockPosition?.y ?? pos.y
@@ -395,24 +396,41 @@ async function undock() {
     }
 
     preDockPosition = null
-    
-    // 先物理全尺寸出击（此时还在隐身外衣且处于超视距平移外）
-    await updateGeometry(targetX, targetY, FULL_WIDTH, COLLAPSED_HEIGHT, 'size-first')
-    await nextTick()
-    await new Promise(r => setTimeout(r, 60)) // 等待 OS 实实在在撑开窗体
 
-    // 解除隐身并启动平滑回廊动画
-    isGeometryHidden.value = false
+    // 突破核心：由于 WebView 渲染滞后，在 Tauri OS 窗口尺寸变化瞬间，基于DOM宽度的排版会崩溃并漂移到左上角 0,0
+    // 我们必须在 OS 窗口改变之前，就提前强行拔掉它的“10px吸附窄条”伪装，换回 420 宽的灰条并将其移出画外（此时必被 10px 的 OS 窗体物理裁剪不可见）
+    // 这样当 OS 窗口重铸尺寸的混乱几十毫秒内，UI是在画外隐藏的，绝对不会像幻影一样闪烁在左上角！
+    disableTransition.value = true
+    dockEdge.value = 'none'
+    visualDockEdge.value = savedEdge //瞬间将其转移至 410px 外躲避
+    await settleLayout()
+    void document.documentElement.offsetHeight
+
+    // 让系统放开手脚撑延展成 420，此时由于它躲在 X=410px 的偏远位置，随着窗体的展开，它的左边缘恰巧会完全严丝合缝地吻合在屏幕最右侧边缘！
+    await updateGeometry(targetX, targetY, FULL_WIDTH, COLLAPSED_HEIGHT, 'position-first')
+    
+    // 给系统重绘边框一个短暂时间，让它把画作稳定拿出来
+    await nextTick()
+    await new Promise(r => setTimeout(r, 60))
+
+    // 致命核心！必须等待实打实的两帧，确保 WebView 完完全全把这个无动画的 translateX 初态绘制并锁进 GPU
+    // 如果立刻恢复 disableTransition = false，浏览器会将它和上一状态合并，导致根本没有过渡瞬间跳跃（即“以左侧展开”）
+    await new Promise(r => requestAnimationFrame(r))
+    await new Promise(r => requestAnimationFrame(r))
+    await new Promise(r => setTimeout(r, 20))
+
+    // 重新开启引擎动力阀门，释放完美滑动
+    disableTransition.value = false
     visualDockEdge.value = 'none'
 
-    await new Promise(r => setTimeout(r, 350))
+    await new Promise(r => setTimeout(r, 450))
 
   } catch (e) {
     console.error('Undock failed', e)
     dockEdge.value = previousEdge
     visualDockEdge.value = 'none'
     preDockPosition = previousPreDock
-    isGeometryHidden.value = previousGeometryHidden
+    disableTransition.value = previousDisableTransition
   } finally {
     isTransitioning.value = false
   }
@@ -506,10 +524,13 @@ onUnmounted(() => {
       class="progress-wrapper"
       :class="{
         'is-docked': dockEdge !== 'none',
+        'is-docked-left': dockEdge === 'left',
+        'is-docked-right': dockEdge === 'right',
+        'is-docked-top': dockEdge === 'top',
         'is-expanded': isExpanded,
         'expand-down': isExpanded && expandDirection === 'down',
         'expand-up': isExpanded && expandDirection === 'up',
-        'is-geometry-hidden': isGeometryHidden,
+        'no-transition': disableTransition,
         'visual-dock-right': visualDockEdge === 'right',
         'visual-dock-left': visualDockEdge === 'left',
         'visual-dock-top': visualDockEdge === 'top',
@@ -640,23 +661,24 @@ html, body {
 }
 
 .progress-wrapper {
-  transition: transform 0.4s cubic-bezier(0.25, 1, 0.3, 1), opacity 0.25s ease-out;
+  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.25s ease-out;
 }
 
 .progress-wrapper.visual-dock-right {
-  transform: translateX(calc(100% - 10px));
+  /* 剥离 DOM 解析延迟，强制使用与 TS 配置绑定的绝对逻辑像素值 */
+  transform: translateX(v-bind('cssVisualDockRight'));
 }
 
 .progress-wrapper.visual-dock-left {
-  transform: translateX(calc(-100% + 10px));
+  transform: translateX(v-bind('cssVisualDockLeft'));
 }
 
 .progress-wrapper.visual-dock-top {
-  transform: translateY(calc(-100% + 10px));
+  transform: translateY(v-bind('cssVisualDockTop'));
 }
 
-.progress-wrapper.is-geometry-hidden {
-  opacity: 0;
+.progress-wrapper.no-transition {
+  transition: none !important;
 }
 
 .progress-wrapper.is-docked {
@@ -666,6 +688,28 @@ html, body {
   background: var(--color-accent, #6366f1);
   box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
   justify-content: center;
+  position: absolute;
+}
+
+.progress-wrapper.is-docked-right {
+  width: 10px;
+  height: 100%;
+  right: 0;
+  top: 0;
+}
+
+.progress-wrapper.is-docked-left {
+  width: 10px;
+  height: 100%;
+  left: 0;
+  top: 0;
+}
+
+.progress-wrapper.is-docked-top {
+  width: 100%;
+  height: 10px;
+  top: 0;
+  left: 0;
 }
 
 .dock-indicator {
