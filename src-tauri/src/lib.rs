@@ -3,6 +3,11 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Manager, WebviewWindow, WindowEvent, WebviewUrl, WebviewWindowBuilder,
 };
+use std::sync::Mutex;
+use std::time::{Instant, Duration};
+use tauri_plugin_notification::NotificationExt;
+
+struct NotificationState(Mutex<Option<Instant>>);
 #[cfg(windows)]
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     SetWindowPos, SWP_NOACTIVATE, SWP_NOZORDER,
@@ -261,9 +266,36 @@ async fn close_popout(app: tauri::AppHandle, label: String) -> Result<(), String
     Ok(())
 }
 
+#[tauri::command]
+async fn trigger_countdown_notification(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, NotificationState>,
+    title: String,
+    body: String,
+) -> Result<(), String> {
+    let mut last_notify = state.0.lock().unwrap();
+    let now = Instant::now();
+    if let Some(last) = *last_notify {
+        if now.duration_since(last) < Duration::from_secs(5) {
+            return Ok(());
+        }
+    }
+    *last_notify = Some(now);
+
+    let _ = app
+        .notification()
+        .builder()
+        .title(title)
+        .body(body)
+        .show();
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(NotificationState(Mutex::new(None)))
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
@@ -282,7 +314,8 @@ pub fn run() {
             close_popout,
             update_popout_geometry,
             hide_progress_panel,
-            show_progress_panel
+            show_progress_panel,
+            trigger_countdown_notification
         ])
         .setup(|app| {
             // 开发模式日志

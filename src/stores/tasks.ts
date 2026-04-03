@@ -367,32 +367,26 @@ export const useTasksStore = defineStore('tasks', () => {
    * 倒计时结束时发通知（利用随机延迟防重锁，避免 Tauri 下 navigator.locks 死锁问题）
    */
   function notifyCountdownOnce() {
-    // 为每个窗口分配 50~150ms 的随机延迟，人为打破执行的“同步性”避免并发读取漏洞
-    const delay = Math.floor(Math.random() * 100) + 50
-    setTimeout(() => {
+    const mins = Math.round(countdown.value.totalSeconds / 60)
+    const title = '计时结束'
+    const body = `${mins} 分钟的专注倒计时已完成。`
+
+    if (isTauri()) {
+      import('@tauri-apps/api/core').then(({ invoke }) => {
+        // 利用 Rust 后端进程级别的原生 Mutex 互斥锁，彻底断绝 Webview 多进程并发和本地存储同步延迟带来的双重/零次漏洞！
+        invoke('trigger_countdown_notification', { title, body }).catch((e) => {
+          console.error('[notify] rust backend error:', e)
+        })
+      }).catch(() => {})
+    } else {
+      // 浏览器环境降级，单进程本身不存在严格并发问题
       const flagKey = COUNTDOWN_NOTIFIED_KEY
       const existing = localStorage.getItem(flagKey)
-      if (existing) {
-        const ts = parseInt(existing, 10)
-        // 5秒内的重复通知视为重复
-        if (Date.now() - ts < 5000) return
-      }
+      if (existing && Date.now() - parseInt(existing, 10) < 5000) return
       localStorage.setItem(flagKey, String(Date.now()))
       
-      const mins = Math.round(countdown.value.totalSeconds / 60)
-      const title = '⏰ 计时结束'
-      const body = `${mins} 分钟倒计时已结束！\n打起精神，准备接下来的挑战吧。`
-      
-      // 1. 发送系统通知（Windows 开发环境下可能因为缺乏 AUMID 静默失败）
       notify(title, body)
-
-      // 2. 强制弹出原生系统级的模态对话框，这能百分百打断并告知用户，同时触发系统级提示音
-      if (isTauri()) {
-        import('@tauri-apps/plugin-dialog').then(({ message }) => {
-          message(body, { title, kind: 'info' }).catch(() => {})
-        }).catch(() => {})
-      }
-    }, delay)
+    }
   }
 
   function startCountdown(minutes: number) {
