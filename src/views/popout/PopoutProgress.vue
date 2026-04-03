@@ -55,7 +55,7 @@ function handleStorage(e: StorageEvent) {
 /* ─── 窗口尺寸常量 ─── */
 const FULL_WIDTH = 420
 const COLLAPSED_HEIGHT = 48
-const PANEL_HEIGHT = 332
+const PANEL_HEIGHT = 380
 const DOCK_VISIBLE_PX = 10
 const EDGE_THRESHOLD = 15
 const WIN_LABEL = 'popout-progress'

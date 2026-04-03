@@ -14,7 +14,15 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
+    "@fontsource/chakra-petch": "^5.2.7",
+    "@fontsource/dotgothic16": "^5.2.8",
     "@fontsource/inter": "^5.2.8",
+    "@fontsource/orbitron": "^5.2.8",
+    "@fontsource/press-start-2p": "^5.2.7",
+    "@fontsource/share-tech-mono": "^5.2.7",
+    "@fontsource/silkscreen": "^5.2.8",
+    "@fontsource/vt323": "^5.2.7",
+    "@fontsource/wallpoet": "^5.2.7",
     "@milkdown/kit": "^7.19.0",
     "@milkdown/plugin-listener": "^7.19.0",
     "@milkdown/plugin-math": "^7.5.9",
