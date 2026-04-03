@@ -29,5 +29,12 @@ export const useThemeStore = defineStore('theme', () => {
     localStorage.setItem(THEME_KEY, val)
   }, { immediate: true })
 
+  // 跨窗口同步监听（解决多 Webview 间状态不同步的问题）
+  window.addEventListener('storage', (e) => {
+    if (e.key === THEME_KEY && (e.newValue === 'dark' || e.newValue === 'light')) {
+      theme.value = e.newValue as Theme
+    }
+  })
+
   return { theme, toggle }
 })

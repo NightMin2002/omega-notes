@@ -35,19 +35,13 @@ function quickAdd() {
         class="hub-task"
         :class="{ done: store.isCompleted(task.id), skipped: store.isSkipped(task.id) }"
       >
-        <label class="hub-check">
-          <input
-            type="checkbox"
-            class="sr-only"
-            :checked="store.isCompleted(task.id)"
-            @change="store.toggleComplete(task.id)"
-          />
+        <div class="hub-check" @click.stop="store.toggleComplete(task.id)">
           <span class="check-dot" :class="{ checked: store.isCompleted(task.id) }">
             <svg v-if="store.isCompleted(task.id)" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="20 6 9 17 4 12" />
             </svg>
           </span>
-        </label>
+        </div>
         <span class="hub-task-name">{{ task.title }}</span>
         <span v-if="task.category" class="hub-cat">{{ task.category }}</span>
       </div>
