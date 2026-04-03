@@ -345,7 +345,7 @@ pub fn run() {
             #[cfg(desktop)]
             {
                 let show = MenuItemBuilder::with_id("show", "显示 Ω Notes").build(app)?;
-                let float_progress = MenuItemBuilder::with_id("float-progress", "🚀 时间枢纽").build(app)?;
+                let float_progress = MenuItemBuilder::with_id("float-progress", "🚀 桌面微件").build(app)?;
                 let quit = MenuItemBuilder::with_id("quit", "退出").build(app)?;
                 let menu = MenuBuilder::new(app)
                     .items(&[&show, &float_progress, &quit])

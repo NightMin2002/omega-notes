@@ -378,13 +378,13 @@ function handleInputConfirm(val: string) {
           <span class="nav-label">设置</span>
         </RouterLink>
 
-        <!-- 悬挂快捷 -->
+        <!-- 桌面微件 -->
         <div class="io-row popout-row">
-          <button class="io-btn popout-btn" @click="openPopout('progress')" data-tooltip="桌面时间枢纽，内置倒计时与任务管理">
+          <button class="io-btn popout-btn" @click="openPopout('progress')" data-tooltip="开启桌面微件（倒计时与任务屏）">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
             </svg>
-            <span>时间枢纽</span>
+            <span>桌面微件</span>
           </button>
         </div>
 

@@ -59,13 +59,13 @@ const router = createRouter({
       path: '/popout/progress',
       name: 'popout-progress',
       component: () => import('../views/popout/PopoutProgress.vue'),
-      meta: { popout: true, title: '时间枢纽' },
+      meta: { popout: true, title: '桌面微件' },
     },
     {
       path: '/popout/progress-panel',
       name: 'popout-progress-panel',
       component: () => import('../views/popout/PopoutProgressPanel.vue'),
-      meta: { popout: true, title: '时间枢纽面板' },
+      meta: { popout: true, title: '桌面微件面板' },
     },
   ],
 })
