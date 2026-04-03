@@ -10,11 +10,22 @@ let unlistenCloseRequested: (() => void) | null = null
 let unlistenDirectionEvent: (() => void) | null = null
 let posCheckInterval: ReturnType<typeof setInterval>
 const panelDirection = ref<'up' | 'down'>((localStorage.getItem('hub-panel-direction') as 'up' | 'down') || 'up')
+const isVisible = ref(false)
 
 const bc = new BroadcastChannel('omega-hub-channel')
 bc.onmessage = (e) => {
   if (e.data?.type === 'direction') {
     applyDirection(e.data.direction)
+  }
+  if (e.data?.type === 'anim-prepare') {
+    isVisible.value = false
+    applyDirection(e.data.direction)
+  }
+  if (e.data?.type === 'anim-start') {
+    isVisible.value = true
+  }
+  if (e.data?.type === 'anim-close') {
+    isVisible.value = false
   }
 }
 
@@ -73,7 +84,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="panel-shell" :class="`panel-shell--${panelDirection}`">
+  <div class="panel-shell" :class="[`panel-shell--${panelDirection}`, isVisible ? 'is-visible' : 'is-hidden']">
     <HubExpandedBody :direction="panelDirection" />
   </div>
 </template>
@@ -106,6 +117,22 @@ html, body {
   color: var(--color-text-primary);
   border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
   box-sizing: border-box;
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.25s ease-out;
+}
+
+.panel-shell--up.is-hidden {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
+.panel-shell--down.is-hidden {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+.panel-shell.is-visible {
+  transform: translateY(0);
+  opacity: 1;
 }
 
 .panel-shell--up {

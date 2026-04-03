@@ -31,9 +31,10 @@ let unlistenCollapseRequest: (() => void) | null = null
 const isExpanded = ref(false)
 const expandDirection = ref<'up' | 'down'>('up')
 const isTransitioning = ref(false)
-const isGeometryHidden = ref(false) // 右侧吸附恢复时先隐藏，避免窄条中间帧可见
+const isGeometryHidden = ref(false) // 吸附/恢复时先隐藏，避免窄条中间帧可见
 const isHovering = ref(false)
 const dockEdge = ref<'none' | 'left' | 'right' | 'top'>('none')
+const visualDockEdge = ref<'none' | 'left' | 'right' | 'top'>('none') // 控制平滑出入场动画偏移
 
 /* ─── 配置同步 ─── */
 const defaultHubConfig = {
@@ -148,6 +149,11 @@ async function settleLayout() {
 
 async function collapsePanelAndRestorePosition() {
   if (!isExpanded.value) return
+
+  // 发送收缩动画指令，让 Panel 进行 CSS 缓动向时间条滑动隐藏
+  bc.postMessage({ type: 'anim-close' })
+  // 等待动画物理过度结束之后，再销毁/隐藏 WebView 防止直接黑屏截断
+  await new Promise(resolve => setTimeout(resolve, 300))
 
   const monitor = await currentMonitor()
   if (!monitor) return
@@ -265,12 +271,26 @@ async function toggleExpand() {
       metrics.bottom - metrics.panelHeightPx,
     )
 
+    // 发送预备动画指令：利用 translateX/Y 偷偷将实际面板挤到渲染窗体外
+    bc.postMessage({ type: 'anim-prepare', direction: nextDirection })
     await syncPanelDirection(nextDirection)
+
+    // 留给面板 Vue 一点时间挂上 hidden class
+    await new Promise(r => setTimeout(r, 40))
+
     await showPanel(safeX, panelY)
     
+    // 确保操作系统完成了透明面板的绘制，此时由于隐身外衣用户依旧看不见它
+    await nextTick()
+    await new Promise(r => setTimeout(r, 60))
+    
+    // 正式触发解除封印：CSS 将由于 is-visible 的添加开始丝滑过度
+    bc.postMessage({ type: 'anim-start' })
+
     // 冗余触发：在窗口创建并可能有稍许延迟后再次发送，彻底治愈同步遗漏
     setTimeout(() => {
       syncPanelDirection(nextDirection)
+      bc.postMessage({ type: 'anim-start' })
     }, 150)
     
     isExpanded.value = true
@@ -304,6 +324,18 @@ async function dockToEdge(edge: 'left' | 'right' | 'top') {
     const targetY = clamp(pos.y, metrics.top, metrics.bottom - metrics.collapsedHeightPx)
     const targetX = clamp(pos.x, metrics.left, metrics.right - metrics.fullWidthPx)
 
+    // 第一步：如果在靠右侧吸附，应该让窗口先完美贴边，再执行动画
+    if (edge === 'right') {
+      await updateGeometry(metrics.right - metrics.fullWidthPx, targetY, FULL_WIDTH, COLLAPSED_HEIGHT, 'position-first')
+      await new Promise(r => setTimeout(r, 40))
+    }
+
+    // 第二步：开启动画偏移
+    visualDockEdge.value = edge
+    await new Promise(r => setTimeout(r, 350))
+
+    // 第三步：动画结束后，遮盖变形闪烁，执行物理断腿
+    isGeometryHidden.value = true
     dockEdge.value = edge
     await settleLayout()
 
@@ -314,10 +346,18 @@ async function dockToEdge(edge: 'left' | 'right' | 'top') {
     } else {
       await updateGeometry(targetX, metrics.top, FULL_WIDTH, DOCK_VISIBLE_PX, 'size-first')
     }
+
+    // 第四步：物理变形完成，重置视窗并破除隐身
+    await new Promise(r => setTimeout(r, 50))
+    visualDockEdge.value = 'none'
+    isGeometryHidden.value = false
+
   } catch (e) {
     console.error('Dock failed', e)
     dockEdge.value = previousEdge
+    visualDockEdge.value = 'none'
     preDockPosition = previousPreDock
+    isGeometryHidden.value = false
   } finally {
     isTransitioning.value = false
   }
@@ -334,6 +374,8 @@ async function undock() {
     const savedEdge = dockEdge.value
     if (savedEdge !== 'none') {
       isGeometryHidden.value = true
+      dockEdge.value = 'none'
+      visualDockEdge.value = savedEdge // 准备：用 CSS 平移强行把完整视窗挤落界外
       await settleLayout()
     }
 
@@ -353,14 +395,22 @@ async function undock() {
     }
 
     preDockPosition = null
-    dockEdge.value = 'none'
-    await settleLayout()
+    
+    // 先物理全尺寸出击（此时还在隐身外衣且处于超视距平移外）
     await updateGeometry(targetX, targetY, FULL_WIDTH, COLLAPSED_HEIGHT, 'size-first')
-    await settleLayout()
+    await nextTick()
+    await new Promise(r => setTimeout(r, 60)) // 等待 OS 实实在在撑开窗体
+
+    // 解除隐身并启动平滑回廊动画
     isGeometryHidden.value = false
+    visualDockEdge.value = 'none'
+
+    await new Promise(r => setTimeout(r, 350))
+
   } catch (e) {
     console.error('Undock failed', e)
     dockEdge.value = previousEdge
+    visualDockEdge.value = 'none'
     preDockPosition = previousPreDock
     isGeometryHidden.value = previousGeometryHidden
   } finally {
@@ -460,6 +510,9 @@ onUnmounted(() => {
         'expand-down': isExpanded && expandDirection === 'down',
         'expand-up': isExpanded && expandDirection === 'up',
         'is-geometry-hidden': isGeometryHidden,
+        'visual-dock-right': visualDockEdge === 'right',
+        'visual-dock-left': visualDockEdge === 'left',
+        'visual-dock-top': visualDockEdge === 'top',
       }"
       @mousedown="startDrag"
       @mouseenter="handleMouseEnter"
@@ -584,6 +637,22 @@ html, body {
   box-shadow:
     0 12px 24px rgba(0, 0, 0, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.progress-wrapper {
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.3, 1), opacity 0.25s ease-out;
+}
+
+.progress-wrapper.visual-dock-right {
+  transform: translateX(calc(100% - 10px));
+}
+
+.progress-wrapper.visual-dock-left {
+  transform: translateX(calc(-100% + 10px));
+}
+
+.progress-wrapper.visual-dock-top {
+  transform: translateY(calc(-100% + 10px));
 }
 
 .progress-wrapper.is-geometry-hidden {
