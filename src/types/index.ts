@@ -136,4 +136,6 @@ export interface CountdownState {
   totalSeconds: number
   /** 剩余秒数 */
   remainingSeconds: number
+  /** UTC 终止时间戳（毫秒），用于在后台被节流时纠正计时 / 跨窗口同步准确时间 */
+  targetEndTime?: number
 }
