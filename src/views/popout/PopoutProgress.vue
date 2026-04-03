@@ -5,6 +5,13 @@
  */
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
+
+const bc = new BroadcastChannel('omega-hub-channel')
+bc.onmessage = (e) => {
+  if (e.data?.type === 'request-direction') {
+    bc.postMessage({ type: 'direction', direction: expandDirection.value })
+  }
+}
 import { currentMonitor, type Monitor } from '@tauri-apps/api/window'
 import { invoke } from '@tauri-apps/api/core'
 import { emitTo } from '@tauri-apps/api/event'
@@ -98,6 +105,8 @@ async function hidePanel() {
 
 function syncPanelDirection(direction: 'up' | 'down') {
   localStorage.setItem('hub-panel-direction', direction)
+  // 通过原生的 BroadcastChannel，无视 Tauri 休眠机制，光速直达各 Webview
+  bc.postMessage({ type: 'direction', direction })
   return emitTo(PANEL_LABEL, 'hub:panel-direction', { direction }).catch(() => {})
 }
 
@@ -247,6 +256,12 @@ async function toggleExpand() {
 
     await syncPanelDirection(nextDirection)
     await showPanel(safeX, panelY)
+    
+    // 冗余触发：在窗口创建并可能有稍许延迟后再次发送，彻底治愈同步遗漏
+    setTimeout(() => {
+      syncPanelDirection(nextDirection)
+    }, 150)
+    
     isExpanded.value = true
   } catch (e) {
     console.error('Toggle panel failed', e)
@@ -525,7 +540,8 @@ html, body {
   backdrop-filter: blur(20px) saturate(1.2);
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
   color: var(--color-text-primary);
-  border-radius: 20px;
+  border-radius: 16px;
+  clip-path: inset(0 round 16px);
   border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   user-select: none;
@@ -536,18 +552,25 @@ html, body {
 
 .progress-wrapper.is-expanded {
   box-shadow:
-    0 12px 24px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    0 12px 24px rgba(0, 0, 0, 0.18);
 }
 
 .progress-wrapper.expand-up {
-  border-radius: 0 0 14px 14px;
+  border-radius: 0 0 16px 16px;
+  clip-path: inset(0 round 0 0 16px 16px);
   border-top: none;
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.18),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .progress-wrapper.expand-down {
-  border-radius: 14px 14px 0 0;
+  border-radius: 16px 16px 0 0;
+  clip-path: inset(0 round 16px 16px 0 0);
   border-bottom: none;
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .progress-wrapper.is-geometry-hidden {
@@ -556,6 +579,7 @@ html, body {
 
 .progress-wrapper.is-docked {
   border-radius: 0;
+  clip-path: none;
   border: none;
   background: var(--color-accent, #6366f1);
   box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);

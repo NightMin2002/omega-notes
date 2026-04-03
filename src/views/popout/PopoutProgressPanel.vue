@@ -1,14 +1,22 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import { emitTo } from '@tauri-apps/api/event'
-import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
+import { getCurrentWebviewWindow, WebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 
 import HubExpandedBody from './HubExpandedBody.vue'
 
 let unlistenCloseRequested: (() => void) | null = null
 let unlistenDirectionEvent: (() => void) | null = null
+let posCheckInterval: ReturnType<typeof setInterval>
 const panelDirection = ref<'up' | 'down'>((localStorage.getItem('hub-panel-direction') as 'up' | 'down') || 'up')
+
+const bc = new BroadcastChannel('omega-hub-channel')
+bc.onmessage = (e) => {
+  if (e.data?.type === 'direction') {
+    applyDirection(e.data.direction)
+  }
+}
 
 function applyDirection(direction: unknown) {
   panelDirection.value = direction === 'down' ? 'down' : 'up'
@@ -31,9 +39,33 @@ onMounted(async () => {
   })
 
   window.addEventListener('storage', handleStorage)
+
+  // 改用光速级的原生 BroadcastChannel 握手
+  bc.postMessage({ type: 'request-direction' })
+
+  // [终极防漏判定]：直接越过 IPC，读取两个窗口在操作系统底层的绝对物理坐标（Absolute Geometry）。
+  // 如果当前面板 Y 坐标严格大于主时间条 Y 坐标，则证明面板在下方（向下展开），反之亦然。绝对可靠的最后防线。
+  posCheckInterval = setInterval(async () => {
+    try {
+      const mainWin = await WebviewWindow.getByLabel('popout-progress')
+      if (!mainWin) return
+      
+      const pWin = getCurrentWebviewWindow()
+      const pPos = await pWin.outerPosition()
+      const mPos = await mainWin.outerPosition()
+      
+      const correctDirection = pPos.y > mPos.y ? 'down' : 'up'
+      if (panelDirection.value !== correctDirection) {
+        panelDirection.value = correctDirection
+      }
+    } catch {
+      // 忽略因窗口被短暂休眠而产生的拿取异常
+    }
+  }, 100)
 })
 
 onUnmounted(() => {
+  clearInterval(posCheckInterval)
   unlistenCloseRequested?.()
   unlistenDirectionEvent?.()
   window.removeEventListener('storage', handleStorage)
@@ -42,7 +74,7 @@ onUnmounted(() => {
 
 <template>
   <div class="panel-shell" :class="`panel-shell--${panelDirection}`">
-    <HubExpandedBody />
+    <HubExpandedBody :direction="panelDirection" />
   </div>
 </template>
 
@@ -72,27 +104,33 @@ html, body {
   backdrop-filter: blur(20px) saturate(1.2);
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
   color: var(--color-text-primary);
-  border-radius: 16px 16px 0 0;
   border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
-  border-bottom: none;
-  box-shadow:
-    0 20px 40px rgba(0, 0, 0, 0.28),
-    0 6px 18px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
   box-sizing: border-box;
 }
 
 .panel-shell--up {
   --panel-shift-closed: 10px;
   border-radius: 16px 16px 0 0;
+  clip-path: inset(0 round 16px 16px 0 0);
   border-bottom: none;
+  border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.28),
+    0 6px 18px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
   transform-origin: bottom center;
 }
 
 .panel-shell--down {
   --panel-shift-closed: -10px;
   border-radius: 0 0 16px 16px;
+  clip-path: inset(0 round 0 0 16px 16px);
   border-top: none;
+  border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.28),
+    0 6px 18px rgba(0, 0, 0, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.03);
   transform-origin: top center;
 }
 </style>

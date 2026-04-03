@@ -6,11 +6,15 @@ import HubTimer from './HubTimer.vue'
 import HubLife from './HubLife.vue'
 import HubSettings from './HubSettings.vue'
 
+const props = defineProps<{
+  direction?: 'up' | 'down'
+}>()
+
 const activeTab = ref<'tasks' | 'timer' | 'life' | 'settings'>('tasks')
 </script>
 
 <template>
-  <div class="hub-body-area">
+  <div class="hub-body-area" :class="{ 'is-flipped': direction === 'up' }">
     <div class="hub-tabs">
       <button class="tab-btn" :class="{ active: activeTab === 'tasks' }" @click="activeTab = 'tasks'">任务</button>
       <button class="tab-btn" :class="{ active: activeTab === 'timer' }" @click="activeTab = 'timer'">番茄钟</button>
@@ -33,8 +37,12 @@ const activeTab = ref<'tasks' | 'timer' | 'life' | 'settings'>('tasks')
   display: flex;
   flex-direction: column;
   background: var(--color-bg-primary);
-  border-top: 1px solid var(--color-border);
+  /* Removed border-top for a seamless, unified window design */
   overflow: hidden;
+}
+
+.hub-body-area.is-flipped {
+  flex-direction: column-reverse;
 }
 
 .hub-tabs {
