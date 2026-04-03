@@ -380,7 +380,18 @@ export const useTasksStore = defineStore('tasks', () => {
       localStorage.setItem(flagKey, String(Date.now()))
       
       const mins = Math.round(countdown.value.totalSeconds / 60)
-      notify('Ω Notes — 计时结束', `${mins} 分钟倒计时已结束！`)
+      const title = '⏰ 计时结束'
+      const body = `${mins} 分钟倒计时已结束！\n打起精神，准备接下来的挑战吧。`
+      
+      // 1. 发送系统通知（Windows 开发环境下可能因为缺乏 AUMID 静默失败）
+      notify(title, body)
+
+      // 2. 强制弹出原生系统级的模态对话框，这能百分百打断并告知用户，同时触发系统级提示音
+      if (isTauri()) {
+        import('@tauri-apps/plugin-dialog').then(({ message }) => {
+          message(body, { title, kind: 'info' }).catch(() => {})
+        }).catch(() => {})
+      }
     }, delay)
   }
 

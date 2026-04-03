@@ -15,6 +15,10 @@ bc.onmessage = (e) => {
 import { currentMonitor, type Monitor } from '@tauri-apps/api/window'
 import { invoke } from '@tauri-apps/api/core'
 import { emitTo } from '@tauri-apps/api/event'
+import { useTasksStore } from '../../stores/tasks'
+
+const tasksStore = useTasksStore()
+tasksStore.init()
 
 const win = getCurrentWebviewWindow()
 const now = ref(new Date())
@@ -211,10 +215,17 @@ const days = ['日', '一', '二', '三', '四', '五', '六']
 const weekDay = computed(() => `周${days[now.value.getDay()]}`)
 
 const timeStr = computed(() => {
-  const h = now.value.getHours().toString().padStart(2, '0')
-  const m = now.value.getMinutes().toString().padStart(2, '0')
-  const s = now.value.getSeconds().toString().padStart(2, '0')
-  return { m: `${h}:${m}`, s: `:${s}` }
+  const isC = tasksStore.countdown.isRunning
+  const rem = tasksStore.countdown.remainingSeconds
+  const h = isC ? Math.floor(rem / 3600).toString().padStart(2, '0') : now.value.getHours().toString().padStart(2, '0')
+  const m = isC ? Math.floor((rem % 3600) / 60).toString().padStart(2, '0') : now.value.getMinutes().toString().padStart(2, '0')
+  const s = isC ? (rem % 60).toString().padStart(2, '0') : now.value.getSeconds().toString().padStart(2, '0')
+  
+  if (isC) {
+    if (rem >= 3600) return { m: `${h}:${m}`, s: `:${s}`, runningTimer: true }
+    return { m: `${m}:${s}`, s: '', runningTimer: true }
+  }
+  return { m: `${h}:${m}`, s: `:${s}`, runningTimer: false }
 })
 
 /* ─── 展开与折叠 ─── */
@@ -461,7 +472,9 @@ onUnmounted(() => {
       <template v-else>
         <div class="hub-header-bar">
           <div class="date-block">
-            <span class="time">{{ timeStr.m }}<span class="sec">{{ timeStr.s }}</span></span>
+            <span class="time" :class="{ 'is-timer-active': timeStr.runningTimer }">
+              {{ timeStr.m }}<span class="sec">{{ timeStr.s }}</span>
+            </span>
             <span v-if="hubConfig.showWeek" class="week-day">{{ year }} • {{ weekDay }} • W{{ weekNumber }}</span>
             <span v-else class="week-day">{{ year }} • {{ weekDay }}</span>
           </div>
@@ -645,6 +658,12 @@ html, body {
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.5px;
+  transition: color 0.3s ease;
+}
+
+.time.is-timer-active {
+  color: var(--color-accent, #6366f1);
+  letter-spacing: 0.5px;
 }
 
 .sec {
