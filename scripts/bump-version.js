@@ -14,6 +14,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { execSync } from 'node:child_process'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = resolve(__dirname, '..')
@@ -55,6 +56,18 @@ cargoContent = cargoContent.replace(
 )
 writeFileSync(cargoPath, cargoContent, 'utf-8')
 console.log(`  Cargo.toml              ${oldVersion} → ${newVersion}`)
+
+// 4. 更新 Cargo.lock
+// 替换 Cargo.toml 的版本后，调用 cargo update 仅更新本项目在 lockfile 中的版本
+try {
+  execSync('cargo update -p omega-notes', { 
+    cwd: resolve(root, 'src-tauri'),
+    stdio: 'ignore' // 忽略输出，只在出错时抛出异常
+  })
+  console.log(`  Cargo.lock              已同步更新为 ${newVersion}`)
+} catch (err) {
+  console.error('更新 Cargo.lock 失败，请之后手动运行 cargo check 或 cargo build:', err.message)
+}
 
 console.log(`\n版本号已同步为 ${newVersion}`)
 console.log('下一步:')
