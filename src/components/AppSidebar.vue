@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useNotesStore } from '../stores/notes'
 import { useTasksStore } from '../stores/tasks'
+import { useUpdaterStore } from '../stores/updater'
 import { exportNotesAsJson, importNotesFromFiles } from '../utils/dataio'
 import ContextMenu from './ContextMenu.vue'
 import type { ContextMenuItem } from './ContextMenu.vue'
@@ -20,6 +21,7 @@ const route = useRoute()
 const router = useRouter()
 const notesStore = useNotesStore()
 const tasksStore = useTasksStore()
+const updaterStore = useUpdaterStore()
 const showShortcuts = ref(false)
 
 const inboxCount = computed(() =>
@@ -376,6 +378,7 @@ function handleInputConfirm(val: string) {
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
           <span class="nav-label">设置</span>
+          <span v-if="updaterStore.hasUpdate" class="update-dot" aria-label="有新版本可用"></span>
         </RouterLink>
 
         <!-- 桌面微件 -->
@@ -447,7 +450,7 @@ function handleInputConfirm(val: string) {
           </div>
         </Transition>
 
-        <span class="sidebar-version">Ω Notes v2.0.0</span>
+        <span class="sidebar-version">Ω Notes v{{ updaterStore.getCurrentVersion() }}</span>
       </div>
     </aside>
 
@@ -693,6 +696,23 @@ function handleInputConfirm(val: string) {
   font-size: 0.82rem;
   padding: var(--space-2) var(--space-3);
   margin-bottom: var(--space-1);
+}
+
+/* ─── 更新红点 ─── */
+.update-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: oklch(0.65 0.25 25);
+  flex-shrink: 0;
+  margin-left: auto;
+  box-shadow: 0 0 6px 1px oklch(0.65 0.25 25 / 0.5);
+  animation: update-pulse 2s ease-in-out infinite;
+}
+
+@keyframes update-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px 1px oklch(0.65 0.25 25 / 0.5); }
+  50% { opacity: 0.6; box-shadow: 0 0 10px 3px oklch(0.65 0.25 25 / 0.3); }
 }
 
 .sidebar-version {

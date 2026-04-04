@@ -4,6 +4,7 @@ import { useThemeStore } from '../stores/theme'
 import { useSettingsStore } from '../stores/settings'
 import { useNotesStore } from '../stores/notes'
 import { useTasksStore } from '../stores/tasks'
+import { useUpdaterStore } from '../stores/updater'
 import { isTauri } from '../utils/storage'
 import InputDialog from '../components/InputDialog.vue'
 import type { EditorMode, FontFamily } from '../types'
@@ -12,6 +13,7 @@ const themeStore = useThemeStore()
 const settingsStore = useSettingsStore()
 const notesStore = useNotesStore()
 const tasksStore = useTasksStore()
+const updaterStore = useUpdaterStore()
 
 const isTauriEnv = isTauri()
 const storagePath = ref('')
@@ -428,6 +430,86 @@ async function handleFactoryResetConfirm(val: string) {
       </div>
     </section>
 
+    <!-- ═══ 应用更新 ═══ -->
+    <section v-if="isTauriEnv" class="settings-section">
+      <h3 class="section-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10" />
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+        </svg>
+        应用更新
+      </h3>
+
+      <!-- 没有可用更新 -->
+      <div v-if="!updaterStore.hasUpdate && !updaterStore.updateInfo" class="setting-item">
+        <div class="setting-info">
+          <span class="setting-label">检查更新</span>
+          <span class="setting-desc">
+            {{ updaterStore.checking ? '正在检查...' : '当前已是最新版本' }}
+          </span>
+        </div>
+        <button
+          class="action-btn"
+          :disabled="updaterStore.checking"
+          @click="updaterStore.checkForUpdates(false)"
+        >
+          <svg v-if="updaterStore.checking" class="spin-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 12a9 9 0 1 1-2.73-6.44" />
+          </svg>
+          <span>{{ updaterStore.checking ? '检查中' : '立即检查' }}</span>
+        </button>
+      </div>
+
+      <!-- 发现新版本 -->
+      <template v-if="updaterStore.updateInfo">
+        <div class="setting-item update-banner">
+          <div class="setting-info">
+            <span class="setting-label update-version-label">
+              发现新版本 v{{ updaterStore.updateInfo.version }}
+            </span>
+            <span class="setting-desc">
+              当前版本: v{{ updaterStore.updateInfo.currentVersion }}
+            </span>
+          </div>
+          <div class="update-actions">
+            <button
+              class="action-btn update-install-btn"
+              :disabled="updaterStore.downloading"
+              @click="updaterStore.downloadAndInstall()"
+            >
+              <svg v-if="updaterStore.downloading" class="spin-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M21 12a9 9 0 1 1-2.73-6.44" />
+              </svg>
+              <span>{{ updaterStore.downloading ? `下载中 ${updaterStore.downloadProgress}%` : '下载并安装' }}</span>
+            </button>
+            <button
+              v-if="!updaterStore.downloading"
+              class="action-btn dismiss-btn"
+              @click="updaterStore.dismissUpdate()"
+            >
+              <span>忽略本版</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 下载进度条 -->
+        <div v-if="updaterStore.downloading" class="update-progress-bar">
+          <div class="update-progress-fill" :style="{ width: updaterStore.downloadProgress + '%' }" />
+        </div>
+
+        <!-- 更新说明 -->
+        <div v-if="updaterStore.updateInfo.notes" class="update-notes">
+          <div class="update-notes-title">更新内容</div>
+          <pre class="update-notes-body">{{ updaterStore.updateInfo.notes }}</pre>
+        </div>
+      </template>
+
+      <!-- 错误信息 -->
+      <div v-if="updaterStore.updateError" class="update-error">
+        {{ updaterStore.updateError }}
+      </div>
+    </section>
+
     <!-- ═══ 关于 ═══ -->
     <section class="settings-section">
       <h3 class="section-title">
@@ -446,7 +528,7 @@ async function handleFactoryResetConfirm(val: string) {
         </div>
         <div class="about-item">
           <span class="about-label">版本</span>
-          <span class="about-value">2.0.0</span>
+          <span class="about-value">{{ updaterStore.getCurrentVersion() }}</span>
         </div>
         <div class="about-item">
           <span class="about-label">框架</span>
@@ -1139,6 +1221,111 @@ async function handleFactoryResetConfirm(val: string) {
     border-color: var(--color-accent);
     background: var(--color-accent-muted);
   }
+}
+
+/* ═══ 应用更新 ═══ */
+.update-banner {
+  background: oklch(0.25 0.02 260);
+  border-left: 3px solid var(--color-accent);
+}
+
+:root[data-theme="light"] .update-banner {
+  background: oklch(0.95 0.02 260);
+}
+
+.update-version-label {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.update-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.update-install-btn {
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+  border-color: var(--color-accent);
+}
+
+@media (hover: hover) {
+  .update-install-btn:not(:disabled):hover {
+    filter: brightness(1.15);
+  }
+}
+
+.update-install-btn:active {
+  transform: scale(0.97);
+}
+
+.dismiss-btn {
+  color: var(--color-text-tertiary);
+  background: transparent;
+  border-color: var(--color-border);
+}
+
+@media (hover: hover) {
+  .dismiss-btn:hover {
+    color: var(--color-text-secondary);
+    border-color: var(--color-text-tertiary);
+  }
+}
+
+.update-progress-bar {
+  height: 3px;
+  background: var(--color-bg-tertiary);
+  overflow: hidden;
+}
+
+.update-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-accent), oklch(0.75 0.18 160));
+  border-radius: 0 var(--radius-full) var(--radius-full) 0;
+  transition: width 300ms var(--ease-out);
+}
+
+.update-notes {
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--color-divider);
+}
+
+.update-notes-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--space-2);
+}
+
+.update-notes-body {
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  line-height: 1.65;
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+
+.update-error {
+  padding: var(--space-3) var(--space-6);
+  font-size: 0.8rem;
+  color: oklch(0.7 0.22 25);
+  background: oklch(0.7 0.22 25 / 0.08);
+  border-top: 1px solid oklch(0.7 0.22 25 / 0.15);
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 </style>

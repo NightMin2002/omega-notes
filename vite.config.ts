@@ -1,7 +1,10 @@
 import { fileURLToPath, URL } from 'node:url'
+import { readFileSync } from 'node:fs'
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+
+const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))
 
 const isTauri = !!process.env.TAURI_ENV_PLATFORM
 
@@ -18,6 +21,9 @@ export default defineConfig(async ({ mode }) => {
 
   return {
     plugins,
+    define: {
+      '__APP_VERSION__': JSON.stringify(pkg.version),
+    },
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url))
