@@ -32,8 +32,10 @@ const milkdownEditorRef = shallowRef<InstanceType<typeof MilkdownEditor> | null>
 
 // 支持的阅读模式方案
 const readingTheme = ref(localStorage.getItem('omega-reading-theme') || 'aurora')
+const readingThemeChannel = new BroadcastChannel('omega-reading-theme-channel')
 watch(readingTheme, (newVal) => {
   localStorage.setItem('omega-reading-theme', newVal)
+  readingThemeChannel.postMessage({ theme: newVal })
 })
 
 const {
@@ -341,7 +343,7 @@ async function popoutNote() {
             </svg>
             <span>编辑</span>
           </button>
-          <button v-if="!isEditing" class="toolbar-btn" @click="popoutNote" data-tooltip="在独立窗口打开">
+          <button v-if="!isEditing" class="toolbar-btn" @click="popoutNote" data-tooltip="在独立窗口打开" data-tooltip-pos="bottom">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
               <polyline points="15 3 21 3 21 9" />

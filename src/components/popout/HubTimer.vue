@@ -4,6 +4,16 @@ import { useTasksStore } from '../../stores/tasks'
 
 const store = useTasksStore()
 const customMinutes = ref(25)
+const zeroWarning = ref(false)
+
+function startCustom() {
+  if (customMinutes.value <= 0) {
+    zeroWarning.value = true
+    setTimeout(() => { zeroWarning.value = false }, 2000)
+    return
+  }
+  store.startCountdown(customMinutes.value)
+}
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60)
@@ -52,11 +62,14 @@ const dashOffset = computed(() => (1 - progress.value / 100) * 251.2) // 2 * pi 
             :value="customMinutes"
             class="hub-input timer-input"
             inputmode="numeric"
-            @input="(e: Event) => { const v = parseInt((e.target as HTMLInputElement).value); if (!isNaN(v) && v >= 1 && v <= 999) customMinutes = v }"
+            @input="(e: Event) => { const v = parseInt((e.target as HTMLInputElement).value); if (!isNaN(v) && v >= 0 && v <= 999) customMinutes = v }"
           />
           <span class="unit">min</span>
-          <button class="ctrl-btn accent" @click="store.startCountdown(customMinutes)">开始</button>
+          <button class="ctrl-btn accent" @click="startCustom">开始</button>
         </div>
+        <Transition name="warning-fade">
+          <span v-if="zeroWarning" class="zero-warning">倒计时不能为 0 分钟</span>
+        </Transition>
       </template>
       <template v-else>
         <div class="running-btns">
@@ -217,4 +230,21 @@ const dashOffset = computed(() => (1 - progress.value / 100) * 251.2) // 2 * pi 
   border-color: var(--color-accent);
   box-shadow: 0 0 0 2px var(--color-accent-muted);
 }
+
+.zero-warning {
+  display: block;
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--color-danger, #ef4444);
+  margin-top: var(--space-1);
+  padding: 2px var(--space-2);
+  background: var(--color-danger-muted, rgba(239, 68, 68, 0.1));
+  border-radius: var(--radius-sm);
+}
+
+.warning-fade-enter-active { transition: opacity 150ms ease-out, transform 150ms ease-out; }
+.warning-fade-leave-active { transition: opacity 100ms ease-out, transform 100ms ease-out; }
+.warning-fade-enter-from,
+.warning-fade-leave-to { opacity: 0; transform: translateY(-4px); }
 </style>

@@ -209,6 +209,7 @@ const contextMenuItems = computed<ContextMenuItem[]>(() => [
 ])
 
 function handleCardContextMenu(e: MouseEvent, noteId: string) {
+  showPageContextMenu.value = false
   contextMenuTarget.value = noteId
   contextMenuPos.value = { x: e.clientX, y: e.clientY }
   showContextMenu.value = true
@@ -259,6 +260,7 @@ function handlePageContextMenu(e: MouseEvent) {
   // 如果右键在卡片上，不触发页面级菜单
   if ((e.target as HTMLElement).closest('.note-card')) return
   e.preventDefault()
+  showContextMenu.value = false
   pageContextMenuPos.value = { x: e.clientX, y: e.clientY }
   showPageContextMenu.value = true
 }
@@ -403,7 +405,7 @@ function handlePillMouseUp(cat: string) {
         tabindex="0"
         @click="openNote(note.id)"
         @keydown.enter="openNote(note.id)"
-        @contextmenu.prevent="handleCardContextMenu($event, note.id)"
+        @contextmenu.prevent.stop="handleCardContextMenu($event, note.id)"
       >
         <div class="card-badges">
           <svg v-if="note.isFavorite" class="fav-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

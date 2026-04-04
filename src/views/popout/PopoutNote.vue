@@ -3,7 +3,7 @@
  * PopoutNote — 悬挂笔记阅读窗口
  * 精简的笔记阅读视图，始终置顶
  */
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useNotesStore } from '../../stores/notes'
 import MarkdownRenderer from '../../components/MarkdownRenderer.vue'
@@ -19,6 +19,31 @@ const note = computed(() => {
 /* 从 localStorage 读取阅读主题 */
 const readingTheme = ref(localStorage.getItem('omega-reading-theme') || 'aurora')
 
+/* ─── 跨窗口主题同步 ─── */
+const themeChannel = new BroadcastChannel('omega-reading-theme-channel')
+
+function handleThemeMessage(e: MessageEvent) {
+  if (e.data?.theme) {
+    readingTheme.value = e.data.theme
+  }
+}
+
+function handleStorageChange(e: StorageEvent) {
+  if (e.key === 'omega-reading-theme' && e.newValue) {
+    readingTheme.value = e.newValue
+  }
+}
+
+onMounted(() => {
+  themeChannel.onmessage = handleThemeMessage
+  window.addEventListener('storage', handleStorageChange)
+})
+
+onUnmounted(() => {
+  themeChannel.close()
+  window.removeEventListener('storage', handleStorageChange)
+})
+
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleString('zh-CN')
 }
@@ -32,6 +57,7 @@ async function closeWindow() {
   } catch { /* ignore */ }
 }
 </script>
+
 
 <template>
   <div class="popout-shell note-shell" :class="`theme-${readingTheme}`">
