@@ -62,6 +62,8 @@ export interface ExportPayload {
   tasks?: DailyTask[]
   /** 每日完成记录（v2.6+） */
   taskRecords?: DailyRecord[]
+  /** 待办事项列表（v2.7+） */
+  todos?: TodoItem[]
 }
 
 /** 编辑器模式 */
@@ -138,4 +140,36 @@ export interface CountdownState {
   remainingSeconds: number
   /** UTC 终止时间戳（毫秒），用于在后台被节流时纠正计时 / 跨窗口同步准确时间 */
   targetEndTime?: number
+}
+
+/* ═══════════════════════════════════
+   待办事项系统类型
+   ═══════════════════════════════════ */
+
+/** 待办优先级 */
+export type TodoPriority = 'low' | 'medium' | 'high'
+
+/** 待办状态 */
+export type TodoStatus = 'pending' | 'completed'
+
+/** 待办事项实体 */
+export interface TodoItem {
+  id: string
+  title: string
+  /** 详细描述（可选） */
+  description?: string
+  /** 截止日期，格式 "YYYY-MM-DD" */
+  dueDate?: string
+  /** 优先级 */
+  priority: TodoPriority
+  /** 状态 */
+  status: TodoStatus
+  /** 标签 */
+  tags: string[]
+  /** 创建时间 */
+  createdAt: string
+  /** 完成时间 */
+  completedAt?: string
+  /** 排序权重 */
+  sortOrder: number
 }

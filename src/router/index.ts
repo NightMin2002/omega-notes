@@ -43,6 +43,12 @@ const router = createRouter({
       meta: { title: '日常管理' },
     },
     {
+      path: '/todos',
+      name: 'todos',
+      component: () => import('../views/TodosView.vue'),
+      meta: { title: '待办事项' },
+    },
+    {
       path: '/settings',
       name: 'settings',
       component: () => import('../views/SettingsView.vue'),

@@ -56,10 +56,12 @@ omega-v2/
 │   │   ├── ConfirmDialog.vue   # 通用居中确认弹窗（Teleport 到 body）
 │   │   ├── InputDialog.vue     # 通用文本输入操作弹窗（带有验证和描述功能，替代原生 prompt）
 │   │   ├── CategoryDialog.vue  # 选择分类弹窗（封装 CategoryPicker）
+│   │   ├── CalendarWidget.vue  # 自定义月历组件（7×6 网格、待办标点、月导航、无第三方依赖）
 │   │   ├── DraftToast.vue      # 草稿恢复提示 Toast（3秒自动消失）
 │   │   └── popout/             # 桌面悬浮窗子组件（非路由，由 views/popout/ 引用）
-│   │       ├── HubExpandedBody.vue# 悬浮窗展开面板内容（任务/番茄钟/人生/设置 Tabs）
+│   │       ├── HubExpandedBody.vue# 悬浮窗展开面板内容（任务/待办/番茄钟/人生/设置 Tabs）
 │   │       ├── HubTasks.vue      # 悬挂任务列表子模块
+│   │       ├── HubTodos.vue      # 悬挂待办事项子模块（极简列表 + 快速添加）
 │   │       ├── HubTimer.vue      # 悬挂番茄钟子模块
 │   │       ├── HubLife.vue       # 悬挂人生进度条子模块
 │   │       └── HubSettings.vue   # 悬挂设置聚合面板
@@ -72,6 +74,7 @@ omega-v2/
 │   │   ├── TrashView.vue       # 回收站（恢复/永久删除/清空）
 │   │   ├── SettingsView.vue    # 设置页（外观/编辑器/数据/关于/字体缩放）
 │   │   ├── TasksView.vue       # 日常管理（每日任务 + 卡片/列表视图 + 3种主题 + 一键完成 + 倒计时 + 健康提醒）
+│   │   ├── TodosView.vue       # 待办事项（日历+列表双栏、筛选tabs、新建/编辑、优先级标点、逾期高亮）
 │   │   └── popout/             # 桌面悬挂窗口路由页面（always-on-top 独立窗口）
 │   │       ├── PopoutProgress.vue# 悬浮窗底部时间条窗口：拖拽/吸附/方向判断/面板调度
 │   │       ├── PopoutProgressPanel.vue# 悬浮窗独立展开面板窗口：承载 Tabs 内容区
@@ -82,6 +85,7 @@ omega-v2/
 │   │   ├── notes.ts            # 笔记数据（async CRUD + 分类 + 搜索 + 排序 + 回收站）
 │   │   ├── settings.ts         # 应用设置（编辑器模式/字体/回收站清理 + localStorage）
 │   │   ├── tasks.ts            # 日常任务（任务 CRUD + 跳过标记 + 一键完成分类 + 倒计时 + 健康提醒 + 配置持久化 + 导入/导出）
+│   │   ├── todos.ts            # 待办事项（CRUD + 优先级排序 + 日历映射 + 已完成自动清理 + 跨窗口同步）
 │   │   └── updater.ts          # 应用更新（版本检查 + 下载安装 + 进度追踪 + 忽略版本 + 错误处理）
 │   │
 │   ├── composables/            # Vue Composable 函数
@@ -163,6 +167,7 @@ docs/
 | `ConfirmDialog.vue` | 替代原生 `confirm()` 的通用操作确认模态框，支持 `danger` 与 `accent` 主题 | Props: `open`, `title`, `message`, `confirmType` 等 / Emits: `confirm`, `cancel` |
 | `InputDialog.vue` | 替代原生 `prompt()` 的通用文本输入模态框。支持 `requiredMatch` 强制输入指定字符作二次确认等安全控制 | Props: `open`, `title`, `allowEmpty`, `requiredMatch`, `description` 等 / Emits: `confirm`, `cancel` |
 | `CategoryDialog.vue` | 对于 `CategoryPicker.vue` 的弹窗级别封装，通常用于在阅读模式下触发笔记“移动分类”操作 | Props: `open`, `title`, `initialCategory` / Emits: `confirm`, `cancel` |
+| `CalendarWidget.vue` | 自定义月历组件，纯 CSS Grid 实现，无第三方依赖。支持待办日期圆点标记（按优先级显示颜色）、今天/选中高亮、月切换导航 | Props: `selectedDate`, `dotMap` / Emits: `select` |
 | `DraftToast.vue` | 用于通知“已恢复草稿”等非阻塞信息的底部优雅提示条，内置 3 秒自动消失机制 | Props: `show`, `message` / Emits: `close` |
 
 **编辑器架构说明**：`MilkdownEditor` 和 `MilkdownEditorCore` 必须拆分为两个组件，因为 `useEditor()` 需要在 `MilkdownProvider` 的 inject 上下文内调用。如果合并为一个组件会导致 `Symbol(editorInfoCtxKey) not found` 错误。
@@ -176,17 +181,19 @@ docs/
 | `WriteView.vue` | `/write` | `notes` | 模板选择器 → WYSIWYG/分屏编辑 + 图片插入 + `[[title]]` 链接插入 + 标题/分类/标签表单 |
 | `NoteDetailView.vue` | `/note/:id` | `notes` | **Flex 内部滚动架构**：detail-toolbar + editor-toolbar 固定不滚动，detail-content 独立滚动（分屏时 flex 填充，pane 独立滚动）；阅读/编辑/分屏切换，收藏/置顶/删除，`[[title]]` 链接，反向链接，**4 种阅读主题 + 编辑器主题适配**，字体缩放，悬挂窗口 |
 | `TasksView.vue` | `/tasks` | `tasks` | 每日任务 + **卡片/列表视图切换** + **3种主题（默认/简约/彩色）** + **分类一键完成** + 倒计时 + 健康提醒 + 悬挂任务按钮 |
+| `TodosView.vue` | `/todos` | `todos` | 待办事项主页：左侧自定义月历 + 筛选 tabs（全部/今天/本周/逾期） + 统计，右侧待办列表（优先级圆点 + 截止日期 + 逾期红边），新建/编辑表单，已完成折叠区 |
 | `PopoutNote.vue` | `/popout/note/:id` | `notes` | 悬挂笔记（popout，always-on-top）：完整 Markdown 阅读 |
 | `SettingsView.vue` | `/settings` | `theme`, `settings`, `notes` | 设置：外观（主题/字体）、编辑器（默认模式）、数据（存储位置/统计/回收站清理）、系统（开机自启）、关于 |
 | `PopoutProgress.vue` | `/popout/progress` | `tasks` | 底部常驻悬浮时间条：常驻时间、拖拽、边缘吸附、分向展开。通过 `BroadcastChannel('omega-hub-channel')` 与 Panel 通透通信，避免 WebView 渲染迟滞引发重置闪烁 |
-| `PopoutProgressPanel.vue` | `/popout/progress-panel` | `tasks` | 悬浮窗独立展开面板窗口：承载 4 个 Tab 视图组件，支持隐藏状态下的物理坐标判定与预热 |
+| `PopoutProgressPanel.vue` | `/popout/progress-panel` | `tasks` | 悬浮窗独立展开面板窗口：承载 5 个 Tab 视图组件，支持隐藏状态下的物理坐标判定与预热 | |
 
 **悬浮窗子组件** (`src/components/popout/`)：
 
 | 组件 | 依赖的 Store | 功能 |
 |---|---|---|
-| `HubExpandedBody.vue` | - | 悬浮窗面板包装层：统一管理 4 个 Tab 子部件切换 |
+| `HubExpandedBody.vue` | - | 悬浮窗面板包装层：统一管理 5 个 Tab 子部件切换（任务/待办/番茄钟/人生进度/设置） |
 | `HubTasks.vue` | `tasks` | 悬浮窗任务小部件（快速打卡、极简列表） |
+| `HubTodos.vue` | `todos` | 悬浮窗待办小部件（极简列表 + 快速添加，逾期红色标记） |
 | `HubTimer.vue` | `tasks` | 悬浮窗番茄钟小部件（环形 SVG 倒计时） |
 | `HubLife.vue` | - | 悬浮窗人生进度小部件（自定义极客字库 + 毫秒级心跳逻辑） |
 | `HubSettings.vue` | - | 悬浮窗局部偏好设置小部件 |
@@ -231,6 +238,8 @@ docs/
 | | 计算属性: `activeNotes`, `filteredNotes`, `categories`, `categoryTree`, `allTags`, `favoriteNotes`, `recentNotes`, `trashNotes`, `totalCount`, `pinnedCount`, `favoriteCount`, `trashCount` | | |
 | `settings.ts` | `settings`（单一状态源），computed getters: `defaultEditorMode`, `fontFamily`, `trashAutoCleanDays`, `contentZoom` | `setDefaultEditorMode`, `setFontFamily`, `setTrashAutoCleanDays`, `setContentZoom`, `init` | localStorage `omega-settings` |
 | `tasks.ts` | `config`, `tasks`, `records`, `healthReminder`, `countdown` | `addTask`, `toggleComplete`, `startCountdown`, `notifyCountdownOnce` 等丰富日常管理接口 | 委托 localStorage 支持多窗口同步 |
+| `todos.ts` | `todos[]`, `autoCleanDays` | `addTodo`, `updateTodo`, `removeTodo`, `toggleComplete`, `clearCompleted`, `importTodos`, `setAutoCleanDays` | localStorage `omega-todos` |
+| | 计算属性: `pendingTodos`, `completedTodos`, `overdueTodos`, `todayTodos`, `upcomingTodos`, `pendingCount`, `overdueCount`, `datePriorityMap` | | |
 | `updater.ts` | `hasUpdate`, `updateInfo`, `downloadProgress` | `checkForUpdates`, `downloadAndInstall`, `dismissUpdate` | 由 Tauri 官方 Updater 插件提供后端支撑 |
 
 ### 路由层 (`src/router/`)
@@ -242,6 +251,7 @@ docs/
 | `/write` | `write` | `WriteView` | 新建笔记 |
 | `/note/:id` | `note-detail` | `NoteDetailView` | 笔记详情 |
 | `/trash` | `trash` | `TrashView` | 回收站 |
+| `/todos` | `todos` | `TodosView` | 待办事项 |
 | `/settings` | `settings` | `SettingsView` | 设置 |
 | `/popout/note/:id` | `popout-note` | `PopoutNote` | 悬挂笔记（`meta.popout: true`） |
 | `/popout/progress` | `popout-progress` | `PopoutProgress` | 悬浮时间条主窗口（`meta.popout: true`） |

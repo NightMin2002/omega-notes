@@ -1,4 +1,4 @@
-import type { Note, ExportPayload, DailyTask, DailyRecord } from '@/types'
+import type { Note, ExportPayload, DailyTask, DailyRecord, TodoItem } from '@/types'
 import { isTauri, parseFrontmatter, parseTags } from '@/utils/storage'
 
 /** 浏览器环境下载文本文件 */
@@ -35,6 +35,7 @@ export async function exportNotesAsJson(
   notes: Note[],
   tasks?: DailyTask[],
   taskRecords?: DailyRecord[],
+  todos?: TodoItem[],
 ) {
   const payload: ExportPayload = {
     version: 2,
@@ -44,6 +45,7 @@ export async function exportNotesAsJson(
   }
   if (tasks && tasks.length > 0) payload.tasks = tasks
   if (taskRecords && taskRecords.length > 0) payload.taskRecords = taskRecords
+  if (todos && todos.length > 0) payload.todos = todos
 
   const json = JSON.stringify(payload, null, 2)
   const date = new Date().toISOString().slice(0, 10)
@@ -99,6 +101,7 @@ export interface ImportResult {
   notes: Partial<Note>[]
   tasks: DailyTask[]
   taskRecords: DailyRecord[]
+  todos: TodoItem[]
 }
 
 /**
@@ -106,7 +109,7 @@ export interface ImportResult {
  * @returns 解析出的数据（调用方负责去重和入库）
  */
 export async function importNotesFromFiles(): Promise<ImportResult> {
-  const result: ImportResult = { notes: [], tasks: [], taskRecords: [] }
+  const result: ImportResult = { notes: [], tasks: [], taskRecords: [], todos: [] }
 
   function processJson(data: any) {
     if (data.notes && Array.isArray(data.notes)) {
@@ -117,6 +120,9 @@ export async function importNotesFromFiles(): Promise<ImportResult> {
     }
     if (data.taskRecords && Array.isArray(data.taskRecords)) {
       result.taskRecords.push(...data.taskRecords)
+    }
+    if (data.todos && Array.isArray(data.todos)) {
+      result.todos.push(...data.todos)
     }
   }
 

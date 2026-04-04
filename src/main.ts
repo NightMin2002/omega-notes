@@ -10,6 +10,7 @@ import router from './router'
 import { useNotesStore } from './stores/notes'
 import { useSettingsStore } from './stores/settings'
 import { useTasksStore } from './stores/tasks'
+import { useTodosStore } from './stores/todos'
 import { useUpdaterStore } from './stores/updater'
 import { registerGlobalShortcuts } from './utils/shortcuts'
 import { startScheduler } from './utils/scheduler'
@@ -40,6 +41,9 @@ settingsStore.init()
 
 const tasksStore = useTasksStore()
 tasksStore.init()
+
+const todosStore = useTodosStore()
+todosStore.init()
 
 registerGlobalShortcuts(router)
 if (!popoutRoute) {

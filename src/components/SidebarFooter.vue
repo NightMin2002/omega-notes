@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useNotesStore } from '../stores/notes'
 import { useTasksStore } from '../stores/tasks'
+import { useTodosStore } from '../stores/todos'
 import { useUpdaterStore } from '../stores/updater'
 import { exportNotesAsJson, importNotesFromFiles } from '../utils/dataio'
 import SidebarShortcutPanel from './SidebarShortcutPanel.vue'
@@ -14,17 +15,18 @@ const emit = defineEmits<{
 const route = useRoute()
 const notesStore = useNotesStore()
 const tasksStore = useTasksStore()
+const todosStore = useTodosStore()
 const updaterStore = useUpdaterStore()
 
 const importMessage = ref('')
 
 async function handleExport() {
-  await exportNotesAsJson(notesStore.notes, tasksStore.tasks, tasksStore.records)
+  await exportNotesAsJson(notesStore.notes, tasksStore.tasks, tasksStore.records, todosStore.todos)
 }
 
 async function handleImport() {
   const data = await importNotesFromFiles()
-  if (data.notes.length === 0 && data.tasks.length === 0) return
+  if (data.notes.length === 0 && data.tasks.length === 0 && data.todos.length === 0) return
 
   const parts: string[] = []
   if (data.notes.length > 0) {
@@ -34,6 +36,10 @@ async function handleImport() {
   if (data.tasks.length > 0) {
     const count = tasksStore.importTasks(data.tasks, data.taskRecords)
     if (count > 0) parts.push(`${count} 条任务`)
+  }
+  if (data.todos.length > 0) {
+    const count = todosStore.importTodos(data.todos)
+    if (count > 0) parts.push(`${count} 条待办`)
   }
 
   if (parts.length > 0) {

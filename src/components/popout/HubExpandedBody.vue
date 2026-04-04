@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 
 import HubTasks from './HubTasks.vue'
+import HubTodos from './HubTodos.vue'
 import HubTimer from './HubTimer.vue'
 import HubLife from './HubLife.vue'
 import HubSettings from './HubSettings.vue'
@@ -10,13 +11,14 @@ const props = defineProps<{
   direction?: 'up' | 'down'
 }>()
 
-const activeTab = ref<'tasks' | 'timer' | 'life' | 'settings'>('tasks')
+const activeTab = ref<'tasks' | 'todos' | 'timer' | 'life' | 'settings'>('tasks')
 </script>
 
 <template>
   <div class="hub-body-area" :class="{ 'is-flipped': direction === 'up' }">
     <div class="hub-tabs">
       <button class="tab-btn" :class="{ active: activeTab === 'tasks' }" @click="activeTab = 'tasks'">任务</button>
+      <button class="tab-btn" :class="{ active: activeTab === 'todos' }" @click="activeTab = 'todos'">待办</button>
       <button class="tab-btn" :class="{ active: activeTab === 'timer' }" @click="activeTab = 'timer'">番茄钟</button>
       <button class="tab-btn" :class="{ active: activeTab === 'life' }" @click="activeTab = 'life'">人生进度</button>
       <button class="tab-btn" :class="{ active: activeTab === 'settings' }" @click="activeTab = 'settings'">设置</button>
@@ -24,6 +26,7 @@ const activeTab = ref<'tasks' | 'timer' | 'life' | 'settings'>('tasks')
 
     <div class="hub-content">
       <HubTasks v-if="activeTab === 'tasks'" />
+      <HubTodos v-else-if="activeTab === 'todos'" />
       <HubTimer v-else-if="activeTab === 'timer'" />
       <HubLife v-else-if="activeTab === 'life'" />
       <HubSettings v-else />
