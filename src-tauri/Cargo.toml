@@ -1,6 +1,6 @@
 [package]
 name = "omega-notes"
-version = "2.0.2"
+version = "2.0.21"
 description = "Ω Notes — Local-First 现代笔记系统"
 authors = ["NightMin"]
 license = "MIT"
