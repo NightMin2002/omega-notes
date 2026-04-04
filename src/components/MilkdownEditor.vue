@@ -53,9 +53,17 @@ defineExpose({
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   transition: border-color var(--duration-fast) var(--ease-out),
               box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.milkdown-wrapper::-webkit-scrollbar { width: 6px; }
+.milkdown-wrapper::-webkit-scrollbar-track { background: transparent; }
+.milkdown-wrapper::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
 }
 
 .milkdown-wrapper:focus-within {
@@ -76,6 +84,16 @@ defineExpose({
 
 <style>
 /* ─── Milkdown 全局样式覆盖 ─── */
+
+/* 去掉 nord 主题自带的内部边框，统一由外层 .milkdown-wrapper 管理 */
+.milkdown,
+.milkdown-theme-nord {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
 .milkdown .editor,
 .milkdown .ProseMirror {
   padding: var(--space-4) !important;

@@ -135,12 +135,28 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
 
 <template>
   <div class="write-page">
-    <div class="page-header">
-      <h2 class="page-title">新建笔记</h2>
-      <div class="header-actions">
+    <!-- ─── 固定顶栏（对齐 NoteDetailView 的 detail-toolbar） ─── -->
+    <div class="detail-toolbar">
+      <!-- 左侧：取消 / 模板返回 -->
+      <button class="toolbar-btn toolbar-btn--cancel" @click="handleCancel">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <template v-if="!showTemplates">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </template>
+          <template v-else>
+            <line x1="19" y1="12" x2="5" y2="12" />
+            <polyline points="12 19 5 12 12 5" />
+          </template>
+        </svg>
+        <span>{{ showTemplates ? '返回' : '取消' }}</span>
+      </button>
+
+      <div class="toolbar-actions">
+        <!-- 模板按钮 (编辑中可返回模板) -->
         <button
           v-if="!showTemplates"
-          class="template-back-btn"
+          class="toolbar-btn"
           @click="showTemplates = true; title = ''; content = ''; category = ''"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -148,13 +164,15 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
           </svg>
           <span>模板</span>
         </button>
+
+        <!-- 模式切换器 -->
         <div v-if="!showTemplates" class="mode-switcher">
           <button
             class="mode-btn"
             :class="{ active: editorMode === 'wysiwyg' }"
             @click="editorMode = 'wysiwyg'"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
             </svg>
             <span>编辑</span>
@@ -164,16 +182,67 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
             :class="{ active: editorMode === 'split' }"
             @click="editorMode = 'split'"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2" /><line x1="12" y1="3" x2="12" y2="21" />
             </svg>
             <span>分屏</span>
           </button>
         </div>
+
+        <!-- 保存按钮（在顶栏右侧，对齐 NoteDetailView） -->
+        <button
+          v-if="!showTemplates"
+          class="toolbar-btn toolbar-btn--save"
+          :class="{ 'is-loading': isSaving }"
+          :disabled="!content.trim() || isSaving || hasSubmitted"
+          @click="handleSubmit"
+        >
+          <span v-if="hasSubmitted && !isSaving" class="save-check">✓</span>
+          <template v-else-if="!isSaving">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+              <polyline points="17 21 17 13 7 13 7 21" />
+              <polyline points="7 3 7 8 15 8" />
+            </svg>
+            <span>保存</span>
+          </template>
+          <span v-else class="spinner" />
+        </button>
       </div>
     </div>
 
-    <!-- 可滚动内容区域 -->
+    <!-- ─── 编辑器工具条（固定，不随内容滚动，对齐 NoteDetailView） ─── -->
+    <template v-if="!showTemplates && editorMode === 'wysiwyg'">
+      <div class="editor-toolbar">
+        <button type="button" class="pane-action" @click="insertImageFromFile">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+          </svg>
+          <span>插入图片</span>
+        </button>
+        <WikiLinkPicker
+          :show="showLinkPicker"
+          :search="linkSearch"
+          :candidates="linkCandidates"
+          @toggle="toggleLinkPicker"
+          @update:search="linkSearch = $event"
+          @select="insertWikiLink"
+        />
+        <button type="button" class="pane-action" :class="{ active: showFormatToolbar }" @click="showFormatToolbar = !showFormatToolbar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 7V4h16v3" /><path d="M9 20h6" /><path d="M12 4v16" />
+          </svg>
+          <span>格式</span>
+        </button>
+      </div>
+      <EditorToolbar
+        v-if="showFormatToolbar"
+        @insert="handleToolbarInsert"
+        @wrap="handleToolbarWrap"
+      />
+    </template>
+
+    <!-- ─── 可滚动内容区域 ─── -->
     <div class="write-content">
       <!-- 模板选择器 -->
       <div v-if="showTemplates" class="template-grid">
@@ -216,7 +285,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
         </button>
       </div>
 
-      <form v-else class="write-form" @submit.prevent="handleSubmit" novalidate>
+      <div v-else class="write-form">
         <input
           v-model="title"
           type="text"
@@ -226,33 +295,6 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
 
         <!-- WYSIWYG 模式 -->
         <template v-if="editorMode === 'wysiwyg'">
-          <div class="editor-toolbar">
-            <button type="button" class="pane-action" @click="insertImageFromFile">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
-              </svg>
-              <span>插入图片</span>
-            </button>
-            <WikiLinkPicker
-              :show="showLinkPicker"
-              :search="linkSearch"
-              :candidates="linkCandidates"
-              @toggle="toggleLinkPicker"
-              @update:search="linkSearch = $event"
-              @select="insertWikiLink"
-            />
-            <button type="button" class="pane-action" :class="{ active: showFormatToolbar }" @click="showFormatToolbar = !showFormatToolbar">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 7V4h16v3" /><path d="M9 20h6" /><path d="M12 4v16" />
-              </svg>
-              <span>格式</span>
-            </button>
-          </div>
-          <EditorToolbar
-            v-if="showFormatToolbar"
-            @insert="handleToolbarInsert"
-            @wrap="handleToolbarWrap"
-          />
           <MilkdownEditor ref="milkdownEditorRef" :key="editorKey" v-model="content" />
         </template>
 
@@ -289,21 +331,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
             >
           </div>
         </div>
-
-        <div class="write-actions">
-          <button type="button" class="btn-secondary" @click="handleCancel">取消</button>
-          <button
-            type="submit"
-            class="btn-primary"
-            :class="{ 'is-loading': isSaving }"
-            :disabled="!content.trim() || isSaving || hasSubmitted"
-          >
-            <span v-if="hasSubmitted && !isSaving">已保存 ✓</span>
-            <span v-else-if="!isSaving">保存笔记</span>
-            <span v-else class="spinner" />
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
 
     <DraftToast :show="showDraftToast" @close="showDraftToast = false" />
@@ -320,16 +348,83 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
   overflow: hidden;
 }
 
-.page-header {
+/* ─── 固定顶栏（与 NoteDetailView 对齐） ─── */
+.detail-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-  padding: var(--space-4) var(--space-6);
+  padding: var(--space-2) var(--space-4);
   border-bottom: 1px solid var(--color-divider);
   background: var(--color-glass);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  gap: var(--space-3);
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .toolbar-btn:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+    transform: translateY(-1px);
+  }
+  .toolbar-btn:active {
+    transform: scale(0.97);
+  }
+}
+
+.toolbar-btn--cancel {
+  color: var(--color-text-tertiary);
+}
+
+.toolbar-btn--save {
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+  padding: var(--space-1) var(--space-4);
+  font-weight: 600;
+}
+
+.toolbar-btn--save:disabled {
+  opacity: 0.45;
+}
+
+@media (hover: hover) {
+  .toolbar-btn--save:hover:not(:disabled) {
+    background: var(--color-accent-hover);
+    color: var(--color-text-inverse);
+    box-shadow: 0 4px 12px var(--color-accent-muted);
+  }
+}
+
+.toolbar-btn--save.is-loading {
+  pointer-events: none;
+}
+
+.save-check {
+  font-weight: 700;
+  font-size: 1rem;
 }
 
 /* 可滚动内容区域 */
@@ -338,38 +433,22 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
   overflow-y: auto;
   overflow-x: hidden;
   padding: var(--space-6);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-.write-content > .template-grid,
-.write-content > .write-form {
+.write-content > .template-grid {
   max-width: 960px;
   margin: 0 auto;
 }
 
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.template-back-btn {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-md);
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--color-text-tertiary);
-  transition: background-color var(--duration-fast) var(--ease-out),
-              color var(--duration-fast) var(--ease-out);
-}
-
-@media (hover: hover) {
-  .template-back-btn:hover {
-    background: var(--color-bg-hover);
-    color: var(--color-text-primary);
-  }
+.write-content > .write-form {
+  max-width: 960px;
+  margin: 0 auto;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
 }
 
 /* ─── 模板网格 ─── */
@@ -422,12 +501,6 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
   color: var(--color-text-tertiary);
 }
 
-.page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
 /* ─── 模式切换 ─── */
 .mode-switcher {
   display: flex;
@@ -462,30 +535,15 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
   }
 }
 
-/* ─── 表单 ─── */
-.write-form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.write-title {
-  font-size: 1.2rem;
-  font-weight: 600;
-  padding: var(--space-3) var(--space-4);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-}
-
+/* ─── 编辑器工具条（固定） ─── */
 .editor-toolbar {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-1) var(--space-4);
   background: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
   position: relative;
   z-index: var(--z-dropdown);
 }
@@ -508,6 +566,29 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
     background: var(--color-bg-hover);
     color: var(--color-accent);
   }
+}
+
+/* ─── 表单 ─── */
+.write-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* 编辑器区域填充剩余高度 */
+.write-form :deep(.milkdown-wrapper),
+.write-form :deep(.split-editor) {
+  flex: 1;
+  min-height: 300px;
+}
+
+.write-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
 }
 
 /* ─── 元信息 ─── */
@@ -534,45 +615,6 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
 .meta-input {
   padding: var(--space-2) var(--space-3);
   font-size: 0.9rem;
-}
-
-/* ─── 按钮 ─── */
-.write-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-3);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--color-divider);
-}
-
-.btn-primary,
-.btn-secondary {
-  padding: var(--space-2) var(--space-6);
-  border-radius: var(--radius-md);
-  font-weight: 500;
-  font-size: 0.9rem;
-  transition: background-color var(--duration-fast) var(--ease-out),
-              transform var(--duration-fast) var(--ease-out),
-              opacity var(--duration-fast) var(--ease-out);
-}
-
-.btn-primary {
-  background: var(--color-accent);
-  color: var(--color-text-inverse);
-}
-
-.btn-primary:disabled { opacity: 0.5; }
-.btn-primary.is-loading { pointer-events: none; }
-
-@media (hover: hover) {
-  .btn-primary:hover:not(:disabled) { background: var(--color-accent-hover); }
-  .btn-secondary:hover { background: var(--color-bg-hover); }
-}
-
-.btn-secondary {
-  background: var(--color-bg-tertiary);
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
 }
 
 .spinner {
