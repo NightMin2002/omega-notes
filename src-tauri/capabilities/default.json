@@ -4,10 +4,9 @@
   "description": "enables the default permissions",
   "windows": [
     "main",
-    "popout-tasks",
-    "popout-timer",
     "popout-note",
-    "popout-progress"
+    "popout-progress",
+    "popout-progress-panel"
   ],
   "permissions": [
     "core:default",

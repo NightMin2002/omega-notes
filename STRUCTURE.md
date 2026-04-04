@@ -16,7 +16,6 @@ omega-v2/
 ├── README.md                   # 项目说明
 ├── STRUCTURE.md                # 本文件 — 结构索引
 ├── SETUP.md                    # 开发环境配置指南（Tauri 依赖说明）
-├── CHANGELOG.md                # 版本变更记录（开发者归档，非必须维护）
 ├── RELEASE.md                  # 发布流程手册（版本发布检查清单 & 步骤）
 │
 ├── scripts/                    # 工具脚本
@@ -25,8 +24,7 @@ omega-v2/
 ├── .github/workflows/          # CI/CD 工作流
 │   └── release.yml             # 自动构建发布（tag push 触发 → 编译签名 → GitHub Releases）
 │
-├── public/                     # 静态资源（不经过 Vite 处理）
-│   └── favicon.ico
+├── public/                     # 原生静态资源（用于存放不经过 Vite 处理、原样复制的文件；目前暂空）
 │
 ├── src/                        # 前端源代码
 │   ├── main.ts                 # 应用入口：挂载 Vue + Pinia + Router；检测 ?popout_route= 跳转悬挂窗口路由；启动自动更新检查（5s 延迟 + 4h 定时）
@@ -66,13 +64,13 @@ omega-v2/
 │   │   ├── SettingsView.vue    # 设置页（外观/编辑器/数据/关于/字体缩放）
 │   │   ├── TasksView.vue       # 日常管理（每日任务 + 卡片/列表视图 + 3种主题 + 一键完成 + 倒计时 + 健康提醒）
 │   │   └── popout/             # 桌面悬挂窗口（always-on-top 独立窗口）
-│   │       ├── HubExpandedBody.vue# 时间枢纽展开面板内容（任务/番茄钟/人生/设置 Tabs）
+│   │       ├── HubExpandedBody.vue# 悬浮窗展开面板内容（任务/番茄钟/人生/设置 Tabs）
 │   │       ├── HubTasks.vue      # 悬挂任务列表子模块
 │   │       ├── HubTimer.vue      # 悬挂番茄钟子模块
 │   │       ├── HubLife.vue       # 悬挂人生进度条子模块
 │   │       ├── HubSettings.vue   # 悬挂设置聚合面板
-│   │       ├── PopoutProgress.vue# 时间枢纽底部时间条窗口：拖拽/吸附/方向判断/面板调度
-│   │       ├── PopoutProgressPanel.vue# 时间枢纽独立展开面板窗口：承载 Tabs 内容区
+│   │       ├── PopoutProgress.vue# 悬浮窗底部时间条窗口：拖拽/吸附/方向判断/面板调度
+│   │       ├── PopoutProgressPanel.vue# 悬浮窗独立展开面板窗口：承载 Tabs 内容区
 │   │       └── PopoutNote.vue    # 悬挂笔记阅读桌面窗口
 │   │
 │   ├── stores/                 # Pinia 状态仓库
@@ -152,6 +150,13 @@ docs/
 | `WikiLinkPicker.vue` | `[[Wiki 链接]]` 选择器下拉面板。从 WriteView/NoteDetailView 提取的共享组件 | Props: `show`, `search`, `candidates` / Emits: `toggle`, `update:search`, `select` |
 | `SplitEditor.vue` | 分屏 Markdown 编辑器（源码 + 工具栏 + 实时预览）。flex:1 填充父容器高度，每个 pane 独立 overflow-y 滚动，pane-header sticky | v-model: `content`, `textareaRef` / Props: `showLinkPicker`, `linkSearch`, `linkCandidates` / Emits: 多个 |
 | `BacklinksPanel.vue` | 反向链接面板。展示引用当前笔记的其他笔记列表 | Props: `backlinks` |
+| `TimePicker.vue` | 自定义时间选择器。支持鼠标滚轮减加时间，Teleport 定位防止被 `overflow: hidden` 裁剪 | v-model: `modelValue` / Props: `minuteStep` |
+| `CategoryPicker.vue` | 分类选择器下拉组件。支持搜索、新建分类、子分类辅助高亮。Teleport 动态定位 | v-model: `modelValue` |
+| `ContextMenu.vue` | 通用右键上下文菜单。点击外部或按下 Escape 自动关闭，层级高过 modal | Props: `show`, `position`, `items` / Emits: `update:show`, `select` |
+| `ConfirmDialog.vue` | 替代原生 `confirm()` 的通用操作确认模态框，支持 `danger` 与 `accent` 主题 | Props: `open`, `title`, `message`, `confirmType` 等 / Emits: `confirm`, `cancel` |
+| `InputDialog.vue` | 替代原生 `prompt()` 的通用文本输入模态框。支持 `requiredMatch` 强制输入指定字符作二次确认等安全控制 | Props: `open`, `title`, `allowEmpty`, `requiredMatch`, `description` 等 / Emits: `confirm`, `cancel` |
+| `CategoryDialog.vue` | 对于 `CategoryPicker.vue` 的弹窗级别封装，通常用于在阅读模式下触发笔记“移动分类”操作 | Props: `open`, `title`, `initialCategory` / Emits: `confirm`, `cancel` |
+| `DraftToast.vue` | 用于通知“已恢复草稿”等非阻塞信息的底部优雅提示条，内置 3 秒自动消失机制 | Props: `show`, `message` / Emits: `close` |
 
 **编辑器架构说明**：`MilkdownEditor` 和 `MilkdownEditorCore` 必须拆分为两个组件，因为 `useEditor()` 需要在 `MilkdownProvider` 的 inject 上下文内调用。如果合并为一个组件会导致 `Symbol(editorInfoCtxKey) not found` 错误。
 
@@ -165,10 +170,22 @@ docs/
 | `NoteDetailView.vue` | `/note/:id` | `notes` | **Flex 内部滚动架构**：detail-toolbar + editor-toolbar 固定不滚动，detail-content 独立滚动（分屏时 flex 填充，pane 独立滚动）；阅读/编辑/分屏切换，收藏/置顶/删除，`[[title]]` 链接，反向链接，**4 种阅读主题 + 编辑器主题适配**，字体缩放，悬挂窗口 |
 | `TasksView.vue` | `/tasks` | `tasks` | 每日任务 + **卡片/列表视图切换** + **3种主题（默认/简约/彩色）** + **分类一键完成** + 倒计时 + 健康提醒 + 悬挂任务按钮 |
 | `PopoutNote.vue` | `/popout/note/:id` | `notes` | 悬挂笔记（popout，always-on-top）：完整 Markdown 阅读 |
-| `PopoutProgress.vue` | `/popout/progress` | `tasks` | 时间枢纽底部时间条窗口：常驻时间、拖拽、边缘吸附、按屏幕空间选择向上/向下展开，并调度独立展开面板窗口，避免透明 WebView 直接 resize 造成闪烁 |
-| `PopoutProgressPanel.vue` | `/popout/progress-panel` | `tasks` | 时间枢纽独立展开面板窗口：承载任务/番茄钟/人生/设置 Tabs 内容，支持隐藏预热与复用，减少首帧跳位 |
-| `TrashView.vue` | `/trash` | `notes` | 回收站：已删除笔记列表、恢复/永久删除、清空回收站确认 dialog |
 | `SettingsView.vue` | `/settings` | `theme`, `settings`, `notes` | 设置：外观（主题/字体）、编辑器（默认模式）、数据（存储位置/统计/回收站清理）、系统（开机自启）、关于 |
+| `PopoutProgress.vue` | `/popout/progress` | `tasks` | 底部常驻悬浮时间条：常驻时间、拖拽、边缘吸附、分向展开。通过 `BroadcastChannel('omega-hub-channel')` 与 Panel 通透通信，避免 WebView 渲染迟滞引发重置闪烁 |
+| `PopoutProgressPanel.vue` | `/popout/progress-panel` | `tasks` | 悬浮窗独立展开面板窗口：承载 4 个 Tab 视图组件，支持隐藏状态下的物理坐标判定与预热 |
+| *(Non-routable)* `HubExpandedBody.vue` | *无对应路由* | - | 悬浮窗面板包装层：统一管理子部件切换 **(TODO: 未来应移至 components/popout/)** |
+| *(Non-routable)* `HubTasks.vue` | *无对应路由* | `tasks` | 悬浮窗任务小部件（快速打卡、极简列表） |
+| *(Non-routable)* `HubTimer.vue` | *无对应路由* | `tasks` | 悬浮窗番茄钟小部件（环形 SVG 倒计时） |
+| *(Non-routable)* `HubLife.vue` | *无对应路由* | - | 悬浮窗人生进度小部件（自定义极客字库 + 毫秒级心跳逻辑） |
+| *(Non-routable)* `HubSettings.vue` | *无对应路由* | - | 悬浮窗局部偏好设置小部件 |
+
+
+### 组合式函数 (`src/composables/`)
+
+| 文件 | 导出 | 用途 |
+|---|---|---|
+| `useEditorActions.ts` | `useEditorActions` | 提取 WYSIWYG / 源码模式下通用的 Markdown 编辑器控制逻辑（图片插入、Wiki 链接、工具栏快捷插入/包裹、粘贴拦截转存） |
+| `useDraft.ts` | `useDraft` | 利用 localStorage 实现高配的草稿自动化引擎：800ms 防抖热挂载保存，按组件销毁周期执行缓冲清洗和强制保存 |
 
 ### 工具层 (`src/utils/`)
 
@@ -189,8 +206,9 @@ docs/
 | | `templates[]` | 向后兼容的静态导出，推荐使用 `getTemplates()` |
 | `images.ts` | `clipboardHasImage()` | 同步检测剪贴板是否含图片 |
 | | `processClipboardImages()` | 异步处理粘贴图片，返回 base64 Markdown 语法 |
-| `dataio.ts` | `exportNotesAsJson(notes)` | 导出全部笔记为 JSON（Tauri: save dialog / 浏览器: Blob） |
-| | `importNotesFromFiles()` | 弹出文件选择器，解析 .json / .md 文件返回 Note 数据（复用 `storage.ts` 的 `parseFrontmatter`） |
+| `dataio.ts` | `exportNotesAsJson(notes, tasks, records)` | 导出全部内容为 JSON（Tauri: save dialog / 浏览器: Blob） |
+| | `importNotesFromFiles()` | 弹出文件选择器，解析 .json / .md 文件返回导入数据（复用 `storage.ts` 的 `parseFrontmatter`） |
+| `scheduler.ts` | `startScheduler()`, `stopScheduler()` | 15 秒高频防重入调度器：系统静默时段检测、健康提醒池抖动机制，以及基于当天 key 的每日任务闹钟分发 |
 
 ### 状态层 (`src/stores/`)
 
@@ -199,7 +217,9 @@ docs/
 | `theme.ts` | `theme: 'dark' \| 'light'` | `toggle()` | localStorage `omega-theme` |
 | `notes.ts` | `notes[]`, `currentCategory`, `searchQuery`, `isLoading`, `recentIds`, `noteMap`（computed Map 索引） | `init`, `addNote`, `updateNote`, `deleteNote`, `restoreNote`, `permanentlyDelete`, `emptyTrash`, `togglePin`, `toggleFavorite`, `recordOpen`, `importBatch`, `reorderNotes`, `moveNoteToCategory`, `getNoteById`, `findNoteByTitle`, `getBacklinks` | 委托 `storage.ts` + localStorage |
 | | 计算属性: `activeNotes`, `filteredNotes`, `categories`, `categoryTree`, `allTags`, `favoriteNotes`, `recentNotes`, `trashNotes`, `totalCount`, `pinnedCount`, `favoriteCount`, `trashCount` | | |
-| `settings.ts` | `settings`（单一状态源），computed getters: `defaultEditorMode`, `fontFamily`, `trashAutoCleanDays`, `zoomLevel` | `setDefaultEditorMode`, `setFontFamily`, `setTrashAutoCleanDays`, `setZoomLevel`, `init` | localStorage `omega-settings` |
+| `settings.ts` | `settings`（单一状态源），computed getters: `defaultEditorMode`, `fontFamily`, `trashAutoCleanDays`, `contentZoom` | `setDefaultEditorMode`, `setFontFamily`, `setTrashAutoCleanDays`, `setContentZoom`, `init` | localStorage `omega-settings` |
+| `tasks.ts` | `config`, `tasks`, `records`, `healthReminder`, `countdown` | `addTask`, `toggleComplete`, `startCountdown`, `notifyCountdownOnce` 等丰富日常管理接口 | 委托 localStorage 支持多窗口同步 |
+| `updater.ts` | `hasUpdate`, `updateInfo`, `downloadProgress` | `checkForUpdates`, `downloadAndInstall`, `dismissUpdate` | 由 Tauri 官方 Updater 插件提供后端支撑 |
 
 ### 路由层 (`src/router/`)
 
@@ -212,8 +232,8 @@ docs/
 | `/trash` | `trash` | `TrashView` | 回收站 |
 | `/settings` | `settings` | `SettingsView` | 设置 |
 | `/popout/note/:id` | `popout-note` | `PopoutNote` | 悬挂笔记（`meta.popout: true`） |
-| `/popout/progress` | `popout-progress` | `PopoutProgress` | 时间枢纽时间条（`meta.popout: true`） |
-| `/popout/progress-panel` | `popout-progress-panel` | `PopoutProgressPanel` | 时间枢纽展开面板（`meta.popout: true`） |
+| `/popout/progress` | `popout-progress` | `PopoutProgress` | 悬浮时间条主窗口（`meta.popout: true`） |
+| `/popout/progress-panel` | `popout-progress-panel` | `PopoutProgressPanel` | 悬浮侧边展开面板（`meta.popout: true`） |
 
 路由使用 **Hash 模式** (`createWebHashHistory`)，Tauri 桌面应用中文件协议不支持 History 模式。
 
