@@ -242,6 +242,11 @@ async function popoutNote() {
                   <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
                 </svg>
               </button>
+              <button class="mode-btn" :class="{ active: readingTheme === 'source' }" @click="readingTheme = 'source'" data-tooltip="源码">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
+                </svg>
+              </button>
             </div>
 
             <!-- 编辑模式：顶栏保存按钮 -->
@@ -301,6 +306,17 @@ async function popoutNote() {
                   <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
                 </svg>
                 <span>羊皮纸</span>
+              </button>
+              <button
+                class="mode-btn"
+                :class="{ active: readingTheme === 'source' }"
+                @click="readingTheme = 'source'"
+                data-tooltip="源码模式"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
+                </svg>
+                <span>源码</span>
               </button>
             </div>
           </template>
@@ -470,7 +486,11 @@ async function popoutNote() {
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               </button>
+              <template v-if="readingTheme === 'source'">
+                <pre class="source-raw"><code>{{ note.content }}</code></pre>
+              </template>
               <MarkdownRenderer
+                v-else
                 :content="note.content"
                 :editable-content="note.content"
                 @update:editable-content="(val: string) => { if (note) notesStore.updateNote(note.id, { content: val }) }"
@@ -1655,6 +1675,7 @@ async function popoutNote() {
   font-size: 1.3rem;
   font-weight: 700;
   padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-2);
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -2094,7 +2115,108 @@ async function popoutNote() {
     opacity: 1;
   }
 }
+
+/* =========================================
+   阅读模式 — 视觉方案：源码 (Source)
+   原始 Markdown 文本，等宽字体，无渲染
+   ========================================= */
+.theme-source {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.theme-source .note-hero {
+  padding: var(--space-6) var(--space-8);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-accent);
+}
+
+.theme-source .note-title {
+  font-size: clamp(1.3rem, 3vw, 1.8rem);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.theme-source .note-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+
+.theme-source .meta-category {
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--color-accent);
+  padding: 2px var(--space-2);
+  background: var(--color-accent-muted);
+  border-radius: var(--radius-sm);
+}
+
+.theme-source .meta-date {
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  color: var(--color-text-tertiary);
+}
+
+.theme-source .note-tags {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.theme-source .tag {
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  color: var(--color-text-secondary);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.theme-source .note-body {
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6) var(--space-8);
+  border: 1px solid var(--color-border);
+  position: relative;
+}
+
+/* 源码原文展示块 */
+.source-raw {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  tab-size: 4;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  line-height: 1.75;
+  color: var(--color-text-primary);
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.source-raw code {
+  font-family: inherit;
+  font-size: inherit;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  border: none;
+}
 </style>
+
 
 <!-- 编辑器主题适配（非 scoped，穿透 MilkdownEditor 组件） -->
 <style>

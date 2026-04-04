@@ -195,6 +195,8 @@ const contextMenuPos = ref({ x: 0, y: 0 })
 const contextMenuTarget = ref<string | null>(null)
 
 const contextMenuItems = computed<ContextMenuItem[]>(() => [
+  { id: 'create-note', label: '新建笔记' },
+  { id: 'divider-0', label: '', divider: true },
   { id: 'rename', label: '重命名' },
   { id: 'move', label: '移动到分类...' },
   { id: 'divider', label: '', divider: true },
@@ -216,6 +218,13 @@ const moveTargetId = ref('')
 const moveInitialCategory = ref('')
 
 async function handleContextMenuSelect(id: string) {
+  if (id === 'create-note') {
+    const category = notesStore.currentCategory !== 'all' ? notesStore.currentCategory : ''
+    const query = category ? `?category=${encodeURIComponent(category)}` : ''
+    router.push(`/write${query}`)
+    return
+  }
+
   const noteId = contextMenuTarget.value
   if (!noteId) return
   const note = notesStore.getNoteById(noteId)
@@ -231,6 +240,29 @@ async function handleContextMenuSelect(id: string) {
     showMoveDialog.value = true
   } else if (id === 'delete') {
     await notesStore.deleteNote(noteId)
+  }
+}
+
+/* ─── 页面级右键菜单（空白区域）─── */
+const showPageContextMenu = ref(false)
+const pageContextMenuPos = ref({ x: 0, y: 0 })
+const pageContextMenuItems = computed<ContextMenuItem[]>(() => [
+  { id: 'create-note', label: '新建笔记' },
+])
+
+function handlePageContextMenu(e: MouseEvent) {
+  // 如果右键在卡片上，不触发页面级菜单
+  if ((e.target as HTMLElement).closest('.note-card')) return
+  e.preventDefault()
+  pageContextMenuPos.value = { x: e.clientX, y: e.clientY }
+  showPageContextMenu.value = true
+}
+
+function handlePageContextMenuSelect(id: string) {
+  if (id === 'create-note') {
+    const category = notesStore.currentCategory !== 'all' ? notesStore.currentCategory : ''
+    const query = category ? `?category=${encodeURIComponent(category)}` : ''
+    router.push(`/write${query}`)
   }
 }
 
@@ -250,7 +282,7 @@ function handleMoveConfirm(newCategory: string) {
 </script>
 
 <template>
-  <div class="notes-page">
+  <div class="notes-page" @contextmenu="handlePageContextMenu">
     <div class="notes-header">
       <h2 class="page-title">{{ pageTitle }}</h2>
       <div class="search-box">
@@ -300,19 +332,6 @@ function handleMoveConfirm(newCategory: string) {
       >
         {{ cat }}
       </button>
-
-      <!-- 在当前分类下新建笔记 -->
-      <RouterLink
-        v-if="notesStore.currentCategory !== 'all'"
-        :to="`/write?category=${encodeURIComponent(notesStore.currentCategory)}`"
-        class="category-pill cat-add-btn"
-        title="在此分类新建笔记"
-      >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-        新建
-      </RouterLink>
     </div>
 
     <!-- 标签云（普通模式 + 有标签时显示） -->
@@ -388,6 +407,13 @@ function handleMoveConfirm(newCategory: string) {
       :position="contextMenuPos"
       :items="contextMenuItems"
       @select="handleContextMenuSelect"
+    />
+
+    <ContextMenu
+      v-model:show="showPageContextMenu"
+      :position="pageContextMenuPos"
+      :items="pageContextMenuItems"
+      @select="handlePageContextMenuSelect"
     />
 
     <InputDialog
@@ -577,21 +603,7 @@ function handleMoveConfirm(newCategory: string) {
   border-color: var(--color-accent);
 }
 
-.cat-add-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  color: var(--color-accent);
-  border-color: var(--color-accent);
-  border-style: dashed;
-  font-weight: 500;
-}
 
-@media (hover: hover) {
-  .cat-add-btn:hover {
-    background: var(--color-accent-muted);
-  }
-}
 
 /* ─── 笔记网格（Flexbox — SortableJS 与 CSS Grid 不兼容，flex-wrap 是正解） ─── */
 .notes-grid {

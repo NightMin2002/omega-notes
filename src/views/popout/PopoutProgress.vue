@@ -161,17 +161,10 @@ async function collapsePanelAndRestorePosition() {
   // 等待动画物理过度结束之后，再销毁/隐藏 WebView 防止直接黑屏截断
   await new Promise(resolve => setTimeout(resolve, 300))
 
-  const monitor = await currentMonitor()
-  if (!monitor) return
-  const metrics = getWorkAreaMetrics(monitor)
   const pos = await win.outerPosition()
-  const safeX = clamp(pos.x, metrics.left, metrics.right - metrics.fullWidthPx)
-  const targetX = clamp(preExpandPosition?.x ?? safeX, metrics.left, metrics.right - metrics.fullWidthPx)
-  const targetY = clamp(
-    preExpandPosition?.y ?? pos.y,
-    metrics.top,
-    metrics.bottom - metrics.collapsedHeightPx,
-  )
+  // 回到展开前的位置，不强制 clamp 回屏幕内——尊重用户的放置意愿
+  const targetX = preExpandPosition?.x ?? pos.x
+  const targetY = preExpandPosition?.y ?? pos.y
 
   await hidePanel()
   await updateGeometry(targetX, targetY, FULL_WIDTH, COLLAPSED_HEIGHT, 'position-first')
@@ -446,6 +439,15 @@ async function checkEdgeAndDock() {
     if (!monitor) return
 
     const metrics = getWorkAreaMetrics(monitor)
+
+    // 窗口中心必须在工作区内部才触发吸附——如果用户已将窗口拖到屏幕外，则不拉回
+    const centerX = pos.x + size.width / 2
+    const centerY = pos.y + size.height / 2
+    const isCenterInWorkArea =
+      centerX >= metrics.left && centerX <= metrics.right &&
+      centerY >= metrics.top && centerY <= metrics.bottom
+    if (!isCenterInWorkArea) return
+
     if (pos.y <= metrics.top + metrics.edgeThresholdPx) await dockToEdge('top')
     else if (pos.x <= metrics.left + metrics.edgeThresholdPx) await dockToEdge('left')
     else if (pos.x + size.width >= metrics.right - metrics.edgeThresholdPx) await dockToEdge('right')
