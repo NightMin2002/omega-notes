@@ -4,7 +4,7 @@ import { emitTo } from '@tauri-apps/api/event'
 import { getCurrentWebviewWindow, WebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 
-import HubExpandedBody from './HubExpandedBody.vue'
+import HubExpandedBody from '../../components/popout/HubExpandedBody.vue'
 
 let unlistenCloseRequested: (() => void) | null = null
 let unlistenDirectionEvent: (() => void) | null = null

@@ -37,7 +37,10 @@ omega-v2/
 │   │
 │   ├── components/             # 全局/共享组件
 │   │   ├── AppHeader.vue       # 顶部导航栏（含搜索/快速笔记入口）
-│   │   ├── AppSidebar.vue      # 侧边栏导航（收藏夹/最近/文件夹树/右键菜单/导入导出/快捷键面板/悬挂任务按钮）
+│   │   ├── AppSidebar.vue      # 侧边栏导航（组装层：路由链接 + 子组件编排）
+│   │   ├── SidebarFolderTree.vue # 侧边栏文件夹树（递归展平 + 展开/折叠 + 右键菜单 + 新建子分类）
+│   │   ├── SidebarFooter.vue   # 侧边栏底部（设置入口 + 桌面微件 + 导入/导出 + 版本号）
+│   │   ├── SidebarShortcutPanel.vue # 快捷键面板（展开/折叠 + kbd 列表）
 │   │   ├── MilkdownEditor.vue  # Markdown 编辑器外壳（提供 Provider）
 │   │   ├── MilkdownEditorCore.vue # 编辑器核心（Milkdown 插件注册）
 │   │   ├── MarkdownRenderer.vue # Markdown → HTML 渲染（阅读模式）+ Mermaid 图表
@@ -53,7 +56,13 @@ omega-v2/
 │   │   ├── ConfirmDialog.vue   # 通用居中确认弹窗（Teleport 到 body）
 │   │   ├── InputDialog.vue     # 通用文本输入操作弹窗（带有验证和描述功能，替代原生 prompt）
 │   │   ├── CategoryDialog.vue  # 选择分类弹窗（封装 CategoryPicker）
-│   │   └── DraftToast.vue      # 草稿恢复提示 Toast（3秒自动消失）
+│   │   ├── DraftToast.vue      # 草稿恢复提示 Toast（3秒自动消失）
+│   │   └── popout/             # 桌面悬浮窗子组件（非路由，由 views/popout/ 引用）
+│   │       ├── HubExpandedBody.vue# 悬浮窗展开面板内容（任务/番茄钟/人生/设置 Tabs）
+│   │       ├── HubTasks.vue      # 悬挂任务列表子模块
+│   │       ├── HubTimer.vue      # 悬挂番茄钟子模块
+│   │       ├── HubLife.vue       # 悬挂人生进度条子模块
+│   │       └── HubSettings.vue   # 悬挂设置聚合面板
 │   │
 │   ├── views/                  # 路由页面组件
 │   │   ├── HomeView.vue        # 主页指挥中心（问候 + 任务进度环 + 统计 + 快捷入口 + 最近更新）
@@ -63,12 +72,7 @@ omega-v2/
 │   │   ├── TrashView.vue       # 回收站（恢复/永久删除/清空）
 │   │   ├── SettingsView.vue    # 设置页（外观/编辑器/数据/关于/字体缩放）
 │   │   ├── TasksView.vue       # 日常管理（每日任务 + 卡片/列表视图 + 3种主题 + 一键完成 + 倒计时 + 健康提醒）
-│   │   └── popout/             # 桌面悬挂窗口（always-on-top 独立窗口）
-│   │       ├── HubExpandedBody.vue# 悬浮窗展开面板内容（任务/番茄钟/人生/设置 Tabs）
-│   │       ├── HubTasks.vue      # 悬挂任务列表子模块
-│   │       ├── HubTimer.vue      # 悬挂番茄钟子模块
-│   │       ├── HubLife.vue       # 悬挂人生进度条子模块
-│   │       ├── HubSettings.vue   # 悬挂设置聚合面板
+│   │   └── popout/             # 桌面悬挂窗口路由页面（always-on-top 独立窗口）
 │   │       ├── PopoutProgress.vue# 悬浮窗底部时间条窗口：拖拽/吸附/方向判断/面板调度
 │   │       ├── PopoutProgressPanel.vue# 悬浮窗独立展开面板窗口：承载 Tabs 内容区
 │   │       └── PopoutNote.vue    # 悬挂笔记阅读桌面窗口
@@ -140,7 +144,10 @@ docs/
 | 组件 | 职责 | Props / Events |
 |---|---|---|
 | `AppHeader.vue` | 毛玻璃顶栏。侧边栏切换、主题切换、搜索入口（Ctrl+K）、快速笔记入口（Ctrl+Q） | Props: `sidebarCollapsed` / Emits: `toggleSidebar`, `openSearch`, `openQuickNote` |
-| `AppSidebar.vue` | 左侧导航。路由链接高亮、⭐ 收藏夹、🕐 最近打开、收件箱、📁 文件夹树（无限嵌套 + 展开/折叠）、导入/导出、快捷键面板 | Props: `collapsed` / Emits: `collapse` |
+| `AppSidebar.vue` | 侧边栏组装层。路由链接高亮、⭐ 收藏夹、🕐 最近打开、收件箱，编排 `SidebarFolderTree` + `SidebarFooter` 子组件 | Props: `collapsed` / Emits: `collapse` |
+| `SidebarFolderTree.vue` | 📁 文件夹树。递归展平分类树 + 无限嵌套展开/折叠 + 右键菜单（新建笔记/子分类/删除） | Emits: `collapseIfMobile` |
+| `SidebarFooter.vue` | 侧边栏底部。设置入口 + 桌面微件按钮 + 导入/导出 + 版本号 + 快捷键面板 | Emits: `collapseIfMobile` |
+| `SidebarShortcutPanel.vue` | 快捷键面板。展开/折叠的键盘快捷键速查表 | *无外部接口* |
 | `MilkdownEditor.vue` | 编辑器外壳。提供 `MilkdownProvider` inject 上下文 | Props: `modelValue`, `readonly` / Emits: `update:modelValue` |
 | `MilkdownEditorCore.vue` | 编辑器核心。注册 commonmark/GFM/history/indent/clipboard/**math**/smartPaste 插件，监听 `markdownUpdated`。**智能粘贴**：DOM 层拦截粘贴事件，图片自动转 base64 image 节点，Markdown 文本自动解析为富文本 | Props: `modelValue` / Emits: `update:modelValue` |
 | `MarkdownRenderer.vue` | 只读渲染。markdown-it + highlight.js + **texmath (KaTeX)** + **task-lists** + **Mermaid.js 图表**。支持 `[[title]]` 双向链接语法（渲染为可点击链接 + 跳转导航）。Mermaid 代码块自动渲染为 SVG，支持流程图/序列图/甘特图等 | Props: `content` |
@@ -173,11 +180,16 @@ docs/
 | `SettingsView.vue` | `/settings` | `theme`, `settings`, `notes` | 设置：外观（主题/字体）、编辑器（默认模式）、数据（存储位置/统计/回收站清理）、系统（开机自启）、关于 |
 | `PopoutProgress.vue` | `/popout/progress` | `tasks` | 底部常驻悬浮时间条：常驻时间、拖拽、边缘吸附、分向展开。通过 `BroadcastChannel('omega-hub-channel')` 与 Panel 通透通信，避免 WebView 渲染迟滞引发重置闪烁 |
 | `PopoutProgressPanel.vue` | `/popout/progress-panel` | `tasks` | 悬浮窗独立展开面板窗口：承载 4 个 Tab 视图组件，支持隐藏状态下的物理坐标判定与预热 |
-| *(Non-routable)* `HubExpandedBody.vue` | *无对应路由* | - | 悬浮窗面板包装层：统一管理子部件切换 **(TODO: 未来应移至 components/popout/)** |
-| *(Non-routable)* `HubTasks.vue` | *无对应路由* | `tasks` | 悬浮窗任务小部件（快速打卡、极简列表） |
-| *(Non-routable)* `HubTimer.vue` | *无对应路由* | `tasks` | 悬浮窗番茄钟小部件（环形 SVG 倒计时） |
-| *(Non-routable)* `HubLife.vue` | *无对应路由* | - | 悬浮窗人生进度小部件（自定义极客字库 + 毫秒级心跳逻辑） |
-| *(Non-routable)* `HubSettings.vue` | *无对应路由* | - | 悬浮窗局部偏好设置小部件 |
+
+**悬浮窗子组件** (`src/components/popout/`)：
+
+| 组件 | 依赖的 Store | 功能 |
+|---|---|---|
+| `HubExpandedBody.vue` | - | 悬浮窗面板包装层：统一管理 4 个 Tab 子部件切换 |
+| `HubTasks.vue` | `tasks` | 悬浮窗任务小部件（快速打卡、极简列表） |
+| `HubTimer.vue` | `tasks` | 悬浮窗番茄钟小部件（环形 SVG 倒计时） |
+| `HubLife.vue` | - | 悬浮窗人生进度小部件（自定义极客字库 + 毫秒级心跳逻辑） |
+| `HubSettings.vue` | - | 悬浮窗局部偏好设置小部件 |
 
 
 ### 组合式函数 (`src/composables/`)
