@@ -121,6 +121,30 @@ function handleInputConfirm(val: string) {
     notesStore.addCustomCategory(`${target}/${val}`)
   }
 }
+
+/* ─── 拖放笔记到文件夹 ─── */
+const dropTargetPath = ref<string | null>(null)
+
+function handleFolderMouseEnter(folderPath: string) {
+  if (notesStore.draggingNoteId) {
+    dropTargetPath.value = folderPath
+  }
+}
+
+function handleFolderMouseLeave(folderPath: string) {
+  if (dropTargetPath.value === folderPath) {
+    dropTargetPath.value = null
+  }
+}
+
+function handleFolderMouseUp(folderPath: string) {
+  const noteId = notesStore.draggingNoteId
+  if (noteId) {
+    notesStore.moveNoteToCategory(noteId, folderPath)
+    notesStore.draggingNoteId = null
+    dropTargetPath.value = null
+  }
+}
 </script>
 
 <template>
@@ -142,10 +166,13 @@ function handleInputConfirm(val: string) {
         v-for="f in flatFolders"
         :key="f.fullPath"
         class="folder-item"
-        :class="{ active: route.query.category === f.fullPath }"
+        :class="{ active: route.query.category === f.fullPath, 'folder-drop-target': dropTargetPath === f.fullPath }"
         :style="{ paddingLeft: `calc(var(--space-3) + ${f.depth * 16}px)` }"
         @click="navigateFolder(f.fullPath)"
         @contextmenu.prevent="handleFolderContextMenu($event, f.fullPath)"
+        @mouseenter="handleFolderMouseEnter(f.fullPath)"
+        @mouseleave="handleFolderMouseLeave(f.fullPath)"
+        @mouseup="handleFolderMouseUp(f.fullPath)"
       >
         <button
           v-if="f.hasChildren"

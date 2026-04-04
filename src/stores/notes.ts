@@ -37,6 +37,7 @@ export const useNotesStore = defineStore('notes', () => {
   const searchQuery = ref<string>('')
   const isLoading = ref(true)
   const recentIds = ref<string[]>([])
+  const draggingNoteId = ref<string | null>(null)
 
   /** 用户手动创建的分类（笔记保存前就可见） */
   const customCategories = ref<string[]>(
@@ -462,6 +463,7 @@ export const useNotesStore = defineStore('notes', () => {
     currentCategory,
     searchQuery,
     isLoading,
+    draggingNoteId,
     categories,
     categoryTree,
     filteredNotes,

@@ -172,8 +172,11 @@ useDraggable(gridRef, draggableNotes, {
   invertSwap: true,
   delay: 80,
   delayOnTouchOnly: true,
-  onStart() {
+  onStart(evt) {
     gridRef.value?.classList.add('is-dragging')
+    // 记录正在拖拽的笔记 ID 到 store，供侧边栏文件夹树检测
+    const noteId = evt.item?.dataset?.noteId
+    if (noteId) notesStore.draggingNoteId = noteId
   },
   onEnd() {
     /* 1. 在 DOM 真正更新前记录所有卡片的当前位置 */
@@ -186,6 +189,8 @@ useDraggable(gridRef, draggableNotes, {
       playFlipAnimation()
       gridRef.value?.classList.remove('is-dragging')
     })
+    // 延迟清除，让 mouseup 在文件夹上先处理完
+    setTimeout(() => { notesStore.draggingNoteId = null }, 50)
   },
 })
 
@@ -279,6 +284,30 @@ function handleMoveConfirm(newCategory: string) {
     notesStore.moveNoteToCategory(moveTargetId.value, newCategory)
   }
 }
+
+/* ─── 拖拽到分类药丸 ─── */
+const dropTargetCategory = ref<string | null>(null)
+
+function handlePillMouseEnter(cat: string) {
+  if (notesStore.draggingNoteId) {
+    dropTargetCategory.value = cat
+  }
+}
+
+function handlePillMouseLeave(cat: string) {
+  if (dropTargetCategory.value === cat) {
+    dropTargetCategory.value = null
+  }
+}
+
+function handlePillMouseUp(cat: string) {
+  const noteId = notesStore.draggingNoteId
+  if (noteId) {
+    notesStore.moveNoteToCategory(noteId, cat)
+    notesStore.draggingNoteId = null
+    dropTargetCategory.value = null
+  }
+}
 </script>
 
 <template>
@@ -327,8 +356,11 @@ function handleMoveConfirm(newCategory: string) {
         v-for="cat in notesStore.categories"
         :key="cat"
         class="category-pill"
-        :class="{ active: notesStore.currentCategory === cat }"
+        :class="{ active: notesStore.currentCategory === cat, 'pill-drop-target': dropTargetCategory === cat }"
         @click="selectCategory(cat)"
+        @mouseenter="handlePillMouseEnter(cat)"
+        @mouseleave="handlePillMouseLeave(cat)"
+        @mouseup="handlePillMouseUp(cat)"
       >
         {{ cat }}
       </button>
@@ -601,6 +633,14 @@ function handleMoveConfirm(newCategory: string) {
   background: var(--color-accent-muted);
   color: var(--color-accent);
   border-color: var(--color-accent);
+}
+
+.category-pill.pill-drop-target {
+  background: var(--color-accent-muted);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-muted);
+  scale: 1.08;
 }
 
 
