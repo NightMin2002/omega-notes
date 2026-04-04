@@ -1700,6 +1700,7 @@ async function popoutNote() {
   grid-template-columns: 1fr 1fr;
   gap: var(--space-4);
   padding: var(--space-4);
+  margin-top: var(--space-2);
   background: var(--color-bg-secondary);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);

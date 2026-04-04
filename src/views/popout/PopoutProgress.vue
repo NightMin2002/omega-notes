@@ -299,6 +299,10 @@ async function toggleExpand() {
     preExpandPosition = previousPreExpand
   } finally {
     isTransitioning.value = false
+    // 展开动画期间鼠标已离开 → 自动收缩
+    if (isExpanded.value && !isHovering.value) {
+      void collapsePanelAndRestorePosition()
+    }
   }
 }
 
@@ -457,17 +461,17 @@ async function checkEdgeAndDock() {
 }
 
 function handleMouseLeave() {
-  if (isTransitioning.value) return
   isHovering.value = false
+  if (isTransitioning.value) return
   hideTimeout = setTimeout(() => {
     void checkEdgeAndDock()
   }, 1000)
 }
 
 function handleMouseEnter() {
-  if (isTransitioning.value) return
   isHovering.value = true
   clearTimeout(hideTimeout)
+  if (isTransitioning.value) return
   if (dockEdge.value !== 'none') {
     void undock()
   }
