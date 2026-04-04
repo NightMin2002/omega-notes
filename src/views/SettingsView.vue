@@ -135,6 +135,8 @@ async function handleFactoryResetConfirm(val: string) {
     showResetDialog.value = false
   }
 }
+
+
 </script>
 
 <template>
@@ -440,73 +442,127 @@ async function handleFactoryResetConfirm(val: string) {
         应用更新
       </h3>
 
-      <!-- 没有可用更新 -->
-      <div v-if="!updaterStore.hasUpdate && !updaterStore.updateInfo" class="setting-item">
+      <!-- 基础检查更新项 (当没有新版本或被忽略时显示) -->
+      <div v-if="!updaterStore.hasUpdate" class="setting-item update-check-item">
         <div class="setting-info">
           <span class="setting-label">检查更新</span>
           <span class="setting-desc">
-            {{ updaterStore.checking ? '正在检查...' : '当前已是最新版本' }}
+            <template v-if="updaterStore.checking">正在连接更新服务器并校验...</template>
+            <template v-else-if="updaterStore.updateInfo && !updaterStore.hasUpdate">已忽略新版本 v{{ updaterStore.updateInfo.version }}</template>
+            <template v-else>当前已是最新版本 (v{{ updaterStore.getCurrentVersion() }})</template>
           </span>
         </div>
-        <button
-          class="action-btn"
-          :disabled="updaterStore.checking"
-          @click="updaterStore.checkForUpdates(false)"
-        >
-          <svg v-if="updaterStore.checking" class="spin-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M21 12a9 9 0 1 1-2.73-6.44" />
-          </svg>
-          <span>{{ updaterStore.checking ? '检查中' : '立即检查' }}</span>
-        </button>
+        <div class="update-check-actions">
+
+          <button
+            class="action-btn primary-btn"
+            :disabled="updaterStore.checking"
+            @click="updaterStore.checkForUpdates(false)"
+          >
+            <svg v-if="updaterStore.checking" class="spin-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M21 12a9 9 0 1 1-2.73-6.44" />
+            </svg>
+            <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10" />
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+            </svg>
+            <span>{{ updaterStore.checking ? '检查中...' : '立即检查' }}</span>
+          </button>
+        </div>
       </div>
 
-      <!-- 发现新版本 -->
-      <template v-if="updaterStore.updateInfo">
-        <div class="setting-item update-banner">
-          <div class="setting-info">
-            <span class="setting-label update-version-label">
-              发现新版本 v{{ updaterStore.updateInfo.version }}
-            </span>
-            <span class="setting-desc">
-              当前版本: v{{ updaterStore.updateInfo.currentVersion }}
-            </span>
-          </div>
-          <div class="update-actions">
-            <button
-              class="action-btn update-install-btn"
-              :disabled="updaterStore.downloading"
-              @click="updaterStore.downloadAndInstall()"
-            >
-              <svg v-if="updaterStore.downloading" class="spin-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M21 12a9 9 0 1 1-2.73-6.44" />
+      <!-- 发现新版本卡片 -->
+      <template v-if="updaterStore.hasUpdate && updaterStore.updateInfo">
+        <div class="update-card-container">
+          <div class="update-card">
+            <!-- 右上角绝对定位的关闭按钮 -->
+            <button class="update-close-btn" @click="updaterStore.dismissUpdate()" data-tooltip="关闭提示" data-tooltip-pos="bottom">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
-              <span>{{ updaterStore.downloading ? `下载中 ${updaterStore.downloadProgress}%` : '下载并安装' }}</span>
             </button>
-            <button
-              v-if="!updaterStore.downloading"
-              class="action-btn dismiss-btn"
-              @click="updaterStore.dismissUpdate()"
-            >
-              <span>忽略本版</span>
-            </button>
+
+            <!-- 卡片上部分：图标与标题 -->
+            <div class="update-card-top">
+              <div class="update-icon-wrapper">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </div>
+              <div class="header-titles">
+                <div class="title-primary">
+                  发现新版本
+                  <span class="version-pill">v{{ updaterStore.updateInfo.version }}</span>
+                </div>
+                <div class="title-secondary">
+                  当前版本 v{{ updaterStore.updateInfo.currentVersion }}
+                </div>
+              </div>
+            </div>
+
+            <!-- 卡片中部分：更新日志 -->
+            <div class="update-notes-wrapper" v-if="updaterStore.updateInfo.notes">
+              <div class="notes-header">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="8" y1="6" x2="21" y2="6"/>
+                  <line x1="8" y1="12" x2="21" y2="12"/>
+                  <line x1="8" y1="18" x2="21" y2="18"/>
+                  <line x1="3" y1="6" x2="3.01" y2="6"/>
+                  <line x1="3" y1="12" x2="3.01" y2="12"/>
+                  <line x1="3" y1="18" x2="3.01" y2="18"/>
+                </svg>
+                详细更新内容
+              </div>
+              <div class="update-notes-scroller">
+                <div class="update-notes-body">{{ updaterStore.updateInfo.notes }}</div>
+              </div>
+            </div>
+
+            <!-- 卡片底部：操作与进度条 -->
+            <div class="update-card-bottom">
+              <div class="footer-left">
+                <div v-if="updaterStore.downloading" class="progress-container">
+                  <span class="progress-status">正在下载包... {{ updaterStore.downloadProgress }}%</span>
+                  <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" :style="{ width: updaterStore.downloadProgress + '%' }" />
+                  </div>
+                </div>
+              </div>
+              <div class="footer-right">
+                <button
+                  v-if="!updaterStore.downloading"
+                  class="action-btn text-btn"
+                  @click="updaterStore.dismissUpdate()"
+                >
+                  稍后提醒
+                </button>
+                <button
+                  class="action-btn install-btn"
+                  :disabled="updaterStore.downloading"
+                  @click="updaterStore.downloadAndInstall()"
+                >
+                  <svg v-if="updaterStore.downloading" class="spin-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M21 12a9 9 0 1 1-2.73-6.44" />
+                  </svg>
+                  <span>{{ updaterStore.downloading ? '下载中...' : '下载并安装' }}</span>
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-
-        <!-- 下载进度条 -->
-        <div v-if="updaterStore.downloading" class="update-progress-bar">
-          <div class="update-progress-fill" :style="{ width: updaterStore.downloadProgress + '%' }" />
-        </div>
-
-        <!-- 更新说明 -->
-        <div v-if="updaterStore.updateInfo.notes" class="update-notes">
-          <div class="update-notes-title">更新内容</div>
-          <pre class="update-notes-body">{{ updaterStore.updateInfo.notes }}</pre>
         </div>
       </template>
 
       <!-- 错误信息 -->
       <div v-if="updaterStore.updateError" class="update-error">
-        {{ updaterStore.updateError }}
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <span>{{ updaterStore.updateError }}</span>
       </div>
     </section>
 
@@ -1111,23 +1167,6 @@ async function handleFactoryResetConfirm(val: string) {
 
 .toggle-switch.active .toggle-thumb {
   transform: translateX(20px);
-
-  .storage-actions {
-    width: 100%;
-    justify-content: flex-start;
-  }
-
-  .about-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .about-item:nth-child(odd) {
-    border-right: none;
-  }
-
-  .about-item:not(:last-child) {
-    border-bottom: 1px solid var(--color-divider);
-  }
 }
 
 /* ═══ 缩放控制 ═══ */
@@ -1224,99 +1263,338 @@ async function handleFactoryResetConfirm(val: string) {
 }
 
 /* ═══ 应用更新 ═══ */
-.update-banner {
-  background: oklch(0.25 0.02 260);
-  border-left: 3px solid var(--color-accent);
-}
-
-:root[data-theme="light"] .update-banner {
-  background: oklch(0.95 0.02 260);
-}
-
-.update-version-label {
-  color: var(--color-accent);
-  font-weight: 700;
-}
-
-.update-actions {
+.update-check-actions {
   display: flex;
-  gap: var(--space-2);
   align-items: center;
+  gap: var(--space-4);
   flex-shrink: 0;
 }
 
-.update-install-btn {
+/* 按钮通用样式 */
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  appearance: none;
+  border: 1px solid transparent;
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  font-family: inherit;
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.8);
+}
+
+.action-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px oklch(from var(--color-accent) l c h / 0.3);
+}
+
+.action-btn:not(:disabled):active {
+  transform: translateY(1px) scale(0.97);
+}
+
+/* 立即检查 / 主按钮 */
+.primary-btn {
   background: var(--color-accent);
-  color: var(--color-text-inverse);
-  border-color: var(--color-accent);
+  color: #ffffff; /* 强制白色，防止在亮/暗色模式下被覆盖 */
+  box-shadow: 0 2px 4px oklch(from var(--color-accent) l c h / 0.2),
+              inset 0 1px 1px oklch(from var(--color-accent) 0.9 c h / 0.4);
 }
 
 @media (hover: hover) {
-  .update-install-btn:not(:disabled):hover {
-    filter: brightness(1.15);
+  .primary-btn:not(:disabled):hover {
+    filter: brightness(1.1);
+    box-shadow: 0 4px 12px oklch(from var(--color-accent) l c h / 0.3),
+                inset 0 1px 1px oklch(from var(--color-accent) 0.9 c h / 0.5);
+    transform: translateY(-1px);
   }
 }
 
-.update-install-btn:active {
-  transform: scale(0.97);
+/* 稍后提醒 / 取消按钮 */
+.cancel-btn {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
 }
 
-.dismiss-btn {
+@media (hover: hover) {
+  .cancel-btn:hover {
+    color: var(--color-text-primary);
+    background: var(--color-bg-hover);
+    border-color: var(--color-border-strong);
+  }
+}
+
+/* 下载并安装按钮 */
+.install-btn {
+  background: var(--color-accent);
+  color: #ffffff; 
+  padding: 10px 24px;
+  box-shadow: 0 4px 12px oklch(from var(--color-accent) l c h / 0.25),
+              inset 0 1px 2px rgba(255, 255, 255, 0.2);
+}
+
+@media (hover: hover) {
+  .install-btn:not(:disabled):hover {
+    filter: brightness(1.15);
+    box-shadow: 0 6px 16px oklch(from var(--color-accent) l c h / 0.35),
+                inset 0 1px 2px rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+  }
+}
+
+
+/* 新版更新卡片外层 */
+.update-card-container {
+  padding: var(--space-4) 0 0 0;
+  background: transparent;
+}
+
+.update-card {
+  position: relative;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm), 0 10px 40px oklch(from var(--color-accent) l c h / 0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+.update-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
   color: var(--color-text-tertiary);
   background: transparent;
-  border-color: var(--color-border);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 @media (hover: hover) {
-  .dismiss-btn:hover {
+  .update-close-btn:hover {
     color: var(--color-text-secondary);
-    border-color: var(--color-text-tertiary);
+    background: var(--color-bg-hover);
+    border-color: var(--color-border);
   }
 }
 
-.update-progress-bar {
-  height: 3px;
+.update-close-btn:active {
+  transform: scale(0.95);
+}
+
+/* 卡片上部布局 */
+.update-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: 24px 24px 16px 24px;
+}
+
+/* 缩小图标区域 */
+.update-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, oklch(from var(--color-accent) l c h / 0.1), oklch(from var(--color-accent) l c h / 0.15));
+  color: var(--color-accent);
+  flex-shrink: 0;
+  border: 1px solid oklch(from var(--color-accent) l c h / 0.15);
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.05);
+}
+
+.header-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* 标题之间的呼吸间隙 */
+}
+
+.title-primary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 1.15rem; /* 增大主标题字号 */
+  font-weight: 700;
+  color: var(--color-text-primary);
+  letter-spacing: 0.01em;
+}
+
+.version-pill {
+  background: var(--color-accent);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  letter-spacing: 0;
+  box-shadow: inset 0 -1px 1px rgba(0,0,0,0.1);
+}
+
+.title-secondary {
+  font-size: 0.85rem;
+  color: var(--color-text-tertiary);
+}
+
+/* 日志框 */
+.update-notes-wrapper {
+  margin: 0 24px 20px 24px;
   background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 
-.update-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--color-accent), oklch(0.75 0.18 160));
-  border-radius: 0 var(--radius-full) var(--radius-full) 0;
-  transition: width 300ms var(--ease-out);
-}
-
-.update-notes {
-  padding: var(--space-4) var(--space-6);
-  border-top: 1px solid var(--color-divider);
-}
-
-.update-notes-title {
-  font-size: 0.72rem;
+.notes-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 12px 16px;
+  font-size: 0.8rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-text-tertiary);
-  margin-bottom: var(--space-2);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-elevated);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.update-notes-scroller {
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 16px 20px 20px 24px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+
+.update-notes-scroller::-webkit-scrollbar {
+  width: 6px;
+}
+.update-notes-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+.update-notes-scroller::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-strong);
+  border-radius: var(--radius-full);
+}
+.update-notes-scroller::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-text-tertiary);
 }
 
 .update-notes-body {
   font-family: var(--font-sans);
-  font-size: 0.82rem;
-  line-height: 1.65;
+  font-size: 0.9rem;
+  line-height: 1.85; /* 加大行高，更轻松的阅读体验 */
   color: var(--color-text-secondary);
   white-space: pre-wrap;
   word-break: break-word;
   margin: 0;
+  padding-left: 12px; /* 满足用户的左缩排期望 */
+  border-left: 2px solid var(--color-border); /* 配合缩进增加浅边框使其视觉上有锚定感 */
 }
 
+/* 卡片底部布局 */
+.update-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: var(--color-bg-elevated);
+  border-top: 1px solid var(--color-divider);
+}
+
+.footer-left {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.progress-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 200px;
+}
+
+.progress-status {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.progress-bar-bg {
+  height: 6px;
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: var(--radius-full);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+
+/* 文字平级按钮 */
+.text-btn {
+  background: transparent;
+  color: var(--color-text-tertiary);
+  border: none;
+  font-size: 0.85rem;
+  padding: 8px 16px;
+  transition: color 0.2s;
+}
+
+@media (hover: hover) {
+  .text-btn:hover {
+    color: var(--color-text-primary);
+    background: var(--color-bg-hover);
+  }
+}
+
+.text-btn:active {
+  transform: scale(0.96);
+}
+
+/* 错误提示 */
 .update-error {
-  padding: var(--space-3) var(--space-6);
-  font-size: 0.8rem;
-  color: oklch(0.7 0.22 25);
-  background: oklch(0.7 0.22 25 / 0.08);
-  border-top: 1px solid oklch(0.7 0.22 25 / 0.15);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  margin: var(--space-6) 0 0 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--color-danger);
+  background: oklch(from var(--color-danger) l c h / 0.06);
+  border: 1px solid oklch(from var(--color-danger) l c h / 0.2);
+  border-radius: var(--radius-md);
 }
 
 .spin-icon {
@@ -1328,4 +1606,32 @@ async function handleFactoryResetConfirm(val: string) {
   to { transform: rotate(360deg); }
 }
 
+/* 响应式调整 */
+@media (max-width: 680px) {
+  .header-section {
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  
+  .icon-close-btn {
+    position: absolute;
+    top: var(--space-4);
+    right: var(--space-4);
+  }
+  
+  .footer-section {
+    flex-direction: column;
+    gap: var(--space-4);
+    align-items: stretch;
+  }
+  
+  .progress-container {
+    max-width: 100%;
+  }
+  
+  .footer-right {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
 </style>

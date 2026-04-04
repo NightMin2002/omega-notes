@@ -103,6 +103,7 @@ export const useUpdaterStore = defineStore('updater', () => {
       localStorage.setItem('omega-dismissed-update', updateInfo.value.version)
     }
     hasUpdate.value = false
+    updateInfo.value = null
   }
 
   /** 获取当前运行版本 */
