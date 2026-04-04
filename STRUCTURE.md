@@ -16,13 +16,20 @@ omega-v2/
 ├── README.md                   # 项目说明
 ├── STRUCTURE.md                # 本文件 — 结构索引
 ├── SETUP.md                    # 开发环境配置指南（Tauri 依赖说明）
-├── CHANGELOG.md                # 版本变更记录
+├── CHANGELOG.md                # 版本变更记录（开发者归档，非必须维护）
+├── RELEASE.md                  # 发布流程手册（版本发布检查清单 & 步骤）
+│
+├── scripts/                    # 工具脚本
+│   └── bump-version.js         # 版本号三处同步脚本（package.json / tauri.conf.json / Cargo.toml）
+│
+├── .github/workflows/          # CI/CD 工作流
+│   └── release.yml             # 自动构建发布（tag push 触发 → 编译签名 → GitHub Releases）
 │
 ├── public/                     # 静态资源（不经过 Vite 处理）
 │   └── favicon.ico
 │
 ├── src/                        # 前端源代码
-│   ├── main.ts                 # 应用入口：挂载 Vue + Pinia + Router；检测 ?popout_route= 跳转悬挂窗口路由
+│   ├── main.ts                 # 应用入口：挂载 Vue + Pinia + Router；检测 ?popout_route= 跳转悬挂窗口路由；启动自动更新检查（5s 延迟 + 4h 定时）
 │   ├── App.vue                 # 根组件：Header + Sidebar + RouterView；route.meta.popout 时纯净渲染；定义 --app-main-padding CSS 变量供子页面负 margin 抵消
 │   │
 │   ├── assets/                 # 项目资产
@@ -72,7 +79,8 @@ omega-v2/
 │   │   ├── theme.ts            # 主题管理（暗色/亮色 + 持久化）
 │   │   ├── notes.ts            # 笔记数据（async CRUD + 分类 + 搜索 + 排序 + 回收站）
 │   │   ├── settings.ts         # 应用设置（编辑器模式/字体/回收站清理 + localStorage）
-│   │   └── tasks.ts            # 日常任务（任务 CRUD + 跳过标记 + 一键完成分类 + 倒计时 + 健康提醒 + 配置持久化 + 导入/导出）
+│   │   ├── tasks.ts            # 日常任务（任务 CRUD + 跳过标记 + 一键完成分类 + 倒计时 + 健康提醒 + 配置持久化 + 导入/导出）
+│   │   └── updater.ts          # 应用更新（版本检查 + 下载安装 + 进度追踪 + 忽略版本 + 错误处理）
 │   │
 │   ├── composables/            # Vue Composable 函数
 │   │   ├── useEditorActions.ts # 编辑器共用操作（图片/链接/工具栏/粘贴）

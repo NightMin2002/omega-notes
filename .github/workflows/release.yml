@@ -40,26 +40,37 @@ jobs:
         run: npm ci
 
       # 提取最近的 commit 消息作为发布说明
-      - name: Generate release notes from commits
+      # 优先使用 RELEASE_NOTES.md（手写），否则自动从 git commit 提取
+      - name: Generate release notes
         id: release_notes
         shell: bash
         run: |
-          # 找到上一个 tag（如果有的话）
-          PREV_TAG=$(git tag --sort=-creatordate | head -2 | tail -1)
           CURRENT_TAG=${GITHUB_REF#refs/tags/}
 
-          if [ -z "$PREV_TAG" ] || [ "$PREV_TAG" = "$CURRENT_TAG" ]; then
-            # 首次发布或只有一个 tag，取最近 20 条 commit
-            COMMITS=$(git log --pretty=format:"- %s" -20)
+          # 优先检查是否存在手写发布说明
+          if [ -f "RELEASE_NOTES.md" ]; then
+            echo "使用手写 RELEASE_NOTES.md"
+            NOTES=$(cat RELEASE_NOTES.md)
           else
-            # 取两个 tag 之间的 commit
-            COMMITS=$(git log --pretty=format:"- %s" ${PREV_TAG}..${CURRENT_TAG})
+            echo "从 git commit 自动生成发布说明"
+            PREV_TAG=$(git tag --sort=-creatordate | head -2 | tail -1)
+
+            if [ -z "$PREV_TAG" ] || [ "$PREV_TAG" = "$CURRENT_TAG" ]; then
+              NOTES=$(git log --pretty=format:"- %s" -20)
+            else
+              NOTES=$(git log --pretty=format:"- %s" ${PREV_TAG}..${CURRENT_TAG})
+            fi
           fi
 
-          # 写入到文件（避免多行字符串在 GitHub Actions 中的换行问题）
-          echo "$COMMITS" > release_notes.txt
-          echo "Generated release notes:"
-          cat release_notes.txt
+          # 使用 heredoc 安全写入多行 output
+          {
+            echo "notes<<NOTES_EOF"
+            echo "$NOTES"
+            echo "NOTES_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "=== 发布说明 ==="
+          echo "$NOTES"
 
       - name: Build and release
         uses: tauri-apps/tauri-action@v0
@@ -73,10 +84,7 @@ jobs:
           releaseBody: |
             ## 更新内容
 
-            ${{ steps.release_notes.outputs.notes || '' }}
-
-            ---
-            查看完整更新日志: [CHANGELOG.md](https://github.com/NightMin2002/omega-notes/blob/main/CHANGELOG.md)
+            ${{ steps.release_notes.outputs.notes }}
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}

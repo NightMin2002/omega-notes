@@ -30,3 +30,4 @@ coverage
 # Vite
 *.timestamp-*-*.mjs
 .tauri-keys.txt
+RELEASE_NOTES.md
