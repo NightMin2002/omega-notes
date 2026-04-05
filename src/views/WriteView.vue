@@ -104,24 +104,6 @@ async function handleSubmit() {
   }
 }
 
-/* ─── Bug #2 fix: 取消按钮逻辑 ─── */
-function handleCancel() {
-  /* 如果正在编辑（非模板选择），先返回模板选择器 */
-  if (!showTemplates.value) {
-    showTemplates.value = true
-    title.value = ''
-    content.value = ''
-    category.value = prefillCat || ''
-    return
-  }
-  /* 已在模板选择器，导航离开 */
-  clearDraft()
-  if (window.history.length > 1) {
-    router.back()
-  } else {
-    router.replace('/notes')
-  }
-}
 
 /* ─── Ctrl+S 保存 ─── */
 function handleGlobalKey(e: KeyboardEvent) {
@@ -203,20 +185,7 @@ function confirmDeleteTemplate() {
   <div class="write-page">
     <!-- ─── 固定顶栏（对齐 NoteDetailView 的 detail-toolbar） ─── -->
     <div class="detail-toolbar">
-      <!-- 左侧：取消 / 模板返回 -->
-      <button class="toolbar-btn toolbar-btn--cancel" @click="handleCancel">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <template v-if="!showTemplates">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </template>
-          <template v-else>
-            <line x1="19" y1="12" x2="5" y2="12" />
-            <polyline points="12 19 5 12 12 5" />
-          </template>
-        </svg>
-        <span>{{ showTemplates ? '返回' : '取消' }}</span>
-      </button>
+
 
       <div class="toolbar-actions">
         <!-- 模板按钮 (编辑中可返回模板) -->

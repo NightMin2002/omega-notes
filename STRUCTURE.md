@@ -150,7 +150,7 @@ docs/
 | 组件 | 职责 | Props / Events |
 |---|---|---|
 | `AppHeader.vue` | 毛玻璃顶栏。侧边栏切换、主题切换、搜索入口（Ctrl+K）、快速笔记入口（Ctrl+Q） | Props: `sidebarCollapsed` / Emits: `toggleSidebar`, `openSearch`, `openQuickNote` |
-| `AppSidebar.vue` | 侧边栏组装层。路由链接高亮、⭐ 收藏夹、🕐 最近打开、收件箱，编排 `SidebarFolderTree` + `SidebarFooter` 子组件 | Props: `collapsed` / Emits: `collapse` |
+| `AppSidebar.vue` | 侧边栏组装层。支持“首页/知识库”双标签切换。路由链接分类编排（主页、新建笔记、任务 vs 笔记库、收藏夹、最近打开、收件箱），编排 `SidebarFolderTree` + `SidebarFooter` 子组件 | Props: `collapsed` / Emits: `collapse` |
 | `SidebarFolderTree.vue` | 📁 文件夹树。递归展平分类树 + 无限嵌套展开/折叠 + 右键菜单（新建笔记/子分类/删除） | Emits: `collapseIfMobile` |
 | `SidebarFooter.vue` | 侧边栏底部。设置入口 + 桌面微件按钮 + 导入/导出 + 版本号 + 快捷键面板 | Emits: `collapseIfMobile` |
 | `SidebarShortcutPanel.vue` | 快捷键面板。展开/折叠的键盘快捷键速查表 | *无外部接口* |
