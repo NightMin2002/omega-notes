@@ -9,10 +9,13 @@ import WikiLinkPicker from '../components/WikiLinkPicker.vue'
 import SplitEditor from '../components/SplitEditor.vue'
 import CategoryPicker from '../components/CategoryPicker.vue'
 import DraftToast from '../components/DraftToast.vue'
+import ContextMenu from '../components/ContextMenu.vue'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
+import TemplateEditorDialog from '../components/TemplateEditorDialog.vue'
 import { getTemplates, type NoteTemplate } from '../utils/templates'
 import { useEditorActions } from '../composables/useEditorActions'
 import { useDraft } from '../composables/useDraft'
-import type { EditorMode } from '../types'
+import type { EditorMode, CustomTemplate } from '../types'
 
 const notesStore = useNotesStore()
 const settingsStore = useSettingsStore()
@@ -130,6 +133,69 @@ function handleGlobalKey(e: KeyboardEvent) {
 
 onMounted(() => window.addEventListener('keydown', handleGlobalKey))
 onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
+
+/* ─── 自定义模板管理 ─── */
+const showTemplateEditor = ref(false)
+const editingTemplate = ref<CustomTemplate | null>(null)
+const showDeleteConfirm = ref(false)
+const deletingTemplateId = ref('')
+
+/* 模板右键菜单 */
+const contextMenuShow = ref(false)
+const contextMenuPos = ref({ x: 0, y: 0 })
+const contextMenuTarget = ref<CustomTemplate | null>(null)
+
+function openNewTemplate() {
+  editingTemplate.value = null
+  showTemplateEditor.value = true
+}
+
+function handleTemplateEditorConfirm(data: { name: string; description: string; title: string; category: string; content: string }) {
+  if (editingTemplate.value) {
+    settingsStore.updateCustomTemplate(editingTemplate.value.id, data)
+  } else {
+    settingsStore.addCustomTemplate(data)
+  }
+  showTemplateEditor.value = false
+  editingTemplate.value = null
+}
+
+function applyCustomTemplate(tpl: CustomTemplate) {
+  title.value = tpl.title
+  content.value = tpl.content
+  if (!prefillCat || !category.value) {
+    category.value = tpl.category
+  }
+  showTemplates.value = false
+  if (tpl.content) {
+    editorMode.value = 'split'
+  }
+}
+
+function handleTemplateContextMenu(e: MouseEvent, tpl: CustomTemplate) {
+  e.preventDefault()
+  contextMenuTarget.value = tpl
+  contextMenuPos.value = { x: e.clientX, y: e.clientY }
+  contextMenuShow.value = true
+}
+
+function handleContextMenuSelect(id: string) {
+  contextMenuShow.value = false
+  if (!contextMenuTarget.value) return
+  if (id === 'edit') {
+    editingTemplate.value = contextMenuTarget.value
+    showTemplateEditor.value = true
+  } else if (id === 'delete') {
+    deletingTemplateId.value = contextMenuTarget.value.id
+    showDeleteConfirm.value = true
+  }
+}
+
+function confirmDeleteTemplate() {
+  settingsStore.removeCustomTemplate(deletingTemplateId.value)
+  showDeleteConfirm.value = false
+  deletingTemplateId.value = ''
+}
 
 </script>
 
@@ -276,12 +342,46 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
             <path d="M9 18h6" /><path d="M10 22h4" />
             <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
           </svg>
-          <!-- check -->
-          <svg v-else-if="tpl.icon === 'check'" class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
-          </svg>
           <span class="template-name">{{ tpl.name }}</span>
           <span class="template-desc">{{ tpl.description }}</span>
+        </button>
+
+        <!-- 待办事项快捷入口卡片 -->
+        <button class="template-card template-card--shortcut" @click="router.push('/todos')">
+          <svg class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
+          <span class="template-name">待办事项</span>
+          <span class="template-desc">跳转到待办管理</span>
+        </button>
+
+        <!-- 自定义模板卡片 -->
+        <button
+          v-for="ct in settingsStore.customTemplates"
+          :key="ct.id"
+          class="template-card template-card--custom"
+          @click="applyCustomTemplate(ct)"
+          @contextmenu="handleTemplateContextMenu($event, ct)"
+        >
+          <svg class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+          </svg>
+          <span class="template-name">{{ ct.name }}</span>
+          <span class="template-desc">{{ ct.description || '自定义模板' }}</span>
+          <span class="custom-badge">自定义</span>
+        </button>
+
+        <!-- 新建模板卡片 -->
+        <button class="template-card template-card--add" @click="openNewTemplate">
+          <svg class="template-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          <span class="template-name">新建模板</span>
+          <span class="template-desc">创建专属模板</span>
         </button>
       </div>
 
@@ -335,6 +435,37 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
     </div>
 
     <DraftToast :show="showDraftToast" @close="showDraftToast = false" />
+
+    <!-- 自定义模板右键菜单 -->
+    <ContextMenu
+      :show="contextMenuShow"
+      :position="contextMenuPos"
+      :items="[
+        { id: 'edit', label: '编辑模板', icon: 'edit' },
+        { id: 'delete', label: '删除模板', icon: 'trash', danger: true },
+      ]"
+      @update:show="contextMenuShow = $event"
+      @select="handleContextMenuSelect"
+    />
+
+    <!-- 模板编辑弹窗 -->
+    <TemplateEditorDialog
+      :open="showTemplateEditor"
+      :edit-template="editingTemplate"
+      @confirm="handleTemplateEditorConfirm"
+      @cancel="showTemplateEditor = false; editingTemplate = null"
+    />
+
+    <!-- 删除确认弹窗 -->
+    <ConfirmDialog
+      :open="showDeleteConfirm"
+      title="删除自定义模板"
+      message="确定要删除这个自定义模板吗？此操作不可撤销。"
+      confirmText="删除"
+      confirmType="danger"
+      @confirm="confirmDeleteTemplate"
+      @cancel="showDeleteConfirm = false"
+    />
   </div>
 </template>
 
@@ -499,6 +630,52 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
 .template-desc {
   font-size: 0.75rem;
   color: var(--color-text-tertiary);
+}
+
+/* ─── 待办跳转卡片 ─── */
+.template-card--shortcut {
+  border-style: dashed;
+}
+.template-card--shortcut .template-icon {
+  color: var(--color-accent);
+}
+
+/* ─── 自定义模板卡片 ─── */
+.template-card--custom {
+  position: relative;
+}
+
+.custom-badge {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--color-accent-text);
+  background: var(--color-accent-muted);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
+  letter-spacing: 0.02em;
+}
+
+/* ─── 新建模板卡片 ─── */
+.template-card--add {
+  border: 2px dashed var(--color-border);
+  background: transparent;
+}
+
+.template-card--add .template-icon {
+  color: var(--color-text-tertiary);
+}
+
+@media (hover: hover) {
+  .template-card--add:hover {
+    border-color: var(--color-accent);
+    background: var(--color-accent-muted);
+  }
+  .template-card--add:hover .template-icon {
+    color: var(--color-accent);
+  }
 }
 
 /* ─── 模式切换 ─── */

@@ -4,7 +4,7 @@
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { AppSettings, EditorMode, FontFamily } from '@/types'
+import type { AppSettings, EditorMode, FontFamily, CustomTemplate } from '@/types'
 
 const STORAGE_KEY = 'omega-settings'
 
@@ -13,6 +13,7 @@ const defaults: AppSettings = {
   fontFamily: 'system',
   trashAutoCleanDays: 30,
   contentZoom: 100,
+  customTemplates: [],
 }
 
 function loadSettings(): AppSettings {
@@ -44,6 +45,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const fontFamily = computed(() => settings.value.fontFamily)
   const trashAutoCleanDays = computed(() => settings.value.trashAutoCleanDays)
   const contentZoom = computed(() => settings.value.contentZoom)
+  const customTemplates = computed(() => settings.value.customTemplates)
 
   // ─── Actions ───
   function setDefaultEditorMode(mode: EditorMode) {
@@ -76,6 +78,33 @@ export const useSettingsStore = defineStore('settings', () => {
     document.documentElement.style.setProperty('--font-sans', fontMap[family])
   }
 
+  // ─── 自定义模板 CRUD ───
+  function addCustomTemplate(tpl: Omit<CustomTemplate, 'id' | 'createdAt'>) {
+    const newTpl: CustomTemplate = {
+      ...tpl,
+      id: `tpl-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      createdAt: new Date().toISOString(),
+    }
+    settings.value.customTemplates.push(newTpl)
+    persist(settings.value)
+    return newTpl
+  }
+
+  function updateCustomTemplate(id: string, patch: Partial<Omit<CustomTemplate, 'id' | 'createdAt'>>) {
+    const tplList = settings.value.customTemplates
+    const idx = tplList.findIndex(t => t.id === id)
+    if (idx !== -1) {
+      const target = tplList[idx]!
+      Object.assign(target, patch)
+      persist(settings.value)
+    }
+  }
+
+  function removeCustomTemplate(id: string) {
+    settings.value.customTemplates = settings.value.customTemplates.filter(t => t.id !== id)
+    persist(settings.value)
+  }
+
   /** 初始化时应用已保存的字体和缩放 */
   function init() {
     applyFont(settings.value.fontFamily)
@@ -88,10 +117,14 @@ export const useSettingsStore = defineStore('settings', () => {
     fontFamily,
     trashAutoCleanDays,
     contentZoom,
+    customTemplates,
     setDefaultEditorMode,
     setFontFamily,
     setTrashAutoCleanDays,
     setContentZoom,
+    addCustomTemplate,
+    updateCustomTemplate,
+    removeCustomTemplate,
     init,
   }
 })

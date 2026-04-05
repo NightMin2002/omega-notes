@@ -7,6 +7,8 @@ import { useTasksStore } from '../stores/tasks'
 import { useUpdaterStore } from '../stores/updater'
 import { isTauri } from '../utils/storage'
 import InputDialog from '../components/InputDialog.vue'
+import MarkdownIt from 'markdown-it'
+import DOMPurify from 'dompurify'
 import type { EditorMode, FontFamily } from '../types'
 
 const themeStore = useThemeStore()
@@ -136,6 +138,24 @@ async function handleFactoryResetConfirm(val: string) {
   }
 }
 
+
+/* ─── 更新日志轻量 Markdown 渲染 ─── */
+const updateMd = new MarkdownIt({ html: false, linkify: true, breaks: true })
+
+const renderedUpdateNotes = computed(() => {
+  const raw = updaterStore.updateInfo?.notes
+  if (!raw) return ''
+  const html = updateMd.render(raw)
+  return DOMPurify.sanitize(html, { FORBID_TAGS: ['script', 'style', 'iframe'] })
+})
+
+/** 格式化字节数为可读字符串 */
+function formatBytes(bytes: number): string {
+  if (bytes <= 0) return ''
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
 
 </script>
 
@@ -517,7 +537,7 @@ async function handleFactoryResetConfirm(val: string) {
                 详细更新内容
               </div>
               <div class="update-notes-scroller">
-                <div class="update-notes-body">{{ updaterStore.updateInfo.notes }}</div>
+                <div class="update-notes-body md-notes" v-html="renderedUpdateNotes" />
               </div>
             </div>
 
@@ -525,7 +545,14 @@ async function handleFactoryResetConfirm(val: string) {
             <div class="update-card-bottom">
               <div class="footer-left">
                 <div v-if="updaterStore.downloading" class="progress-container">
-                  <span class="progress-status">正在下载包... {{ updaterStore.downloadProgress }}%</span>
+                  <span class="progress-status">
+                    正在下载包...
+                    <template v-if="updaterStore.downloadTotalBytes > 0">
+                      {{ formatBytes(Math.round(updaterStore.downloadTotalBytes * updaterStore.downloadProgress / 100)) }}
+                      / {{ formatBytes(updaterStore.downloadTotalBytes) }}
+                    </template>
+                    ({{ updaterStore.downloadProgress }}%)
+                  </span>
                   <div class="progress-bar-bg">
                     <div class="progress-bar-fill" :style="{ width: updaterStore.downloadProgress + '%' }" />
                   </div>
@@ -1499,14 +1526,74 @@ async function handleFactoryResetConfirm(val: string) {
 
 .update-notes-body {
   font-family: var(--font-sans);
-  font-size: 0.9rem;
-  line-height: 1.85; /* 加大行高，更轻松的阅读体验 */
+  font-size: 0.88rem;
+  line-height: 1.75;
   color: var(--color-text-secondary);
-  white-space: pre-wrap;
   word-break: break-word;
   margin: 0;
-  padding-left: 12px; /* 满足用户的左缩排期望 */
-  border-left: 2px solid var(--color-border); /* 配合缩进增加浅边框使其视觉上有锚定感 */
+}
+
+/* Markdown 渲染后的内部元素样式 */
+.md-notes :deep(h1),
+.md-notes :deep(h2),
+.md-notes :deep(h3) {
+  color: var(--color-text-primary);
+  font-weight: 700;
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-2);
+  line-height: 1.3;
+}
+.md-notes :deep(h1) { font-size: 1.1rem; }
+.md-notes :deep(h2) { font-size: 1rem; }
+.md-notes :deep(h3) { font-size: 0.92rem; }
+
+.md-notes :deep(p) {
+  margin-bottom: var(--space-2);
+}
+
+.md-notes :deep(ul),
+.md-notes :deep(ol) {
+  padding-left: var(--space-5);
+  margin: var(--space-2) 0;
+}
+.md-notes :deep(ul) { list-style: disc; }
+.md-notes :deep(ol) { list-style: decimal; }
+
+.md-notes :deep(li) {
+  margin-bottom: var(--space-1);
+}
+
+.md-notes :deep(code) {
+  font-family: var(--font-mono);
+  background: var(--color-bg-primary);
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-sm);
+  font-size: 0.85em;
+}
+
+.md-notes :deep(strong) {
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.md-notes :deep(a) {
+  color: var(--color-accent-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.md-notes :deep(hr) {
+  border: none;
+  border-top: 1px solid var(--color-divider);
+  margin: var(--space-3) 0;
+}
+
+.md-notes :deep(blockquote) {
+  border-left: 3px solid var(--color-accent);
+  padding-left: var(--space-3);
+  margin: var(--space-2) 0;
+  color: var(--color-text-tertiary);
+  font-style: italic;
 }
 
 /* 卡片底部布局 */
@@ -1585,16 +1672,21 @@ async function handleFactoryResetConfirm(val: string) {
 .update-error {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
-  margin: var(--space-6) 0 0 0;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  margin: var(--space-4) var(--space-4) var(--space-4) var(--space-4);
   font-size: 0.85rem;
   font-weight: 500;
-  line-height: 1.5;
+  line-height: 1.6;
   color: var(--color-danger);
   background: oklch(from var(--color-danger) l c h / 0.06);
   border: 1px solid oklch(from var(--color-danger) l c h / 0.2);
   border-radius: var(--radius-md);
+}
+
+.update-error svg {
+  flex-shrink: 0;
+  margin-top: 1px;
 }
 
 .spin-icon {

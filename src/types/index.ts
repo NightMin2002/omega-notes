@@ -82,6 +82,23 @@ export interface AppSettings {
   trashAutoCleanDays: number
   /** 内容缩放百分比（80-150，默认 100） */
   contentZoom: number
+  /** 用户自定义笔记模板 */
+  customTemplates: CustomTemplate[]
+}
+
+/** 用户自定义笔记模板 */
+export interface CustomTemplate {
+  id: string
+  name: string
+  description: string
+  /** 模板默认标题 */
+  title: string
+  /** 模板默认分类 */
+  category: string
+  /** 模板内容（Markdown 原文） */
+  content: string
+  /** 创建时间 */
+  createdAt: string
 }
 
 /* ═══════════════════════════════════

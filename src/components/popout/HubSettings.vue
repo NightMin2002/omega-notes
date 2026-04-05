@@ -11,6 +11,7 @@ const config = ref({
   showWeek: true,
   useDetailedText: true,
   detailedTextType: 'elapsed',
+  panelPinned: false,
 })
 
 onMounted(() => {
@@ -68,6 +69,13 @@ watch(config, (val) => {
       <label class="setting-item">
         <span class="setting-label">显示年份/第几周 (如: W14)</span>
         <input type="checkbox" v-model="config.showWeek" class="toggle-checkbox" />
+      </label>
+
+      <div class="setting-divider" />
+
+      <label class="setting-item">
+        <span class="setting-label">展开面板后固定（不自动收缩）</span>
+        <input type="checkbox" v-model="config.panelPinned" class="toggle-checkbox" />
       </label>
     </div>
   </div>
@@ -176,5 +184,12 @@ watch(config, (val) => {
   color: var(--color-text-primary);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   font-weight: 600;
+}
+
+.setting-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: var(--space-1) 0;
+  opacity: 0.5;
 }
 </style>

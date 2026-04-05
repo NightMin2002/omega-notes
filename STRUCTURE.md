@@ -58,6 +58,7 @@ omega-v2/
 │   │   ├── CategoryDialog.vue  # 选择分类弹窗（封装 CategoryPicker）
 │   │   ├── CalendarWidget.vue  # 自定义月历组件（7×6 网格、待办标点、月导航、无第三方依赖）
 │   │   ├── DraftToast.vue      # 草稿恢复提示 Toast（3秒自动消失）
+│   │   ├── TemplateEditorDialog.vue # 自定义笔记模板编辑弹窗（新建/编辑，含名称/描述/分类/内容字段）
 │   │   └── popout/             # 桌面悬浮窗子组件（非路由，由 views/popout/ 引用）
 │   │       ├── HubExpandedBody.vue# 悬浮窗展开面板内容（任务/待办/番茄钟/人生/设置 Tabs）
 │   │       ├── HubTasks.vue      # 悬挂任务列表子模块
@@ -69,7 +70,7 @@ omega-v2/
 │   ├── views/                  # 路由页面组件
 │   │   ├── HomeView.vue        # 主页指挥中心（问候 + 任务进度环 + 统计 + 快捷入口 + 最近更新）
 │   │   ├── NotesView.vue       # 知识库（搜索 + 分类筛选 + 卡片网格 + FLIP 拖拽动画）
-│   │   ├── WriteView.vue       # 新建笔记（模板 + 编辑器 + 图片/链接 + 草稿自动保存）
+│   │   ├── WriteView.vue       # 新建笔记（模板选择器 + 自定义模板 + 待办跳转入口 + 编辑器 + 图片/链接 + 草稿自动保存）
 │   │   ├── NoteDetailView.vue  # 笔记详情（Flex 内部滚动架构：工具栏固定 + 内容区独立滚动 + 分屏 flex 填充 + 阅读 4 主题 + 字体缩放 + 悬挂）
 │   │   ├── TrashView.vue       # 回收站（恢复/永久删除/清空）
 │   │   ├── SettingsView.vue    # 设置页（外观/编辑器/数据/关于/字体缩放）
@@ -96,13 +97,13 @@ omega-v2/
 │   │   ├── markdown.ts         # stripMarkdown / truncateText
 │   │   ├── storage.ts          # 存储适配层（Tauri fs / localStorage 降级）
 │   │   ├── shortcuts.ts        # 全局快捷键注册（Tauri 环境）
-│   │   ├── templates.ts        # 笔记模板定义（6 种预设）
+│   │   ├── templates.ts        # 笔记模板定义（5 种预设，待办清单已改为跳转入口）
 │   │   ├── images.ts           # 图片粘贴处理（base64 转换）
 │   │   ├── dataio.ts           # 数据导入/导出（JSON + .md 支持）
 │   │   └── scheduler.ts        # 后台调度器（任务提醒 + 健康提醒巡检）
 │   │
 │   ├── types/                  # 共享类型定义
-│   │   └── index.ts            # Note / DailyTask / HealthReminder / CountdownState 等
+│   │   └── index.ts            # Note / DailyTask / HealthReminder / CountdownState / CustomTemplate 等
 │   │
 │   └── router/                 # 路由配置
 │       └── index.ts            # 路由表 + 页面标题同步；含 3 条 meta.popout 路由（/popout/*）
@@ -178,7 +179,7 @@ docs/
 |---|---|---|---|
 | `HomeView.vue` | `/` | `notes` | 统计卡片（总笔记/分类/已收藏/已置顶）、快捷入口、最近更新列表 |
 | `NotesView.vue` | `/notes` | `notes` | 搜索框、分类药丸（支持拖拽放入移动分类）、面包屑（嵌套分类时）、标签云筛选（`?tag=`）、收藏夹/最近视图（`?view=`）、笔记卡片网格、**FLIP 拖拽动画（Flexbox + capturePositions/playFlipAnimation）**、**拖拽卡片到分类药丸/侧边栏文件夹移动分类**、**Markdown 卡片预览** |
-| `WriteView.vue` | `/write` | `notes` | 模板选择器 → WYSIWYG/分屏编辑 + 图片插入 + `[[title]]` 链接插入 + 标题/分类/标签表单 |
+| `WriteView.vue` | `/write` | `notes`, `settings` | 模板选择器 → WYSIWYG/分屏编辑 + 图片插入 + `[[title]]` 链接插入 + 标题/分类/标签表单 + **自定义模板管理（新建/编辑/删除/右键菜单）** + **待办事项跳转入口** |
 | `NoteDetailView.vue` | `/note/:id` | `notes` | **Flex 内部滚动架构**：detail-toolbar + editor-toolbar 固定不滚动，detail-content 独立滚动（分屏时 flex 填充，pane 独立滚动）；阅读/编辑/分屏切换，收藏/置顶/删除，`[[title]]` 链接，反向链接，**4 种阅读主题 + 编辑器主题适配**，字体缩放，悬挂窗口 |
 | `TasksView.vue` | `/tasks` | `tasks` | 每日任务 + **卡片/列表视图切换** + **3种主题（默认/简约/彩色）** + **分类一键完成** + 倒计时 + 健康提醒 + 悬挂任务按钮 |
 | `TodosView.vue` | `/todos` | `todos` | 待办事项主页：左侧自定义月历 + 筛选 tabs（全部/今天/本周/逾期） + 统计，右侧待办列表（优先级圆点 + 截止日期 + 逾期红边），新建/编辑表单，已完成折叠区 |
@@ -221,7 +222,7 @@ docs/
 | | `parseFrontmatter(raw)` | 解析 YAML frontmatter → `{ meta, content }`（供 `dataio.ts` 复用） |
 | | `parseTags(raw)` | 解析标签字符串（`"[a, b]"` → `['a', 'b']`） |
 | `shortcuts.ts` | `registerGlobalShortcuts(router)` | 注册系统级全局快捷键（仅 Tauri），启动时先 `unregisterAll` 防止 HMR 重复注册 |
-| `templates.ts` | `getTemplates()` | 工厂函数，返回 6 种笔记模板（空白/会议/读书/日记/学习/待办），调用时动态生成当天日期 |
+| `templates.ts` | `getTemplates()` | 工厂函数，返回 5 种笔记模板（空白/会议/读书/日记/学习），调用时动态生成当天日期 |
 | | `templates[]` | 向后兼容的静态导出，推荐使用 `getTemplates()` |
 | `images.ts` | `clipboardHasImage()` | 同步检测剪贴板是否含图片 |
 | | `processClipboardImages()` | 异步处理粘贴图片，返回 base64 Markdown 语法 |
@@ -236,11 +237,11 @@ docs/
 | `theme.ts` | `theme: 'dark' \| 'light'` | `toggle()` | localStorage `omega-theme` |
 | `notes.ts` | `notes[]`, `currentCategory`, `searchQuery`, `isLoading`, `recentIds`, `draggingNoteId`（跨组件拖拽状态）, `noteMap`（computed Map 索引） | `init`, `addNote`, `updateNote`, `deleteNote`, `restoreNote`, `permanentlyDelete`, `emptyTrash`, `togglePin`, `toggleFavorite`, `recordOpen`, `importBatch`, `reorderNotes`, `moveNoteToCategory`, `getNoteById`, `findNoteByTitle`, `getBacklinks` | 委托 `storage.ts` + localStorage |
 | | 计算属性: `activeNotes`, `filteredNotes`, `categories`, `categoryTree`, `allTags`, `favoriteNotes`, `recentNotes`, `trashNotes`, `totalCount`, `pinnedCount`, `favoriteCount`, `trashCount` | | |
-| `settings.ts` | `settings`（单一状态源），computed getters: `defaultEditorMode`, `fontFamily`, `trashAutoCleanDays`, `contentZoom` | `setDefaultEditorMode`, `setFontFamily`, `setTrashAutoCleanDays`, `setContentZoom`, `init` | localStorage `omega-settings` |
+| `settings.ts` | `settings`（单一状态源），computed getters: `defaultEditorMode`, `fontFamily`, `trashAutoCleanDays`, `contentZoom`, `customTemplates` | `setDefaultEditorMode`, `setFontFamily`, `setTrashAutoCleanDays`, `setContentZoom`, `addCustomTemplate`, `updateCustomTemplate`, `removeCustomTemplate`, `init` | localStorage `omega-settings` |
 | `tasks.ts` | `config`, `tasks`, `records`, `healthReminder`, `countdown` | `addTask`, `toggleComplete`, `startCountdown`, `notifyCountdownOnce` 等丰富日常管理接口 | 委托 localStorage 支持多窗口同步 |
 | `todos.ts` | `todos[]`, `autoCleanDays` | `addTodo`, `updateTodo`, `removeTodo`, `toggleComplete`, `clearCompleted`, `importTodos`, `setAutoCleanDays` | localStorage `omega-todos` |
 | | 计算属性: `pendingTodos`, `completedTodos`, `overdueTodos`, `todayTodos`, `upcomingTodos`, `pendingCount`, `overdueCount`, `datePriorityMap` | | |
-| `updater.ts` | `hasUpdate`, `updateInfo`, `downloadProgress` | `checkForUpdates`, `downloadAndInstall`, `dismissUpdate` | 由 Tauri 官方 Updater 插件提供后端支撑 |
+| `updater.ts` | `hasUpdate`, `updateInfo`, `downloadProgress`, `downloadTotalBytes` | `checkForUpdates`, `downloadAndInstall`, `dismissUpdate` | 由 Tauri 官方 Updater 插件提供后端支撑 |
 
 ### 路由层 (`src/router/`)
 

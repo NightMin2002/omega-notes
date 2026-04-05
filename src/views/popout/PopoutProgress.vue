@@ -43,6 +43,7 @@ const defaultHubConfig = {
   showWeek: true,
   useDetailedText: true,
   detailedTextType: 'elapsed',
+  panelPinned: false,
 }
 
 function readHubConfig() {
@@ -299,8 +300,8 @@ async function toggleExpand() {
     preExpandPosition = previousPreExpand
   } finally {
     isTransitioning.value = false
-    // 展开动画期间鼠标已离开 → 自动收缩
-    if (isExpanded.value && !isHovering.value) {
+    // 展开动画期间鼠标已离开 → 若未固定则自动收缩
+    if (isExpanded.value && !isHovering.value && !hubConfig.value.panelPinned) {
       void collapsePanelAndRestorePosition()
     }
   }

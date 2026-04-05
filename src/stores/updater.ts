@@ -86,6 +86,7 @@ export const useUpdaterStore = defineStore('updater', () => {
   const checking = ref(false)
   const downloading = ref(false)
   const downloadProgress = ref(0)
+  const downloadTotalBytes = ref(0)
   const updateError = ref('')
 
   // 用户主动忽略的版本号
@@ -146,6 +147,7 @@ export const useUpdaterStore = defineStore('updater', () => {
     if (!isTauri() || downloading.value) return
     downloading.value = true
     downloadProgress.value = 0
+    downloadTotalBytes.value = 0
     updateError.value = ''
     try {
       const { check } = await import('@tauri-apps/plugin-updater')
@@ -157,6 +159,7 @@ export const useUpdaterStore = defineStore('updater', () => {
         await update.downloadAndInstall((event) => {
           if (event.event === 'Started' && event.data.contentLength) {
             totalLength = event.data.contentLength
+            downloadTotalBytes.value = totalLength
           } else if (event.event === 'Progress') {
             downloaded += event.data.chunkLength
             if (totalLength > 0) {
@@ -198,6 +201,7 @@ export const useUpdaterStore = defineStore('updater', () => {
     checking,
     downloading,
     downloadProgress,
+    downloadTotalBytes,
     updateError,
     checkForUpdates,
     downloadAndInstall,
