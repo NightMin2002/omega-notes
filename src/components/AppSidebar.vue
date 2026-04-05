@@ -24,7 +24,7 @@ const todosStore = useTodosStore()
 watch(
   () => route.path,
   (path) => {
-    if (path.startsWith('/note') || path.startsWith('/trash')) {
+    if (path.startsWith('/note') || path.startsWith('/trash') || path === '/write') {
       activeTab.value = 'kb'
     } else if (path === '/' || path === '/tasks' || path === '/todos') {
       activeTab.value = 'home'
@@ -86,18 +86,6 @@ function collapseIfMobile() {
             <span class="nav-label">主页</span>
           </RouterLink>
 
-          <RouterLink
-            to="/write"
-            class="nav-item"
-            :class="{ active: route.path === '/write' }"
-            @click="collapseIfMobile"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-            </svg>
-            <span class="nav-label">新建笔记</span>
-          </RouterLink>
 
           <!-- 日常管理 -->
           <div class="nav-divider" />
@@ -136,6 +124,19 @@ function collapseIfMobile() {
         <!-- “知识库”标签内容 -->
         <div v-show="activeTab === 'kb'" class="tab-content">
           <div class="nav-section-label">知识库概览</div>
+
+          <RouterLink
+            to="/write"
+            class="nav-item"
+            :class="{ active: route.path === '/write' }"
+            @click="collapseIfMobile"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+            <span class="nav-label">新建笔记</span>
+          </RouterLink>
           <RouterLink
             to="/notes"
             class="nav-item"
