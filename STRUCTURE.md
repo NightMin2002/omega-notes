@@ -60,6 +60,8 @@ omega-v2/
 │   │   ├── DraftToast.vue      # 草稿恢复提示 Toast（3秒自动消失）
 │   │   ├── DatePicker.vue      # 自定义日期选择器（Teleport 弹出日历面板，替代原生 input[type=date]）
 │   │   ├── TemplateEditorDialog.vue # 自定义笔记模板编辑弹窗（新建/编辑，含名称/描述/分类/内容字段）
+│   │   ├── NoteListPanel.vue  # 知识库浏览器 Master 面板（搜索 + 分类树折叠 + 笔记列表，emit select 不跳路由）
+│   │   ├── NoteReaderPanel.vue # 知识库浏览器 Detail 面板（嵌入式阅读/编辑器，复用 MarkdownRenderer + MilkdownEditor）
 │   │   └── popout/             # 桌面悬浮窗子组件（非路由，由 views/popout/ 引用）
 │   │       ├── HubExpandedBody.vue# 悬浮窗展开面板内容（任务/待办/番茄钟/人生/设置 Tabs）
 │   │       ├── HubTasks.vue      # 悬挂任务列表子模块
@@ -70,7 +72,8 @@ omega-v2/
 │   │
 │   ├── views/                  # 路由页面组件
 │   │   ├── HomeView.vue        # 主页指挥中心（问候 + 任务进度环 + 统计 + 快捷入口 + 最近更新）
-│   │   ├── NotesView.vue       # 知识库（搜索 + 分类筛选 + 卡片网格 + FLIP 拖拽动画）
+│   │   ├── NotesView.vue       # 知识库（搜索 + 分类筛选 + 网格/列表视图切换 + 卡片网格 + FLIP 拖拽动画）
+│   │   ├── ExplorerView.vue    # 知识库浏览器（主从布局：左侧 NoteListPanel + 右侧 NoteReaderPanel + 拖拽分隔条）
 │   │   ├── WriteView.vue       # 新建笔记（模板选择器 + 自定义模板 + 待办跳转入口 + 编辑器 + 图片/链接 + 草稿自动保存）
 │   │   ├── NoteDetailView.vue  # 笔记详情（Flex 内部滚动架构：工具栏固定 + 内容区独立滚动 + 分屏 flex 填充 + 阅读 4 主题 + 字体缩放 + 悬挂）
 │   │   ├── TrashView.vue       # 回收站（恢复/永久删除/清空）
@@ -172,6 +175,8 @@ docs/
 | `CalendarWidget.vue` | 自定义月历组件，纯 CSS Grid 实现，无第三方依赖。支持待办日期圆点标记（按优先级显示颜色）、今天/选中高亮、月切换导航 | Props: `selectedDate`, `dotMap` / Emits: `select` |
 | `DraftToast.vue` | 用于通知“已恢复草稿”等非阻塞信息的底部优雅提示条，内置 3 秒自动消失机制 | Props: `show`, `message` / Emits: `close` |
 | `DatePicker.vue` | 自定义日期选择器，替代原生 `input[type=date]`。Teleport 弹出日历面板，支持待办圆点、清除日期、今天快捷键 | v-model: `modelValue` / Props: `placeholder`, `dotMap` |
+| `NoteListPanel.vue` | 知识库浏览器 Master 面板。搜索筛选 + 分类/全部/收藏三 Tab + 分类树递归折叠 + 笔记条目列表（选中高亮） | Props: `selectedId` / Emits: `select` |
+| `NoteReaderPanel.vue` | 知识库浏览器 Detail 面板。嵌入式阅读/编辑器，切换笔记时自动退出编辑。复用 MarkdownRenderer、MilkdownEditor、SplitEditor、BacklinksPanel | Props: `noteId` / Emits: `navigate`, `deleted` |
 
 **编辑器架构说明**：`MilkdownEditor` 和 `MilkdownEditorCore` 必须拆分为两个组件，因为 `useEditor()` 需要在 `MilkdownProvider` 的 inject 上下文内调用。如果合并为一个组件会导致 `Symbol(editorInfoCtxKey) not found` 错误。
 
@@ -181,7 +186,8 @@ docs/
 |---|---|---|---|
 | `HomeView.vue` | `/` | `tasks`, `todos` | 效率主页：Mega Hero 看板（动态时间问候/日期/超大任务进度环）与行动卡片 |
 | `KnowledgeBaseView.vue`| `/kb-home` | `notes` | 知识库专属底座：呈现全库统计（文章数/类目/收藏）、收件箱未理及最近更新 |
-| `NotesView.vue` | `/notes` | `notes` | 搜索框、分类药丸（支持拖拽放入移动分类）、面包屑（嵌套分类时）、标签云筛选（`?tag=`）、收藏夹/最近视图（`?view=`）、笔记卡片网格、**FLIP 拖拽动画（Flexbox + capturePositions/playFlipAnimation）**、**拖拽卡片到分类药丸/侧边栏文件夹移动分类**、**Markdown 卡片预览** |
+| `NotesView.vue` | `/notes` | `notes` | 搜索框、**网格/列表视图切换（localStorage 持久化）**、分类药丸（支持拖拽放入移动分类）、面包屑（嵌套分类时）、标签云筛选（`?tag=`）、收藏夹/最近视图（`?view=`）、笔记卡片网格（自适应 2-3 列）、列表视图、笔记数量统计、**FLIP 拖拽动画**、**拖拽卡片到分类药丸/侧边栏文件夹移动分类**、**Markdown 卡片预览** |
+| `ExplorerView.vue` | `/explorer/:id?` | `notes` | **知识库浏览器（主从布局）**：左侧 NoteListPanel（Master）+ 右侧 NoteReaderPanel（Detail）+ 可拖拽分隔条（宽度持久化）+ URL 同步选中笔记 + 窄屏上下分栏降级 |
 | `WriteView.vue` | `/write` | `notes`, `settings` | 模板选择器 → WYSIWYG/分屏编辑 + 图片插入 + `[[title]]` 链接插入 + 标题/分类/标签表单 + **自定义模板管理（新建/编辑/删除/右键菜单）** + **待办事项跳转入口** |
 | `NoteDetailView.vue` | `/note/:id` | `notes` | **Flex 内部滚动架构**：detail-toolbar + editor-toolbar 固定不滚动，detail-content 独立滚动（分屏时 flex 填充，pane 独立滚动）；阅读/编辑/分屏切换，收藏/置顶/删除，`[[title]]` 链接，反向链接，**4 种阅读主题 + 编辑器主题适配**，字体缩放，悬挂窗口 |
 | `TasksView.vue` | `/tasks` | `tasks` | 每日任务 + **卡片/列表视图切换** + **3种主题（默认/简约/彩色）** + **分类一键完成** + 倒计时 + 健康提醒 + 悬挂任务按钮 |
@@ -252,7 +258,8 @@ docs/
 |---|---|---|---|
 | `/` | `home` | `HomeView` | 效率主页 |
 | `/kb-home` | `kb-home` | `KnowledgeBaseView` | 知识库总览 |
-| `/notes` | `notes` | `NotesView` | 知识库 |
+| `/notes` | `notes` | `NotesView` | 知识库（网格/列表） |
+| `/explorer/:id?` | `explorer` | `ExplorerView` | 知识库浏览器（主从布局） |
 | `/write` | `write` | `WriteView` | 新建笔记 |
 | `/note/:id` | `note-detail` | `NoteDetailView` | 笔记详情 |
 | `/trash` | `trash` | `TrashView` | 回收站 |

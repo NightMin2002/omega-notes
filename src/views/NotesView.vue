@@ -13,6 +13,16 @@ const notesStore = useNotesStore()
 const router = useRouter()
 const route = useRoute()
 
+/* ─── 视图模式：网格 / 列表（持久化） ─── */
+type ViewMode = 'grid' | 'list'
+const viewMode = ref<ViewMode>(
+  (localStorage.getItem('omega-notes-view-mode') as ViewMode) || 'grid'
+)
+function setViewMode(mode: ViewMode) {
+  viewMode.value = mode
+  localStorage.setItem('omega-notes-view-mode', mode)
+}
+
 /* ─── 搜索防抖 ─── */
 const localSearch = ref(notesStore.searchQuery)
 let searchTimer: ReturnType<typeof setTimeout> | null = null
@@ -315,18 +325,56 @@ function handlePillMouseUp(cat: string) {
 <template>
   <div class="notes-page" @contextmenu="handlePageContextMenu">
     <div class="notes-header">
-      <h2 class="page-title">{{ pageTitle }}</h2>
-      <div class="search-box">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-        <input
-          v-model="localSearch"
-          type="text"
-          class="search-input"
-          placeholder="搜索笔记…"
-        >
+      <div class="header-left">
+        <h2 class="page-title">{{ pageTitle }}</h2>
+        <span class="notes-count">{{ displayedNotes.length }} 篇</span>
+      </div>
+      <div class="header-right">
+        <div class="search-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            v-model="localSearch"
+            type="text"
+            class="search-input"
+            placeholder="搜索笔记…"
+          >
+        </div>
+        <!-- 视图模式切换 -->
+        <div class="view-toggle">
+          <button
+            class="view-toggle-btn"
+            :class="{ active: viewMode === 'grid' }"
+            data-tooltip="网格视图"
+            data-tooltip-pos="bottom"
+            @click="setViewMode('grid')"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+            </svg>
+          </button>
+          <button
+            class="view-toggle-btn"
+            :class="{ active: viewMode === 'list' }"
+            data-tooltip="列表视图"
+            data-tooltip-pos="bottom"
+            @click="setViewMode('list')"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="6" x2="21" y2="6" />
+              <line x1="8" y1="12" x2="21" y2="12" />
+              <line x1="8" y1="18" x2="21" y2="18" />
+              <line x1="3" y1="6" x2="3.01" y2="6" />
+              <line x1="3" y1="12" x2="3.01" y2="12" />
+              <line x1="3" y1="18" x2="3.01" y2="18" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -391,7 +439,7 @@ function handlePillMouseUp(cat: string) {
 
     <!-- 笔记网格 -->
     <div
-      v-show="displayedNotes.length > 0"
+      v-show="displayedNotes.length > 0 && viewMode === 'grid'"
       ref="gridRef"
       class="notes-grid"
     >
@@ -422,6 +470,38 @@ function handlePillMouseUp(cat: string) {
           <span class="note-card-category">{{ note.category }}</span>
           <span class="note-card-date">{{ formatDate(note.updatedAt) }}</span>
         </div>
+      </div>
+    </div>
+
+    <!-- 笔记列表 -->
+    <div
+      v-show="displayedNotes.length > 0 && viewMode === 'list'"
+      class="notes-list"
+    >
+      <div
+        v-for="note in displayedNotes"
+        :key="note.id"
+        class="list-row"
+        :class="{ pinned: note.isPinned }"
+        role="button"
+        tabindex="0"
+        @click="openNote(note.id)"
+        @keydown.enter="openNote(note.id)"
+        @contextmenu.prevent.stop="handleCardContextMenu($event, note.id)"
+      >
+        <div class="list-row-badges">
+          <svg v-if="note.isPinned" class="pin-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+          <svg v-if="note.isFavorite" class="fav-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+        </div>
+        <span class="list-row-title">{{ note.title || '未命名笔记' }}</span>
+        <span class="list-row-preview">{{ previewHtml(note.content).replace(/<[^>]*>/g, '').slice(0, 80) }}</span>
+        <span class="list-row-category">{{ note.category }}</span>
+        <span class="list-row-date">{{ formatDate(note.updatedAt) }}</span>
       </div>
     </div>
 
@@ -472,8 +552,7 @@ function handlePillMouseUp(cat: string) {
 
 <style scoped>
 .notes-page {
-  max-width: 1000px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 .notes-header {
@@ -483,6 +562,66 @@ function handlePillMouseUp(cat: string) {
   gap: var(--space-4);
   margin-bottom: var(--space-6);
   flex-wrap: wrap;
+}
+
+.header-left {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.notes-count {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-full);
+}
+
+/* ─── 视图模式切换 ─── */
+.view-toggle {
+  display: flex;
+  gap: 2px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: 3px;
+}
+
+.view-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: calc(var(--radius-md) - 2px);
+  color: var(--color-text-tertiary);
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.view-toggle-btn.active {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+@media (hover: hover) {
+  .view-toggle-btn:not(.active):hover {
+    color: var(--color-text-secondary);
+  }
+}
+
+.view-toggle-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-accent-muted);
 }
 
 .page-title {
@@ -651,17 +790,17 @@ function handlePillMouseUp(cat: string) {
 .notes-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-4);
+  gap: var(--space-6);
 }
 
 .note-card {
-  /* flex item 模拟 grid auto-fill minmax(280px, 1fr) */
-  flex: 1 1 280px;
-  max-width: calc(50% - var(--space-4) / 2);
+  /* flex item 自适应：宽屏 3 列、中屏 2 列、窄屏 1 列 */
+  flex: 1 1 320px;
+  max-width: calc(33.333% - var(--space-6) * 2 / 3);
   min-width: 280px;
   position: relative;
   text-align: left;
-  padding: var(--space-4);
+  padding: var(--space-6);
   background: var(--color-surface);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -675,6 +814,15 @@ function handlePillMouseUp(cat: string) {
   user-select: none;
   touch-action: none;
   will-change: transform;
+  /* 内部元素垂直排布 */
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 1200px) {
+  .note-card {
+    max-width: calc(50% - var(--space-6) / 2);
+  }
 }
 
 @media (hover: hover) {
@@ -711,7 +859,7 @@ function handlePillMouseUp(cat: string) {
   translate: none !important;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .note-card {
     max-width: 100%;
   }
@@ -719,8 +867,8 @@ function handlePillMouseUp(cat: string) {
 
 .card-badges {
   position: absolute;
-  top: var(--space-3);
-  right: var(--space-3);
+  top: var(--space-4);
+  right: var(--space-4);
   display: flex;
   gap: var(--space-1);
 }
@@ -737,29 +885,34 @@ function handlePillMouseUp(cat: string) {
   font-size: 1rem;
   font-weight: 600;
   color: var(--color-text-primary);
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
+  padding-right: var(--space-6); /* 避让 badges */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  line-height: 1.4;
 }
 
 .note-card-content {
-  font-size: 0.85rem;
-  color: var(--color-text-secondary);
-  line-height: 1.5;
-  /* 3 行 × 1.5 行高 × 0.85rem ≈ 3.825rem，取整为 4em */
-  max-height: 4em;
+  font-size: 0.82rem;
+  color: var(--color-text-tertiary);
+  line-height: 1.6;
+  /* 显示 3 行，每行约 1.6 × 0.82rem ≈ 1.31rem，3 行 ≈ 3.94rem，取 4.2em */
+  max-height: 4.2em;
   overflow: hidden;
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
   word-break: break-word;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-divider);
+  flex: 1;
 }
 
 /* 预览内粗体 */
 .note-card-content :deep(strong) {
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--color-text-secondary);
 }
 
 /* 预览内斜体 */
@@ -772,19 +925,24 @@ function handlePillMouseUp(cat: string) {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding-top: var(--space-3);
+  margin-top: auto;
 }
 
 .note-card-category {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 500;
   color: var(--color-accent-text);
-  padding: var(--space-1) var(--space-2);
+  padding: 3px var(--space-2);
   background: var(--color-accent-muted);
   border-radius: var(--radius-full);
+  letter-spacing: 0.02em;
 }
 
 .note-card-date {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--color-text-tertiary);
+  font-weight: 400;
 }
 
 /* ─── 空状态 ─── */
@@ -812,6 +970,112 @@ function handlePillMouseUp(cat: string) {
     opacity: 0.9;
     transform: translateY(-1px);
     color: var(--color-text-inverse);
+  }
+}
+
+/* ─── 列表视图 ─── */
+.notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--color-glass-border);
+}
+
+.list-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .list-row:hover {
+    background: var(--color-bg-hover);
+  }
+}
+
+.list-row:active {
+  transform: scale(0.998);
+}
+
+.list-row.pinned {
+  border-left: 3px solid var(--color-accent-muted);
+}
+
+.list-row-badges {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: 28px;
+  flex-shrink: 0;
+  justify-content: center;
+}
+
+.list-row-badges .pin-icon {
+  color: var(--color-accent);
+}
+
+.list-row-badges .fav-icon {
+  color: var(--color-warning, #e6a817);
+}
+
+.list-row-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 120px;
+  max-width: 280px;
+  flex-shrink: 0;
+}
+
+.list-row-preview {
+  flex: 1;
+  font-size: 0.8rem;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.list-row-category {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--color-accent-text);
+  padding: 2px var(--space-2);
+  background: var(--color-accent-muted);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.list-row-date {
+  font-size: 0.75rem;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 56px;
+  text-align: right;
+}
+
+/* 列表视图响应式：窄屏隐藏预览 */
+@media (max-width: 768px) {
+  .list-row-preview {
+    display: none;
+  }
+  .list-row-title {
+    max-width: none;
+    flex: 1;
   }
 }
 </style>

@@ -26,14 +26,22 @@ const tabHistory = ref({
   kb: '/kb-home'
 })
 
+/** 知识库相关路由前缀/路径集合 */
+const KB_PATHS = ['/kb-home', '/notes', '/write', '/trash']
+const KB_PREFIX = ['/note/', '/explorer'] // startsWith 匹配（如 /note/:id、/explorer/:id）
+
+function isKbRoute(path: string): boolean {
+  return KB_PATHS.includes(path) || KB_PREFIX.some(p => path.startsWith(p))
+}
+
 // 自动根据路由切换侧边栏状态，并记录各标签的最近停留页面
 watch(
   () => route.path,
   (path) => {
-    if (path.startsWith('/note') || path.startsWith('/trash') || path === '/write' || path === '/kb-home') {
+    if (isKbRoute(path)) {
       activeTab.value = 'kb'
       tabHistory.value.kb = route.fullPath
-    } else if (path === '/' || path === '/tasks' || path === '/todos' || path === '/settings') {
+    } else {
       activeTab.value = 'home'
       tabHistory.value.home = route.fullPath
     }
@@ -65,10 +73,13 @@ function collapseIfMobile() {
     <aside class="sidebar" :class="{ collapsed }">
       <nav class="sidebar-nav">
         <!-- 侧边栏双标签切换器 -->
-        <div class="sidebar-tabs">
+        <div class="sidebar-tabs" role="tablist" aria-label="导航标签">
           <button
             class="tab-btn"
             :class="{ active: activeTab === 'home' }"
+            role="tab"
+            :aria-selected="activeTab === 'home'"
+            aria-controls="tab-panel-home"
             @click="handleTabClick('home')"
           >
             首页
@@ -76,15 +87,18 @@ function collapseIfMobile() {
           <button
             class="tab-btn"
             :class="{ active: activeTab === 'kb' }"
+            role="tab"
+            :aria-selected="activeTab === 'kb'"
+            aria-controls="tab-panel-kb"
             @click="handleTabClick('kb')"
           >
             知识库
           </button>
-          <div class="tab-indicator" :class="activeTab"></div>
+          <div class="tab-indicator" :class="activeTab" aria-hidden="true"></div>
         </div>
 
         <!-- “首页”标签内容 -->
-        <div v-show="activeTab === 'home'" class="tab-content">
+        <div v-show="activeTab === 'home'" id="tab-panel-home" role="tabpanel" class="tab-content">
           <!-- 主导航 -->
           <div class="nav-section-label">导航</div>
           <RouterLink
@@ -136,7 +150,7 @@ function collapseIfMobile() {
         </div>
 
         <!-- “知识库”标签内容 -->
-        <div v-show="activeTab === 'kb'" class="tab-content">
+        <div v-show="activeTab === 'kb'" id="tab-panel-kb" role="tabpanel" class="tab-content">
           <div class="nav-section-label">知识库概览</div>
 
           <RouterLink
@@ -177,6 +191,18 @@ function collapseIfMobile() {
               <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
             </svg>
             <span class="nav-label">全部笔记</span>
+          </RouterLink>
+
+          <RouterLink
+            to="/explorer"
+            class="nav-item"
+            :class="{ active: route.path.startsWith('/explorer') }"
+            @click="collapseIfMobile"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" /><line x1="9" y1="3" x2="9" y2="21" />
+            </svg>
+            <span class="nav-label">浏览器</span>
           </RouterLink>
 
           <RouterLink

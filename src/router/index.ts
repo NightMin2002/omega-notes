@@ -25,6 +25,12 @@ const router = createRouter({
       meta: { title: '知识库' },
     },
     {
+      path: '/explorer/:id?',
+      name: 'explorer',
+      component: () => import('../views/ExplorerView.vue'),
+      meta: { title: '知识库浏览器' },
+    },
+    {
       path: '/note/:id',
       name: 'note-detail',
       component: () => import('../views/NoteDetailView.vue'),
