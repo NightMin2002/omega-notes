@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useNotesStore } from '../stores/notes'
 import { useTodosStore } from '../stores/todos'
 import SidebarFolderTree from './SidebarFolderTree.vue'
@@ -17,21 +17,35 @@ const emit = defineEmits<{
 }>()
 
 const route = useRoute()
+const router = useRouter()
 const notesStore = useNotesStore()
 const todosStore = useTodosStore()
 
-// 自动根据路由切换侧边栏状态
+const tabHistory = ref({
+  home: '/',
+  kb: '/kb-home'
+})
+
+// 自动根据路由切换侧边栏状态，并记录各标签的最近停留页面
 watch(
   () => route.path,
   (path) => {
-    if (path.startsWith('/note') || path.startsWith('/trash') || path === '/write') {
+    if (path.startsWith('/note') || path.startsWith('/trash') || path === '/write' || path === '/kb-home') {
       activeTab.value = 'kb'
-    } else if (path === '/' || path === '/tasks' || path === '/todos') {
+      tabHistory.value.kb = route.fullPath
+    } else if (path === '/' || path === '/tasks' || path === '/todos' || path === '/settings') {
       activeTab.value = 'home'
+      tabHistory.value.home = route.fullPath
     }
   },
   { immediate: true }
 )
+
+function handleTabClick(tab: 'home' | 'kb') {
+  if (activeTab.value === tab) return
+  activeTab.value = tab
+  router.push(tabHistory.value[tab])
+}
 
 const inboxCount = computed(() =>
   notesStore.notes.filter(n => n.category === '收件箱').length
@@ -55,14 +69,14 @@ function collapseIfMobile() {
           <button
             class="tab-btn"
             :class="{ active: activeTab === 'home' }"
-            @click="activeTab = 'home'"
+            @click="handleTabClick('home')"
           >
             首页
           </button>
           <button
             class="tab-btn"
             :class="{ active: activeTab === 'kb' }"
-            @click="activeTab = 'kb'"
+            @click="handleTabClick('kb')"
           >
             知识库
           </button>
@@ -124,6 +138,21 @@ function collapseIfMobile() {
         <!-- “知识库”标签内容 -->
         <div v-show="activeTab === 'kb'" class="tab-content">
           <div class="nav-section-label">知识库概览</div>
+
+          <RouterLink
+            to="/kb-home"
+            class="nav-item"
+            :class="{ active: route.path === '/kb-home' }"
+            @click="collapseIfMobile"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            <span class="nav-label">知识库总览</span>
+          </RouterLink>
 
           <RouterLink
             to="/write"

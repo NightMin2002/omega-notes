@@ -13,6 +13,12 @@ const router = createRouter({
       meta: { title: '主页' },
     },
     {
+      path: '/kb-home',
+      name: 'kb-home',
+      component: () => import('../views/KnowledgeBaseView.vue'),
+      meta: { title: '知识库总览' },
+    },
+    {
       path: '/notes',
       name: 'notes',
       component: () => import('../views/NotesView.vue'),

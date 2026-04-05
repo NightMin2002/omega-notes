@@ -179,7 +179,8 @@ docs/
 
 | 页面 | 路由 | 依赖的 Store | 功能 |
 |---|---|---|---|
-| `HomeView.vue` | `/` | `notes` | 统计卡片（总笔记/分类/已收藏/已置顶）、快捷入口、最近更新列表 |
+| `HomeView.vue` | `/` | `tasks`, `todos` | 效率主页：Mega Hero 看板（动态时间问候/日期/超大任务进度环）与行动卡片 |
+| `KnowledgeBaseView.vue`| `/kb-home` | `notes` | 知识库专属底座：呈现全库统计（文章数/类目/收藏）、收件箱未理及最近更新 |
 | `NotesView.vue` | `/notes` | `notes` | 搜索框、分类药丸（支持拖拽放入移动分类）、面包屑（嵌套分类时）、标签云筛选（`?tag=`）、收藏夹/最近视图（`?view=`）、笔记卡片网格、**FLIP 拖拽动画（Flexbox + capturePositions/playFlipAnimation）**、**拖拽卡片到分类药丸/侧边栏文件夹移动分类**、**Markdown 卡片预览** |
 | `WriteView.vue` | `/write` | `notes`, `settings` | 模板选择器 → WYSIWYG/分屏编辑 + 图片插入 + `[[title]]` 链接插入 + 标题/分类/标签表单 + **自定义模板管理（新建/编辑/删除/右键菜单）** + **待办事项跳转入口** |
 | `NoteDetailView.vue` | `/note/:id` | `notes` | **Flex 内部滚动架构**：detail-toolbar + editor-toolbar 固定不滚动，detail-content 独立滚动（分屏时 flex 填充，pane 独立滚动）；阅读/编辑/分屏切换，收藏/置顶/删除，`[[title]]` 链接，反向链接，**4 种阅读主题 + 编辑器主题适配**，字体缩放，悬挂窗口 |
@@ -249,7 +250,8 @@ docs/
 
 | 路径 | 名称 | 组件 | 说明 |
 |---|---|---|---|
-| `/` | `home` | `HomeView` | 主页 |
+| `/` | `home` | `HomeView` | 效率主页 |
+| `/kb-home` | `kb-home` | `KnowledgeBaseView` | 知识库总览 |
 | `/notes` | `notes` | `NotesView` | 知识库 |
 | `/write` | `write` | `WriteView` | 新建笔记 |
 | `/note/:id` | `note-detail` | `NoteDetailView` | 笔记详情 |
