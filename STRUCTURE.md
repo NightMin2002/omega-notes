@@ -58,11 +58,12 @@ omega-v2/
 │   │   ├── CategoryDialog.vue  # 选择分类弹窗（封装 CategoryPicker）
 │   │   ├── CalendarWidget.vue  # 自定义月历组件（7×6 网格、待办标点、月导航、无第三方依赖）
 │   │   ├── DraftToast.vue      # 草稿恢复提示 Toast（3秒自动消失）
+│   │   ├── DatePicker.vue      # 自定义日期选择器（Teleport 弹出日历面板，替代原生 input[type=date]）
 │   │   ├── TemplateEditorDialog.vue # 自定义笔记模板编辑弹窗（新建/编辑，含名称/描述/分类/内容字段）
 │   │   └── popout/             # 桌面悬浮窗子组件（非路由，由 views/popout/ 引用）
 │   │       ├── HubExpandedBody.vue# 悬浮窗展开面板内容（任务/待办/番茄钟/人生/设置 Tabs）
 │   │       ├── HubTasks.vue      # 悬挂任务列表子模块
-│   │       ├── HubTodos.vue      # 悬挂待办事项子模块（极简列表 + 快速添加）
+│   │       ├── HubTodos.vue      # 悬挂待办事项子模块（今日/本周/本月分组 + 备注摘要 + 快速添加）
 │   │       ├── HubTimer.vue      # 悬挂番茄钟子模块
 │   │       ├── HubLife.vue       # 悬挂人生进度条子模块
 │   │       └── HubSettings.vue   # 悬挂设置聚合面板
@@ -75,7 +76,7 @@ omega-v2/
 │   │   ├── TrashView.vue       # 回收站（恢复/永久删除/清空）
 │   │   ├── SettingsView.vue    # 设置页（外观/编辑器/数据/关于/字体缩放）
 │   │   ├── TasksView.vue       # 日常管理（每日任务 + 卡片/列表视图 + 3种主题 + 一键完成 + 倒计时 + 健康提醒）
-│   │   ├── TodosView.vue       # 待办事项（日历+列表双栏、筛选tabs、新建/编辑、优先级标点、逾期高亮）
+│   │   ├── TodosView.vue       # 待办事项（日历+列表双栏、日历日期继承新建、自定义DatePicker、筛选tabs带图标、新建按钮微光、优先级标点、逾期高亮）
 │   │   └── popout/             # 桌面悬挂窗口路由页面（always-on-top 独立窗口）
 │   │       ├── PopoutProgress.vue# 悬浮窗底部时间条窗口：拖拽/吸附/方向判断/面板调度
 │   │       ├── PopoutProgressPanel.vue# 悬浮窗独立展开面板窗口：承载 Tabs 内容区
@@ -170,6 +171,7 @@ docs/
 | `CategoryDialog.vue` | 对于 `CategoryPicker.vue` 的弹窗级别封装，通常用于在阅读模式下触发笔记“移动分类”操作 | Props: `open`, `title`, `initialCategory` / Emits: `confirm`, `cancel` |
 | `CalendarWidget.vue` | 自定义月历组件，纯 CSS Grid 实现，无第三方依赖。支持待办日期圆点标记（按优先级显示颜色）、今天/选中高亮、月切换导航 | Props: `selectedDate`, `dotMap` / Emits: `select` |
 | `DraftToast.vue` | 用于通知“已恢复草稿”等非阻塞信息的底部优雅提示条，内置 3 秒自动消失机制 | Props: `show`, `message` / Emits: `close` |
+| `DatePicker.vue` | 自定义日期选择器，替代原生 `input[type=date]`。Teleport 弹出日历面板，支持待办圆点、清除日期、今天快捷键 | v-model: `modelValue` / Props: `placeholder`, `dotMap` |
 
 **编辑器架构说明**：`MilkdownEditor` 和 `MilkdownEditorCore` 必须拆分为两个组件，因为 `useEditor()` 需要在 `MilkdownProvider` 的 inject 上下文内调用。如果合并为一个组件会导致 `Symbol(editorInfoCtxKey) not found` 错误。
 
@@ -182,7 +184,7 @@ docs/
 | `WriteView.vue` | `/write` | `notes`, `settings` | 模板选择器 → WYSIWYG/分屏编辑 + 图片插入 + `[[title]]` 链接插入 + 标题/分类/标签表单 + **自定义模板管理（新建/编辑/删除/右键菜单）** + **待办事项跳转入口** |
 | `NoteDetailView.vue` | `/note/:id` | `notes` | **Flex 内部滚动架构**：detail-toolbar + editor-toolbar 固定不滚动，detail-content 独立滚动（分屏时 flex 填充，pane 独立滚动）；阅读/编辑/分屏切换，收藏/置顶/删除，`[[title]]` 链接，反向链接，**4 种阅读主题 + 编辑器主题适配**，字体缩放，悬挂窗口 |
 | `TasksView.vue` | `/tasks` | `tasks` | 每日任务 + **卡片/列表视图切换** + **3种主题（默认/简约/彩色）** + **分类一键完成** + 倒计时 + 健康提醒 + 悬挂任务按钮 |
-| `TodosView.vue` | `/todos` | `todos` | 待办事项主页：左侧自定义月历 + 筛选 tabs（全部/今天/本周/逾期） + 统计，右侧待办列表（优先级圆点 + 截止日期 + 逾期红边），新建/编辑表单，已完成折叠区 |
+| `TodosView.vue` | `/todos` | `todos` | 待办事项主页：左侧自定义月历 + 筛选 tabs（全部/今天/本周/逾期，带 SVG 图标） + 统计，右侧待办列表（优先级圆点 + 截止日期 + 逾期红边）；**日历日期继承新建**：选日历后新建自动填入日期；**自定义 DatePicker** 替代原生日历；**微光渐变新建按钮**；已完成折叠区 |
 | `PopoutNote.vue` | `/popout/note/:id` | `notes` | 悬挂笔记（popout，always-on-top）：完整 Markdown 阅读 |
 | `SettingsView.vue` | `/settings` | `theme`, `settings`, `notes` | 设置：外观（主题/字体）、编辑器（默认模式）、数据（存储位置/统计/回收站清理）、系统（开机自启）、关于 |
 | `PopoutProgress.vue` | `/popout/progress` | `tasks` | 底部常驻悬浮时间条：常驻时间、拖拽、边缘吸附、分向展开。通过 `BroadcastChannel('omega-hub-channel')` 与 Panel 通透通信，避免 WebView 渲染迟滞引发重置闪烁 |
@@ -194,7 +196,7 @@ docs/
 |---|---|---|
 | `HubExpandedBody.vue` | - | 悬浮窗面板包装层：统一管理 5 个 Tab 子部件切换（任务/待办/番茄钟/人生进度/设置） |
 | `HubTasks.vue` | `tasks` | 悬浮窗任务小部件（快速打卡、极简列表） |
-| `HubTodos.vue` | `todos` | 悬浮窗待办小部件（极简列表 + 快速添加，逾期红色标记） |
+| `HubTodos.vue` | `todos` | 悬浮窗待办小部件（今日/本周/本月/全部分组视图 + 备注摘要 + 快速添加，逾期红色标记） |
 | `HubTimer.vue` | `tasks` | 悬浮窗番茄钟小部件（环形 SVG 倒计时） |
 | `HubLife.vue` | - | 悬浮窗人生进度小部件（自定义极客字库 + 毫秒级心跳逻辑） |
 | `HubSettings.vue` | - | 悬浮窗局部偏好设置小部件 |

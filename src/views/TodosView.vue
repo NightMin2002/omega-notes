@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useTodosStore } from '../stores/todos'
 import CalendarWidget from '../components/CalendarWidget.vue'
+import DatePicker from '../components/DatePicker.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import type { TodoPriority } from '../types'
 
@@ -12,15 +13,14 @@ type FilterTab = 'all' | 'today' | 'week' | 'overdue'
 const activeFilter = ref<FilterTab>('all')
 const selectedDate = ref<string>('')
 
-const filterTabs: { id: FilterTab; label: string }[] = [
-  { id: 'all', label: '全部' },
-  { id: 'today', label: '今天' },
-  { id: 'week', label: '本周' },
-  { id: 'overdue', label: '逾期' },
+const filterTabs: { id: FilterTab; label: string; icon: string }[] = [
+  { id: 'all', label: '全部', icon: 'M4 6h16M4 12h16M4 18h16' },
+  { id: 'today', label: '今天', icon: 'M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83' },
+  { id: 'week', label: '本周', icon: 'M3 4h18v18H3zM16 2v4M8 2v4M3 10h18' },
+  { id: 'overdue', label: '逾期', icon: 'M12 8v4l3 3M12 2a10 10 0 100 20 10 10 0 000-20z' },
 ]
 
 const filteredTodos = computed(() => {
-  // 如果选中了日历日期，优先按日期筛选
   if (selectedDate.value) {
     return todosStore.todosByDate(selectedDate.value)
   }
@@ -30,6 +30,12 @@ const filteredTodos = computed(() => {
     case 'overdue': return todosStore.overdueTodos
     default: return todosStore.pendingTodos
   }
+})
+
+/** 当前筛选条件的标题 */
+const filterLabel = computed(() => {
+  if (selectedDate.value) return `${selectedDate.value} 的待办`
+  return filterTabs.find(t => t.id === activeFilter.value)?.label || '全部'
 })
 
 function selectFilter(tab: FilterTab) {
@@ -48,6 +54,24 @@ const newTitle = ref('')
 const newDueDate = ref('')
 const newPriority = ref<TodoPriority>('medium')
 const newDescription = ref('')
+
+/**
+ * 关键：如果从日历选中了日期，打开新建表单时自动继承该日期
+ */
+function openCreateForm() {
+  showCreateForm.value = true
+  if (selectedDate.value && !newDueDate.value) {
+    newDueDate.value = selectedDate.value
+  }
+}
+
+function toggleCreateForm() {
+  if (showCreateForm.value) {
+    showCreateForm.value = false
+  } else {
+    openCreateForm()
+  }
+}
 
 function createTodo() {
   if (!newTitle.value.trim()) return
@@ -147,56 +171,87 @@ const priorities: { value: TodoPriority; label: string }[] = [
         待办事项
         <span v-if="todosStore.overdueCount > 0" class="overdue-badge">{{ todosStore.overdueCount }}</span>
       </h2>
-      <button class="create-btn" @click="showCreateForm = !showCreateForm">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-        新建
+
+      <!-- 美化的新建按钮 -->
+      <button
+        class="create-btn"
+        :class="{ 'is-active': showCreateForm }"
+        @click="toggleCreateForm"
+      >
+        <span class="create-btn-icon" :class="{ rotated: showCreateForm }">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </span>
+        <span class="create-btn-text">{{ showCreateForm ? '收起' : '新建待办' }}</span>
+        <span class="create-btn-glow" />
       </button>
     </div>
 
     <!-- 新建表单 -->
     <Transition name="slide-down">
       <div v-if="showCreateForm" class="create-form">
-        <div class="form-row">
-          <input
-            v-model="newTitle"
-            class="form-input title-input"
-            placeholder="待办标题..."
-            @keydown.enter="createTodo"
-          >
-        </div>
-        <div class="form-row form-row-details">
-          <div class="form-field">
-            <label class="form-label">截止日期</label>
-            <input v-model="newDueDate" type="date" class="form-input date-input">
+        <div class="create-form-inner">
+          <!-- 标题行 -->
+          <div class="form-section">
+            <label class="form-label-lg">标题</label>
+            <input
+              v-model="newTitle"
+              class="form-input title-input"
+              placeholder="待办标题..."
+              @keydown.enter="createTodo"
+            >
           </div>
-          <div class="form-field">
-            <label class="form-label">优先级</label>
-            <div class="priority-selector">
-              <button
-                v-for="p in priorities"
-                :key="p.value"
-                class="priority-btn"
-                :class="[`priority-${p.value}`, { active: newPriority === p.value }]"
-                @click="newPriority = p.value"
-              >
-                {{ p.label }}
-              </button>
+
+          <!-- 日期 + 优先级 -->
+          <div class="form-row form-row-duo">
+            <div class="form-field">
+              <label class="form-label">截止日期</label>
+              <DatePicker
+                v-model="newDueDate"
+                placeholder="选择日期"
+                :dot-map="todosStore.datePriorityMap"
+              />
+            </div>
+            <div class="form-field">
+              <label class="form-label">优先级</label>
+              <div class="priority-selector">
+                <button
+                  v-for="p in priorities"
+                  :key="p.value"
+                  class="priority-btn"
+                  :class="[`priority-${p.value}`, { active: newPriority === p.value }]"
+                  @click="newPriority = p.value"
+                >
+                  <span class="priority-dot-mini" :class="`dot-${p.value}`" />
+                  {{ p.label }}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-        <div class="form-row">
-          <input
-            v-model="newDescription"
-            class="form-input"
-            placeholder="备注描述（可选）..."
-          >
-        </div>
-        <div class="form-actions">
-          <button class="form-btn cancel" @click="showCreateForm = false">取消</button>
-          <button class="form-btn confirm" :disabled="!newTitle.trim()" @click="createTodo">添加待办</button>
+
+          <!-- 备注 -->
+          <div class="form-section">
+            <label class="form-label">备注</label>
+            <textarea
+              v-model="newDescription"
+              class="form-input form-textarea"
+              placeholder="备注描述（可选）..."
+              rows="2"
+            />
+          </div>
+
+          <!-- 操作 -->
+          <div class="form-actions">
+            <button class="form-btn cancel" @click="showCreateForm = false">取消</button>
+            <button class="form-btn confirm" :disabled="!newTitle.trim()" @click="createTodo">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              添加待办
+            </button>
+          </div>
         </div>
       </div>
     </Transition>
@@ -220,6 +275,9 @@ const priorities: { value: TodoPriority; label: string }[] = [
             :class="{ active: activeFilter === tab.id && !selectedDate }"
             @click="selectFilter(tab.id)"
           >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path :d="tab.icon" />
+            </svg>
             {{ tab.label }}
             <span v-if="tab.id === 'overdue' && todosStore.overdueCount > 0" class="tab-badge danger">
               {{ todosStore.overdueCount }}
@@ -247,12 +305,19 @@ const priorities: { value: TodoPriority; label: string }[] = [
       <main class="todos-list-area">
         <div v-if="selectedDate" class="list-subtitle">
           <span>{{ selectedDate }} 的待办</span>
-          <button class="clear-date-btn" @click="selectedDate = ''">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-            清除
-          </button>
+          <div class="list-subtitle-actions">
+            <button class="subtitle-action-btn" @click="openCreateForm" data-tooltip="添加此日待办">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+            <button class="clear-date-btn" @click="selectedDate = ''">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+              清除
+            </button>
+          </div>
         </div>
 
         <!-- 待办列表 -->
@@ -266,9 +331,13 @@ const priorities: { value: TodoPriority; label: string }[] = [
             <!-- 编辑模式 -->
             <template v-if="editingId === todo.id">
               <div class="todo-edit-form">
-                <input v-model="editTitle" class="form-input" @keydown.enter="saveEdit" @keydown.esc="cancelEdit">
-                <div class="form-row form-row-details">
-                  <input v-model="editDueDate" type="date" class="form-input date-input">
+                <input v-model="editTitle" class="form-input" placeholder="标题..." @keydown.enter="saveEdit" @keydown.esc="cancelEdit">
+                <div class="form-row form-row-duo">
+                  <DatePicker
+                    v-model="editDueDate"
+                    placeholder="截止日期"
+                    :dot-map="todosStore.datePriorityMap"
+                  />
                   <div class="priority-selector">
                     <button
                       v-for="p in priorities"
@@ -277,11 +346,12 @@ const priorities: { value: TodoPriority; label: string }[] = [
                       :class="[`priority-${p.value}`, { active: editPriority === p.value }]"
                       @click="editPriority = p.value"
                     >
+                      <span class="priority-dot-mini" :class="`dot-${p.value}`" />
                       {{ p.label }}
                     </button>
                   </div>
                 </div>
-                <input v-model="editDescription" class="form-input" placeholder="备注...">
+                <textarea v-model="editDescription" class="form-input form-textarea" placeholder="备注..." rows="2" />
                 <div class="form-actions">
                   <button class="form-btn cancel" @click="cancelEdit">取消</button>
                   <button class="form-btn confirm" @click="saveEdit">保存</button>
@@ -337,7 +407,7 @@ const priorities: { value: TodoPriority; label: string }[] = [
             <line x1="3" y1="10" x2="21" y2="10" />
           </svg>
           <p>暂无待办事项</p>
-          <button class="empty-action" @click="showCreateForm = true">创建一个</button>
+          <button class="empty-action" @click="openCreateForm">创建一个</button>
         </div>
 
         <!-- 已完成区域 -->
@@ -436,22 +506,80 @@ const priorities: { value: TodoPriority; label: string }[] = [
   justify-content: center;
 }
 
+/* ─── 美化的新建按钮 ─── */
 .create-btn {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  background: var(--color-accent);
+  padding: 10px 20px 10px 16px;
+  background: linear-gradient(135deg, var(--color-accent), color-mix(in srgb, var(--color-accent), white 18%));
   color: var(--color-text-inverse);
   border-radius: var(--radius-full);
   font-size: 0.85rem;
   font-weight: 600;
-  transition: opacity var(--duration-fast) var(--ease-out),
-              transform var(--duration-fast) var(--ease-out);
+  overflow: hidden;
+  transition: transform var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+  box-shadow: 0 2px 12px rgba(108, 138, 255, 0.3),
+              0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 @media (hover: hover) {
-  .create-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .create-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(108, 138, 255, 0.4),
+                0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.create-btn:active {
+  transform: scale(0.97) translateY(0);
+}
+
+.create-btn.is-active {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  box-shadow: none;
+}
+
+.create-btn-icon {
+  display: flex;
+  transition: transform var(--duration-normal) var(--ease-spring);
+}
+
+.create-btn-icon.rotated {
+  transform: rotate(45deg);
+}
+
+.create-btn-text {
+  white-space: nowrap;
+}
+
+/* 微光效果 */
+.create-btn-glow {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  animation: create-btn-shimmer 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.create-btn.is-active .create-btn-glow {
+  display: none;
+}
+
+@keyframes create-btn-shimmer {
+  0%, 100% { left: -100%; }
+  50% { left: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .create-btn-glow { display: none; }
+  .create-btn-icon { transition: none; }
 }
 
 /* ─── 新建表单 ─── */
@@ -459,20 +587,45 @@ const priorities: { value: TodoPriority; label: string }[] = [
   background: var(--color-surface);
   border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-xl);
-  padding: var(--space-4);
   margin-bottom: var(--space-6);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+  overflow: hidden;
 }
 
-.form-row { display: flex; gap: var(--space-3); }
-.form-row-details { flex-wrap: wrap; }
+.create-form-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.form-label-lg {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.03em;
+}
+
+.form-row {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.form-row-duo {
+  flex-wrap: wrap;
+}
 
 .form-field {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 140px;
 }
 
 .form-label {
@@ -488,17 +641,16 @@ const priorities: { value: TodoPriority; label: string }[] = [
 }
 
 .title-input {
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 600;
+  padding: var(--space-3) var(--space-4);
 }
 
-.date-input {
-  min-width: 140px;
-  color-scheme: dark;
-}
-
-:root[data-theme="light"] .date-input {
-  color-scheme: light;
+.form-textarea {
+  resize: vertical;
+  min-height: 56px;
+  line-height: 1.6;
+  font-size: 0.88rem;
 }
 
 .priority-selector {
@@ -510,6 +662,9 @@ const priorities: { value: TodoPriority; label: string }[] = [
 }
 
 .priority-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-sm);
   font-size: 0.75rem;
@@ -517,6 +672,17 @@ const priorities: { value: TodoPriority; label: string }[] = [
   color: var(--color-text-tertiary);
   transition: all var(--duration-fast) var(--ease-out);
 }
+
+.priority-dot-mini {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.priority-dot-mini.dot-high { background: var(--color-danger, #ef4444); }
+.priority-dot-mini.dot-medium { background: var(--color-warning, #e6a817); }
+.priority-dot-mini.dot-low { background: var(--color-accent); }
 
 .priority-btn.active.priority-high {
   background: rgba(239, 68, 68, 0.15);
@@ -536,13 +702,18 @@ const priorities: { value: TodoPriority; label: string }[] = [
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: var(--space-2);
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-divider);
 }
 
 .form-btn {
-  padding: var(--space-2) var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-5);
   border-radius: var(--radius-md);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 600;
   transition: all var(--duration-fast) var(--ease-out);
 }
@@ -558,12 +729,17 @@ const priorities: { value: TodoPriority; label: string }[] = [
 .form-btn.confirm {
   background: var(--color-accent);
   color: var(--color-text-inverse);
+  box-shadow: 0 1px 4px rgba(108, 138, 255, 0.25);
 }
 
-.form-btn.confirm:disabled { opacity: 0.4; }
+.form-btn.confirm:disabled { opacity: 0.4; box-shadow: none; }
 
 @media (hover: hover) {
-  .form-btn.confirm:not(:disabled):hover { opacity: 0.9; }
+  .form-btn.confirm:not(:disabled):hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 12px rgba(108, 138, 255, 0.35);
+  }
 }
 
 /* ─── 主体双栏 ─── */
@@ -613,14 +789,25 @@ const priorities: { value: TodoPriority; label: string }[] = [
               color var(--duration-fast) var(--ease-out);
 }
 
+.filter-tab svg {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
 @media (hover: hover) {
   .filter-tab:hover { background: var(--color-bg-hover); color: var(--color-text-primary); }
+  .filter-tab:hover svg { opacity: 1; }
 }
 
 .filter-tab.active {
   background: var(--color-accent-muted);
   color: var(--color-accent);
   font-weight: 600;
+}
+
+.filter-tab.active svg {
+  opacity: 1;
+  color: var(--color-accent);
 }
 
 .tab-badge {
@@ -679,6 +866,27 @@ const priorities: { value: TodoPriority; label: string }[] = [
   font-weight: 600;
   color: var(--color-text-secondary);
   margin-bottom: var(--space-3);
+}
+
+.list-subtitle-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.subtitle-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-md);
+  color: var(--color-accent);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .subtitle-action-btn:hover { background: var(--color-accent-muted); }
 }
 
 .clear-date-btn {
@@ -832,7 +1040,7 @@ const priorities: { value: TodoPriority; label: string }[] = [
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
 /* ─── 空状态 ─── */
@@ -927,5 +1135,10 @@ const priorities: { value: TodoPriority; label: string }[] = [
     width: 100%;
     position: static;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .create-btn { transition: none; }
+  .create-btn-icon { transition: none; }
 }
 </style>
