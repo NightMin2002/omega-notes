@@ -224,27 +224,27 @@ async function popoutNote() {
 
             <!-- 编辑时也可切换视觉主题 -->
             <div class="mode-switcher">
-              <button class="mode-btn" :class="{ active: readingTheme === 'aurora' }" @click="readingTheme = 'aurora'" data-tooltip="精读">
+              <button class="mode-btn" :class="{ active: readingTheme === 'aurora' }" @click="readingTheme = 'aurora'" data-tooltip="精读" data-tooltip-pos="bottom">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 2v2" /><path d="M12 20v2" /><path d="M4.93 4.93l1.41 1.41" /><path d="M17.66 17.66l1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="M6.34 17.66l-1.41 1.41" /><path d="M19.07 4.93l-1.41 1.41" />
                 </svg>
               </button>
-              <button class="mode-btn" :class="{ active: readingTheme === 'ink' }" @click="readingTheme = 'ink'" data-tooltip="笔墨">
+              <button class="mode-btn" :class="{ active: readingTheme === 'ink' }" @click="readingTheme = 'ink'" data-tooltip="笔墨" data-tooltip-pos="bottom">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 19l7-7 3 3-7 7-3-3z" /><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="M2 2l7.586 7.586" /><circle cx="11" cy="11" r="2" />
                 </svg>
               </button>
-              <button class="mode-btn" :class="{ active: readingTheme === 'terminal' }" @click="readingTheme = 'terminal'" data-tooltip="终端">
+              <button class="mode-btn" :class="{ active: readingTheme === 'terminal' }" @click="readingTheme = 'terminal'" data-tooltip="终端" data-tooltip-pos="bottom">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" />
                 </svg>
               </button>
-              <button class="mode-btn" :class="{ active: readingTheme === 'parchment' }" @click="readingTheme = 'parchment'" data-tooltip="羊皮纸">
+              <button class="mode-btn" :class="{ active: readingTheme === 'parchment' }" @click="readingTheme = 'parchment'" data-tooltip="羊皮纸" data-tooltip-pos="bottom">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
                 </svg>
               </button>
-              <button class="mode-btn" :class="{ active: readingTheme === 'source' }" @click="readingTheme = 'source'" data-tooltip="源码">
+              <button class="mode-btn" :class="{ active: readingTheme === 'source' }" @click="readingTheme = 'source'" data-tooltip="源码" data-tooltip-pos="bottom">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
                 </svg>
@@ -270,6 +270,7 @@ async function popoutNote() {
                 :class="{ active: readingTheme === 'aurora' }"
                 @click="readingTheme = 'aurora'"
                 data-tooltip="精读模式"
+                data-tooltip-pos="bottom"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 2v2" /><path d="M12 20v2" /><path d="M4.93 4.93l1.41 1.41" /><path d="M17.66 17.66l1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="M6.34 17.66l-1.41 1.41" /><path d="M19.07 4.93l-1.41 1.41" />
@@ -281,6 +282,7 @@ async function popoutNote() {
                 :class="{ active: readingTheme === 'ink' }"
                 @click="readingTheme = 'ink'"
                 data-tooltip="笔墨模式"
+                data-tooltip-pos="bottom"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 19l7-7 3 3-7 7-3-3z" /><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="M2 2l7.586 7.586" /><circle cx="11" cy="11" r="2" />
@@ -292,6 +294,7 @@ async function popoutNote() {
                 :class="{ active: readingTheme === 'terminal' }"
                 @click="readingTheme = 'terminal'"
                 data-tooltip="终端模式"
+                data-tooltip-pos="bottom"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" />
@@ -303,6 +306,7 @@ async function popoutNote() {
                 :class="{ active: readingTheme === 'parchment' }"
                 @click="readingTheme = 'parchment'"
                 data-tooltip="羊皮纸模式"
+                data-tooltip-pos="bottom"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
@@ -314,6 +318,7 @@ async function popoutNote() {
                 :class="{ active: readingTheme === 'source' }"
                 @click="readingTheme = 'source'"
                 data-tooltip="源码模式"
+                data-tooltip-pos="bottom"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
@@ -323,13 +328,13 @@ async function popoutNote() {
             </div>
           </template>
 
-          <button class="toolbar-btn" :class="{ active: note.isFavorite }" @click="toggleFavorite">
+          <button class="toolbar-btn btn-favorite" :class="{ 'is-active': note.isFavorite }" @click="toggleFavorite">
             <svg width="16" height="16" viewBox="0 0 24 24" :fill="note.isFavorite ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
             </svg>
             <span>{{ note.isFavorite ? '取消收藏' : '收藏' }}</span>
           </button>
-          <button class="toolbar-btn" :class="{ active: note.isPinned }" @click="togglePin">
+          <button class="toolbar-btn btn-pin" :class="{ 'is-active': note.isPinned }" @click="togglePin">
             <svg width="16" height="16" viewBox="0 0 24 24" :fill="note.isPinned ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
               <circle cx="12" cy="10" r="3" />
@@ -369,19 +374,21 @@ async function popoutNote() {
               :disabled="settingsStore.contentZoom <= 80"
               @click="settingsStore.setContentZoom(settingsStore.contentZoom - 5)"
               data-tooltip="缩小"
+              data-tooltip-pos="bottom"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                 <line x1="8" y1="11" x2="14" y2="11" />
               </svg>
             </button>
-            <span class="zoom-value" data-tooltip="双击重置缩放" @dblclick="settingsStore.setContentZoom(100)">{{ settingsStore.contentZoom }}%</span>
+            <span class="zoom-value" data-tooltip="双击重置缩放" data-tooltip-pos="bottom" @dblclick="settingsStore.setContentZoom(100)">{{ settingsStore.contentZoom }}%</span>
             <button
               type="button"
               class="zoom-inline-btn"
               :disabled="settingsStore.contentZoom >= 150"
               @click="settingsStore.setContentZoom(settingsStore.contentZoom + 5)"
               data-tooltip="放大"
+              data-tooltip-pos="bottom"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -610,6 +617,7 @@ async function popoutNote() {
 .toolbar-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-2);
 }
 
@@ -623,6 +631,8 @@ async function popoutNote() {
   font-weight: 500;
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border-button);
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: background-color var(--duration-fast) var(--ease-out),
               color var(--duration-fast) var(--ease-out),
               border-color var(--duration-fast) var(--ease-out),
@@ -646,9 +656,22 @@ async function popoutNote() {
   }
 }
 
-.toolbar-btn.active {
+.toolbar-btn.is-active {
   color: var(--color-accent);
   border-color: var(--color-accent);
+  background: var(--color-accent-muted);
+}
+
+.btn-favorite.is-active {
+  color: var(--color-warning);
+  border-color: var(--color-warning);
+  background: var(--color-warning-muted);
+}
+
+.btn-pin.is-active {
+  color: var(--color-success);
+  border-color: var(--color-success);
+  background: var(--color-success-muted);
 }
 
 /* ─── 顶栏编辑操作按钮 ─── */
@@ -676,8 +699,20 @@ async function popoutNote() {
   }
   .toolbar-btn--save:hover:not(:disabled) {
     background: color-mix(in oklch, var(--color-accent), white 12%);
+    color: #fff;
+    border-color: var(--color-accent);
     transform: translateY(-1px);
     box-shadow: 0 2px 8px var(--color-accent-muted);
+  }
+  .btn-favorite.is-active:hover {
+    color: var(--color-warning);
+    border-color: var(--color-warning);
+    background: color-mix(in srgb, var(--color-warning-muted), var(--color-warning) 10%);
+  }
+  .btn-pin.is-active:hover {
+    color: var(--color-success);
+    border-color: var(--color-success);
+    background: color-mix(in srgb, var(--color-success-muted), var(--color-success) 10%);
   }
 }
 
@@ -700,6 +735,8 @@ async function popoutNote() {
   font-size: 0.75rem;
   font-weight: 500;
   color: var(--color-text-tertiary);
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: background-color var(--duration-fast) var(--ease-out),
               color var(--duration-fast) var(--ease-out);
 }

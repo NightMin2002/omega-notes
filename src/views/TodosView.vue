@@ -196,7 +196,7 @@ const priorities: { value: TodoPriority; label: string }[] = [
           <div v-if="selectedDate" class="list-subtitle">
             <span>{{ selectedDate }} 的待办</span>
             <div class="list-subtitle-actions">
-              <button class="subtitle-action-btn" @click="openCreateModal" data-tooltip="添加此日待办">
+              <button class="subtitle-action-btn" @click="openCreateModal" data-tooltip="添加此日待办" data-tooltip-pos="bottom">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
@@ -247,10 +247,10 @@ const priorities: { value: TodoPriority; label: string }[] = [
                   </div>
                 </div>
                 <div class="todo-actions">
-                  <button class="todo-action-btn" @click="startEdit(todo)" data-tooltip="编辑">
+                  <button class="todo-action-btn" @click="startEdit(todo)" data-tooltip="编辑" data-tooltip-pos="bottom">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                   </button>
-                  <button class="todo-action-btn danger" @click="todosStore.removeTodo(todo.id)" data-tooltip="删除">
+                  <button class="todo-action-btn danger" @click="todosStore.removeTodo(todo.id)" data-tooltip="删除" data-tooltip-pos="bottom">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
                   </button>
                 </div>
@@ -462,6 +462,7 @@ const priorities: { value: TodoPriority; label: string }[] = [
   flex: 1;
   overflow-y: auto;
   padding-right: var(--space-1); /* 给滚动条留空间 */
+  padding-bottom: var(--space-6); /* 防止底部 tooltip 滚动偏移及最后卡片贴底 */
 }
 
 /* ─── 筛选 Tabs ─── */
