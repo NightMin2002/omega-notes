@@ -127,7 +127,7 @@ function handleConfirm() {
 .cat-dialog-cancel-btn,
 .cat-dialog-ok-btn {
   flex: 1;
-  padding: var(--space-2) var(--space-4);
+  padding: 10px var(--space-6);
   border-radius: var(--radius-md);
   font-weight: 500;
   font-size: 0.88rem;

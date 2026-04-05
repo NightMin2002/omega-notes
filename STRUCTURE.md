@@ -76,7 +76,7 @@ omega-v2/
 │   │   ├── TrashView.vue       # 回收站（恢复/永久删除/清空）
 │   │   ├── SettingsView.vue    # 设置页（外观/编辑器/数据/关于/字体缩放）
 │   │   ├── TasksView.vue       # 日常管理（每日任务 + 卡片/列表视图 + 3种主题 + 一键完成 + 倒计时 + 健康提醒）
-│   │   ├── TodosView.vue       # 待办事项（日历+列表双栏、日历日期继承新建、自定义DatePicker、筛选tabs带图标、新建按钮微光、优先级标点、逾期高亮）
+│   │   ├── TodosView.vue       # 待办事项（日历+列表双栏、Modal新建弹窗、列表独立滚动、日历日期继承、自定义DatePicker、筛选tabs带图标、逾期高亮）
 │   │   └── popout/             # 桌面悬挂窗口路由页面（always-on-top 独立窗口）
 │   │       ├── PopoutProgress.vue# 悬浮窗底部时间条窗口：拖拽/吸附/方向判断/面板调度
 │   │       ├── PopoutProgressPanel.vue# 悬浮窗独立展开面板窗口：承载 Tabs 内容区
@@ -184,7 +184,7 @@ docs/
 | `WriteView.vue` | `/write` | `notes`, `settings` | 模板选择器 → WYSIWYG/分屏编辑 + 图片插入 + `[[title]]` 链接插入 + 标题/分类/标签表单 + **自定义模板管理（新建/编辑/删除/右键菜单）** + **待办事项跳转入口** |
 | `NoteDetailView.vue` | `/note/:id` | `notes` | **Flex 内部滚动架构**：detail-toolbar + editor-toolbar 固定不滚动，detail-content 独立滚动（分屏时 flex 填充，pane 独立滚动）；阅读/编辑/分屏切换，收藏/置顶/删除，`[[title]]` 链接，反向链接，**4 种阅读主题 + 编辑器主题适配**，字体缩放，悬挂窗口 |
 | `TasksView.vue` | `/tasks` | `tasks` | 每日任务 + **卡片/列表视图切换** + **3种主题（默认/简约/彩色）** + **分类一键完成** + 倒计时 + 健康提醒 + 悬挂任务按钮 |
-| `TodosView.vue` | `/todos` | `todos` | 待办事项主页：左侧自定义月历 + 筛选 tabs（全部/今天/本周/逾期，带 SVG 图标） + 统计，右侧待办列表（优先级圆点 + 截止日期 + 逾期红边）；**日历日期继承新建**：选日历后新建自动填入日期；**自定义 DatePicker** 替代原生日历；**微光渐变新建按钮**；已完成折叠区 |
+| `TodosView.vue` | `/todos` | `todos` | 待办事项主页：**Flex 固定高度布局**（页头固定 + 列表独立滚动）；左侧自定义月历 + 筛选 tabs（全部/今天/本周/逾期，带 SVG 图标）+ 统计；右侧待办列表（优先级圆点 + 截止日期 + 逾期红边）；**Teleport Modal 新建弹窗**（不影响页面文档流）；**日历日期继承新建**；**自定义 DatePicker**；已完成折叠区 |
 | `PopoutNote.vue` | `/popout/note/:id` | `notes` | 悬挂笔记（popout，always-on-top）：完整 Markdown 阅读 |
 | `SettingsView.vue` | `/settings` | `theme`, `settings`, `notes` | 设置：外观（主题/字体）、编辑器（默认模式）、数据（存储位置/统计/回收站清理）、系统（开机自启）、关于 |
 | `PopoutProgress.vue` | `/popout/progress` | `tasks` | 底部常驻悬浮时间条：常驻时间、拖拽、边缘吸附、分向展开。通过 `BroadcastChannel('omega-hub-channel')` 与 Panel 通透通信，避免 WebView 渲染迟滞引发重置闪烁 |
