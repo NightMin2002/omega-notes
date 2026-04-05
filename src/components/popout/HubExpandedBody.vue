@@ -95,7 +95,17 @@ const activeTab = ref<'tasks' | 'todos' | 'timer' | 'life' | 'settings'>('tasks'
 
 .hub-content {
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong, rgba(255, 255, 255, 0.12)) transparent;
+}
+
+.hub-content::-webkit-scrollbar { width: 4px; }
+.hub-content::-webkit-scrollbar-track { background: transparent; }
+.hub-content::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: var(--radius-full);
 }
 </style>

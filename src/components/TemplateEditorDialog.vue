@@ -226,12 +226,12 @@ function handleKeydown(e: KeyboardEvent) {
 .dialog-close-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-accent); }
 
 .dialog-body {
-  padding: var(--space-5) var(--space-6);
+  padding: var(--space-6) var(--space-7, 32px);
   flex: 1;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-5);
   scrollbar-width: thin;
   scrollbar-color: var(--color-border-strong) transparent;
 }
@@ -252,15 +252,14 @@ function handleKeydown(e: KeyboardEvent) {
 .field {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 .field-label {
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
 }
 
 .required {
@@ -276,7 +275,7 @@ function handleKeydown(e: KeyboardEvent) {
 }
 
 .field-input {
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
   font-size: 0.88rem;
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
@@ -299,7 +298,7 @@ function handleKeydown(e: KeyboardEvent) {
 }
 
 .field-textarea {
-  padding: var(--space-3);
+  padding: var(--space-4);
   font-size: 0.88rem;
   font-family: var(--font-mono);
   background: var(--color-bg-secondary);
@@ -307,8 +306,8 @@ function handleKeydown(e: KeyboardEvent) {
   border-radius: var(--radius-md);
   color: var(--color-text-primary);
   resize: vertical;
-  min-height: 160px;
-  line-height: 1.6;
+  min-height: 180px;
+  line-height: 1.7;
   transition: border-color var(--duration-fast) var(--ease-out),
               box-shadow var(--duration-fast) var(--ease-out);
   appearance: none;

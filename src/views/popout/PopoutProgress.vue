@@ -68,7 +68,7 @@ function handleStorage(e: StorageEvent) {
 /* ─── 窗口尺寸常量 ─── */
 const FULL_WIDTH = 420
 const COLLAPSED_HEIGHT = 48
-const PANEL_HEIGHT = 380
+const PANEL_HEIGHT = 440
 const DOCK_VISIBLE_PX = 10
 
 // 用于提取 CSS 脱框偏移量，确保无论常亮怎么变，无状态移位都高度绑定单源数据
@@ -464,6 +464,8 @@ async function checkEdgeAndDock() {
 function handleMouseLeave() {
   isHovering.value = false
   if (isTransitioning.value) return
+  // 固定模式且面板已展开时，不触发边缘吸附
+  if (hubConfig.value.panelPinned && isExpanded.value) return
   hideTimeout = setTimeout(() => {
     void checkEdgeAndDock()
   }, 1000)
@@ -512,6 +514,8 @@ onMounted(async () => {
   window.addEventListener('storage', handleStorage)
   unlistenCollapseRequest = await win.listen('hub:collapse-request', () => {
     if (isTransitioning.value || !isExpanded.value) return
+    // 固定模式下不响应面板关闭请求
+    if (hubConfig.value.panelPinned) return
     void toggleExpand()
   })
 })

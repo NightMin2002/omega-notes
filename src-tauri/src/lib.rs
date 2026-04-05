@@ -20,7 +20,7 @@ const PROGRESS_ROUTE: &str = "/popout/progress";
 const PROGRESS_PANEL_ROUTE: &str = "/popout/progress-panel";
 const PROGRESS_WIDTH: f64 = 420.0;
 const PROGRESS_BAR_HEIGHT: f64 = 48.0;
-const PROGRESS_PANEL_HEIGHT: f64 = 380.0;
+const PROGRESS_PANEL_HEIGHT: f64 = 440.0;
 
 fn build_popout_window(
     app: &tauri::AppHandle,
