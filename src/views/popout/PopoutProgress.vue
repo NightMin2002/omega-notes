@@ -11,6 +11,11 @@ bc.onmessage = (e) => {
   if (e.data?.type === 'request-direction') {
     bc.postMessage({ type: 'direction', direction: expandDirection.value })
   }
+  // 面板窗口的悬停状态通知
+  if (e.data?.type === 'panel-hover') {
+    isPanelHovering.value = !!e.data.hovering
+    evaluateAutoCollapse()
+  }
 }
 import { currentMonitor, type Monitor } from '@tauri-apps/api/window'
 import { invoke } from '@tauri-apps/api/core'
@@ -25,6 +30,7 @@ const now = ref(new Date())
 let timer: ReturnType<typeof setInterval>
 let edgeCheckTimer: ReturnType<typeof setInterval>
 let hideTimeout: ReturnType<typeof setTimeout>
+let collapseTimer: ReturnType<typeof setTimeout> | null = null
 let unlistenCollapseRequest: (() => void) | null = null
 
 /* ─── Hub 状态 ─── */
@@ -33,6 +39,7 @@ const expandDirection = ref<'up' | 'down'>('up')
 const isTransitioning = ref(false)
 const disableTransition = ref(false)
 const isHovering = ref(false)
+const isPanelHovering = ref(false)
 const dockEdge = ref<'none' | 'left' | 'right' | 'top'>('none')
 const visualDockEdge = ref<'none' | 'left' | 'right' | 'top'>('none')
 
@@ -461,11 +468,32 @@ async function checkEdgeAndDock() {
   }
 }
 
+/** 评估是否应自动收缩面板（跨窗口悬停检测） */
+function evaluateAutoCollapse() {
+  // 清除已有的收缩计时器
+  if (collapseTimer) { clearTimeout(collapseTimer); collapseTimer = null }
+  // 如果面板未展开、正在过渡、或固定模式 → 不评估
+  if (!isExpanded.value || isTransitioning.value || hubConfig.value.panelPinned) return
+  // 如果任一窗口仍有悬停 → 不收缩
+  if (isHovering.value || isPanelHovering.value) return
+  // 两个窗口都无悬停 → 延迟 1.5s 后自动收缩
+  collapseTimer = setTimeout(() => {
+    if (!isHovering.value && !isPanelHovering.value && isExpanded.value && !hubConfig.value.panelPinned) {
+      void collapsePanelAndRestorePosition()
+    }
+    collapseTimer = null
+  }, 1500)
+}
+
 function handleMouseLeave() {
   isHovering.value = false
   if (isTransitioning.value) return
-  // 固定模式且面板已展开时，不触发边缘吸附
-  if (hubConfig.value.panelPinned && isExpanded.value) return
+  // 面板展开时 → 触发跨窗口自动收缩评估
+  if (isExpanded.value) {
+    evaluateAutoCollapse()
+    return
+  }
+  // 面板未展开 → 正常的边缘吸附检测
   hideTimeout = setTimeout(() => {
     void checkEdgeAndDock()
   }, 1000)
@@ -474,6 +502,7 @@ function handleMouseLeave() {
 function handleMouseEnter() {
   isHovering.value = true
   clearTimeout(hideTimeout)
+  if (collapseTimer) { clearTimeout(collapseTimer); collapseTimer = null }
   if (isTransitioning.value) return
   if (dockEdge.value !== 'none') {
     void undock()
@@ -524,6 +553,7 @@ onUnmounted(() => {
   clearInterval(timer)
   clearInterval(edgeCheckTimer)
   clearTimeout(hideTimeout)
+  if (collapseTimer) clearTimeout(collapseTimer)
   window.removeEventListener('storage', handleStorage)
   unlistenCollapseRequest?.()
 })

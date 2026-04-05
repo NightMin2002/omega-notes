@@ -181,7 +181,7 @@ function handleKeydown(e: KeyboardEvent) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-5) var(--space-6);
+  padding: var(--space-6) var(--space-7, 32px);
   border-bottom: 1px solid var(--color-divider);
   flex-shrink: 0;
 }
@@ -189,8 +189,8 @@ function handleKeydown(e: KeyboardEvent) {
 .dialog-title {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  font-size: 1rem;
+  gap: var(--space-3);
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--color-text-primary);
   margin: 0;
@@ -332,8 +332,8 @@ function handleKeydown(e: KeyboardEvent) {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-6);
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-7, 32px);
   border-top: 1px solid var(--color-divider);
   background: var(--color-bg-tertiary);
   flex-shrink: 0;
@@ -343,9 +343,9 @@ function handleKeydown(e: KeyboardEvent) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-2) var(--space-5);
+  padding: var(--space-3) var(--space-6);
   border-radius: var(--radius-md);
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
   appearance: none;

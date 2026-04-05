@@ -84,7 +84,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="panel-shell" :class="[`panel-shell--${panelDirection}`, isVisible ? 'is-visible' : 'is-hidden']">
+  <div
+    class="panel-shell"
+    :class="[`panel-shell--${panelDirection}`, isVisible ? 'is-visible' : 'is-hidden']"
+    @mouseenter="bc.postMessage({ type: 'panel-hover', hovering: true })"
+    @mouseleave="bc.postMessage({ type: 'panel-hover', hovering: false })"
+  >
     <HubExpandedBody :direction="panelDirection" />
   </div>
 </template>
