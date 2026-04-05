@@ -1,20 +1,52 @@
-fix: 更新检查竞速预检与配置修正
-- 更新检查改用双端点竞速预检 (GitHub + ghfast 镜像)，国内外用户均可快速响应
-- 从 .gitignore 移除 RELEASE_NOTES.md，修复 CI 无法读取手写发布说明的问题
-- 为 Tauri check() 添加超时参数，避免端点不可达时长时间阻塞
+功能：桌面微件固定+更新UI优化+待办跳转+自定义模板
+ - 悬浮窗设置新增「展开面板后固定」开关，启用后鼠标离开不自动收缩
+ - 更新日志区域适配 Markdown 渲染（markdown-it 轻量转换）
+ - 下载进度显示安装包大小（如 12.5 MB / 25.0 MB）
+ - 错误提示区域增大内边距和间距，改善呼吸空间
+ - 新建笔记「待办清单」模板改为跳转到待办事项页面的快捷入口
+ - 新增自定义笔记模板功能（创建/编辑/删除/右键管理）
+ - 新增 TemplateEditorDialog 组件（Teleport 弹窗）
+ - settings store 扩展 customTemplates CRUD 和持久化
+ - updater store 新增 downloadTotalBytes 状态跟踪
+ - types 新增 CustomTemplate 接口和 AppSettings.customTemplates 字段
+ - 同步更新 STRUCTURE.md 项目结构文档
 
-UI: 重构应用更新卡片视觉与交互逻辑
-- 彻底重构设置界面的更新检查卡片排版，扩大呼吸空间
-- 减小下载提示图标尺寸，增强文字对比度与间距
-- 新增独立的更新日志展示盒子，带左侧引导细线和缩进
-- 将冗余的原生按钮标题属性替换为全局 data-tooltip 悬浮窗
-- 清理了测试用的注点模拟代码，并修复了关闭按钮无响应的生命周期渲染问题
+修复：面板固定开关+模板弹窗呼吸空间+面板尺寸适配
+ - 修复固定展开开关无效：拦截 hub:collapse-request、handleMouseLeave 两处路径
+ - PANEL_HEIGHT 从 380 增至 440（前后端同步），容纳全部设置开关
+ - HubExpandedBody hub-content 改为 overflow-y: auto 支持内容滚动
+ - TemplateEditorDialog 增大内边距、字段间距、textarea 高度
+ - Rust lib.rs PROGRESS_PANEL_HEIGHT 同步更新为 440
 
-修复：UI/UX 批量优化与 BUG 修复
-- 右键菜单：阻止冒泡杜绝双重弹出 + 滚动时自动关闭
-- 悬挂笔记：通过 BroadcastChannel 实时同步阅读主题
-- 悬挂按钮 tooltip 改为向下弹出防止裁剪
-- 番茄钟：允许输入 0 并给出红色提示而非静默拒绝
-- 人生进度条：生日改为年/月/日三级选择器，去掉预期寿命
-- 新建笔记：重构为固定顶栏+滚动内容架构，对齐阅读视图
-- Milkdown 编辑器：修复内容不可滚动 + 去掉 nord 主题双重边框
+ 修复：面板自动收缩+模板弹窗呼吸空间+面板尺寸适配
+ - 实现跨窗口悬停检测：面板窗口通过 BroadcastChannel 发送 hover 状态
+ - 新增 evaluateAutoCollapse：当两个窗口都无悬停且未固定时 1.5s 后自动收缩
+ - panelPinned=true 时所有收缩路径均被拦截，面板保持固定
+ - PANEL_HEIGHT 从 380 增至 440（前端+Rust 后端同步）
+ - HubExpandedBody hub-content 改为 overflow-y: auto 支持内容滚动
+ - 模板弹窗标题栏、表单区域、底部按钮区域全面增大内边距和间距
+
+ 重构：待办事项五项优化 — 自定义日历替换原生日期选择器、日历日期继承新建、新建按钮微光美化、桌面微件分组视图
+ - 新增 DatePicker.vue 自定义日期选择器组件（Teleport 弹出日历、清除、今天快捷、待办圆点标记）
+ - 替换全部 input[type=date] 为自定义 DatePicker
+ - 日历选中日期后新建自动继承该日期作为截止日
+ - 新建按钮升级为渐变微光呼吸动效 + 旋转关闭 icon
+ - 新建表单增大 padding/gap 呼吸空间、textarea 替代 input 输入备注
+ - 筛选 tabs 添加 SVG 图标增强可辨识度
+ - 日历选中日期时列表标题增加快速添加按钮
+ - 新增今日/本周/本月/全部分组 tabs 切换视图
+ - 待办项显示备注摘要（截断至 40 字符）
+ - 优化空状态为 SVG 占位 + 友好文案
+
+ 优化：待办布局重构 + 全局按钮呼吸空间
+ - 新建表单从内联展开改为 Teleport Modal 弹窗，不再推挤页面内容
+ - 页面采用 flex 固定高度布局，列表区域独立滚动，解决长列表撑破页面问题
+ - 所有操作按钮 padding 增大至 10px 24px
+ - 空状态按钮 padding 增大至 10px 28px
+
+ 修复待办与笔记视图工具栏样式及溢出裁剪缺陷
+ - 修改 Todos 列表页顶部操作按钮，令其 Tooltip 向下弹出以避免顶端裁剪
+ - 优化 Notes 详情页顶行按钮布局（不折行且保持包裹性换行），解决文本变长时的被挤压变形
+ - 重构核心状态视觉：将「收藏」与「置顶」激活态分别独立为醒目的警告色（黄）与成功色（绿）
+ - 修复 Notes 详情页在浅色主题下，「保存」按钮 Hover 时文字色意外退化为黑色的 Bug
+ - 对齐 Notes 详情页面顶端的所有视图模式切换及比例缩放项，令 Tooltip 朝安全区（下方）展现
