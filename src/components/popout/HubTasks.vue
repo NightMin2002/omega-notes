@@ -25,8 +25,8 @@ function quickAdd() {
     </div>
 
     <!-- 任务列表 -->
-    <div class="hub-body">
-      <div v-if="store.enabledTasks.length === 0" class="hub-empty">
+    <TransitionGroup name="list-anim" tag="div" class="hub-body">
+      <div v-if="store.enabledTasks.length === 0" key="empty" class="hub-empty">
         暂无任务，放松一下吧
       </div>
       <div
@@ -45,7 +45,7 @@ function quickAdd() {
         <span class="hub-task-name">{{ task.title }}</span>
         <span v-if="task.category" class="hub-cat">{{ task.category }}</span>
       </div>
-    </div>
+    </TransitionGroup>
 
     <!-- 快速添加 -->
     <div class="hub-footer">
@@ -104,6 +104,11 @@ function quickAdd() {
 }
 .hub-task:hover { background: var(--color-bg-hover); }
 
+.hub-task.done {
+  opacity: 0.65;
+  background: var(--color-bg-tertiary);
+  transition: all 150ms var(--ease-out);
+}
 .hub-task.done .hub-task-name {
   text-decoration: line-through;
   color: var(--color-text-tertiary);
@@ -130,6 +135,16 @@ function quickAdd() {
   background: var(--color-accent);
   border-color: var(--color-accent);
   color: var(--color-text-inverse);
+  transform: scale(0.95);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.15);
+}
+.check-dot.checked svg {
+  animation: checkmark-pop-mini 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+@keyframes checkmark-pop-mini {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 .hub-task-name {
@@ -165,4 +180,20 @@ function quickAdd() {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 2px var(--color-accent-muted);
 }
+
+/* ── 列表排序动画 ── */
+.list-anim-move,
+.list-anim-enter-active,
+.list-anim-leave-active {
+  transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.list-anim-enter-from,
+.list-anim-leave-to {
+  opacity: 0;
+  transform: translateY(10px) scale(0.98);
+}
+.list-anim-leave-active {
+  position: absolute;
+}
+
 </style>

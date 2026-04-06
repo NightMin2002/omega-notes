@@ -147,10 +147,31 @@ export const useTasksStore = defineStore('tasks', () => {
     return new Set(rec?.completedIds ?? [])
   })
 
+  /** 当日跳过 ID 集合 */
+  const todaySkippedIds = computed(() => {
+    const today = currentDayKey.value
+    const rec = records.value.find(r => r.date === today)
+    return new Set(rec?.skippedIds ?? [])
+  })
+
+  function isSkipped(id: string): boolean {
+    return todaySkippedIds.value.has(id)
+  }
+
   /** 启用中的任务 */
-  const enabledTasks = computed(() =>
-    tasks.value.filter(t => t.enabled).sort((a, b) => a.sortOrder - b.sortOrder)
-  )
+  const enabledTasks = computed(() => {
+    return tasks.value.filter(t => t.enabled).sort((a, b) => {
+      const aComp = todayCompletedIds.value.has(a.id) || todaySkippedIds.value.has(a.id)
+      const bComp = todayCompletedIds.value.has(b.id) || todaySkippedIds.value.has(b.id)
+      
+      // 逻辑修正：完成/跳过的任务自动沉底（排到后面），让未完成的任务保持在顶部聚焦区域
+      if (aComp && !bComp) return 1
+      if (!aComp && bComp) return -1
+      
+      // 未完成的按原始排序或优先级排序
+      return a.sortOrder - b.sortOrder
+    })
+  })
 
   /** 按分类分组的任务 */
   const tasksByCategory = computed(() => {
@@ -240,13 +261,6 @@ export const useTasksStore = defineStore('tasks', () => {
     persistRecords()
   }
 
-  /** 当日跳过 ID 集合 */
-  const todaySkippedIds = computed(() => {
-    const today = currentDayKey.value
-    const rec = records.value.find(r => r.date === today)
-    return new Set(rec?.skippedIds ?? [])
-  })
-
   /** 切换跳过状态（今天不做） */
   function toggleSkip(id: string) {
     const today = currentDayKey.value
@@ -263,10 +277,6 @@ export const useTasksStore = defineStore('tasks', () => {
       rec.skippedIds.push(id)
     }
     persistRecords()
-  }
-
-  function isSkipped(id: string): boolean {
-    return todaySkippedIds.value.has(id)
   }
 
   /** 一键完成某分类下所有未完成任务 */

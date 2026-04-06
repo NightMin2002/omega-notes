@@ -88,6 +88,29 @@ const groupedTasks = computed(() => {
   return groups
 })
 
+/** 打平用于 TransitionGroup 渲染 */
+const flattenedItems = computed(() => {
+  const items: any[] = []
+  for (const group of groupedTasks.value) {
+    if (groupedTasks.value.length > 1 || group.name !== '未分类') {
+      items.push({
+        type: 'label',
+        id: `label-${group.name}`,
+        name: group.name,
+        tasks: group.tasks,
+      })
+    }
+    for (const task of group.tasks) {
+      items.push({
+        type: 'task',
+        id: `task-${task.id}`,
+        task,
+      })
+    }
+  }
+  return items
+})
+
 /** 所有出现过的分类（含预设） */
 const allCategories = computed(() => {
   const set = new Set([...store.config.categories, ...store.usedCategories])
@@ -273,21 +296,22 @@ const timeDisplay = computed(() => {
           />
         </div>
 
-        <!-- 任务列表 -->
-        <div class="task-list" :class="[`display-${taskDisplayMode}`, `theme-${taskTheme}`]">
-          <div v-if="filteredTasks.length === 0" class="empty-state">
+        <!-- 任务列表 (使用 TransitionGroup 实现平滑重排) -->
+        <TransitionGroup name="list-anim" tag="div" class="task-list" :class="[`display-${taskDisplayMode}`, `theme-${taskTheme}`]">
+          <div v-if="filteredTasks.length === 0" key="empty" class="empty-state">
             {{ activeFilter ? `「${activeFilter}」下没有任务` : '还没有任务，点击下方添加' }}
           </div>
 
-          <template v-for="group in groupedTasks" :key="group.name">
-            <div v-if="groupedTasks.length > 1 || group.name !== '未分类'" class="group-label">
-              <span class="group-name">{{ group.name }}</span>
-              <span class="group-count">{{ group.tasks.length }}</span>
+          <template v-for="item in flattenedItems" :key="item.id">
+            <!-- 分组标题 -->
+            <div v-if="item.type === 'label'" class="group-label">
+              <span class="group-name">{{ item.name }}</span>
+              <span class="group-count">{{ item.tasks.length }}</span>
               <button
                 type="button"
-                v-if="group.tasks.some(t => !store.isCompleted(t.id) && !store.isSkipped(t.id))"
+                v-if="item.tasks.some((t: any) => !store.isCompleted(t.id) && !store.isSkipped(t.id))"
                 class="btn-complete-all"
-                @click="store.completeAllInCategory(group.name)"
+                @click="store.completeAllInCategory(item.name)"
                 data-tooltip="一键完成此分类"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -297,14 +321,14 @@ const timeDisplay = computed(() => {
               </button>
             </div>
 
+            <!-- 任务卡片 -->
             <div
-              v-for="task in group.tasks"
-              :key="task.id"
+              v-else
               class="task-row"
-              :class="{ completed: store.isCompleted(task.id), skipped: store.isSkipped(task.id) }"
+              :class="{ completed: store.isCompleted(item.task.id), skipped: store.isSkipped(item.task.id) }"
             >
               <!-- ── 编辑模式 ── -->
-              <template v-if="editingId === task.id">
+              <template v-if="editingId === item.task.id">
                 <div class="task-edit">
                   <input
                     v-model="editTitle"
@@ -338,46 +362,46 @@ const timeDisplay = computed(() => {
                   <input
                     type="checkbox"
                     class="sr-only"
-                    :checked="store.isCompleted(task.id)"
-                    @change="store.toggleComplete(task.id)"
+                    :checked="store.isCompleted(item.task.id)"
+                    @change="store.toggleComplete(item.task.id)"
                   />
-                  <span class="check-box" :class="{ checked: store.isCompleted(task.id) }">
-                    <svg v-if="store.isCompleted(task.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <span class="check-box" :class="{ checked: store.isCompleted(item.task.id) }">
+                    <svg v-if="store.isCompleted(item.task.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   </span>
                 </label>
 
-                <span class="task-name">{{ task.title }}</span>
+                <span class="task-name">{{ item.task.title }}</span>
 
-                <span v-if="task.category && groupedTasks.length <= 1" class="badge badge-cat">{{ task.category }}</span>
+                <span v-if="item.task.category && groupedTasks.length <= 1" class="badge badge-cat">{{ item.task.category }}</span>
 
-                <span v-if="task.reminderTime" class="badge badge-time" data-tooltip="到时间未完成会弹窗提醒">
+                <span v-if="item.task.reminderTime" class="badge badge-time" data-tooltip="到时间未完成会弹窗提醒">
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                     <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                   </svg>
-                  {{ task.reminderTime }}
+                  {{ item.task.reminderTime }}
                 </span>
 
                 <div class="task-actions">
                   <button
                     class="btn-icon" 
-                    :class="{ 'skip-active': store.isSkipped(task.id) }"
-                    @click="store.toggleSkip(task.id)" 
-                    :data-tooltip="store.isSkipped(task.id) ? '取消跳过' : '今天不做'"
+                    :class="{ 'skip-active': store.isSkipped(item.task.id) }"
+                    @click="store.toggleSkip(item.task.id)" 
+                    :data-tooltip="store.isSkipped(item.task.id) ? '取消跳过' : '今天不做'"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
                     </svg>
                   </button>
-                  <button class="btn-icon" @click="startEdit(task)" data-tooltip="编辑">
+                  <button class="btn-icon" @click="startEdit(item.task)" data-tooltip="编辑">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                     </svg>
                   </button>
-                  <button class="btn-icon danger" @click="store.removeTask(task.id)" data-tooltip="删除">
+                  <button class="btn-icon danger" @click="store.removeTask(item.task.id)" data-tooltip="删除">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <line x1="18" y1="6" x2="6" y2="18" />
                       <line x1="6" y1="6" x2="18" y2="18" />
@@ -387,7 +411,7 @@ const timeDisplay = computed(() => {
               </template>
             </div>
           </template>
-        </div>
+        </TransitionGroup>
 
         <!-- 添加任务 -->
         <div class="add-section">
@@ -918,6 +942,12 @@ const timeDisplay = computed(() => {
   .task-row:hover .task-actions { opacity: 1; }
 }
 
+.task-row.completed {
+  opacity: 0.65;
+  background: var(--color-bg-tertiary);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
 .task-row.completed .task-name {
   text-decoration: line-through;
   color: var(--color-text-tertiary);
@@ -969,14 +999,24 @@ const timeDisplay = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color var(--duration-fast) var(--ease-out),
-              border-color var(--duration-fast) var(--ease-out);
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .check-box.checked {
   background: var(--color-accent);
   border-color: var(--color-accent);
   color: var(--color-text-inverse);
+  transform: scale(0.95);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.15);
+}
+
+.check-box.checked svg {
+  animation: checkmark-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+@keyframes checkmark-pop {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 .task-name {
@@ -1378,6 +1418,22 @@ const timeDisplay = computed(() => {
 .panel-slide-leave-from {
   max-height: 400px;
 }
+
+/* ── 列表排序动画 ── */
+.list-anim-move,
+.list-anim-enter-active,
+.list-anim-leave-active {
+  transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.list-anim-enter-from,
+.list-anim-leave-to {
+  opacity: 0;
+  transform: translateY(10px) scale(0.98);
+}
+.list-anim-leave-active {
+  position: absolute;
+}
+
 
 /* ─── 无障碍 ─── */
 @media (prefers-reduced-motion: reduce) {
