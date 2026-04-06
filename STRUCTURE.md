@@ -70,6 +70,8 @@ omega-v2/
 │   │   ├── NoteReaderPanel.vue # 知识库浏览器 Detail 面板（嵌入式阅读/编辑器，复用 MarkdownRenderer + MilkdownEditor）
 │   │   ├── NoteOutline.vue    # 笔记目录大纲侧边栏（字数统计 + 阅读进度 + 标题 TOC 导航）
 │   │   ├── ThemeSwitcher.vue  # 阅读主题切换器（v-model 绑定，支持紧凑模式，三方共用）
+│   │   ├── shared/             # 跨视图共享独立业务模块
+│   │   │   └── CountdownModule.vue # 全能型悬浮倒计时控制台（主面板与 Hub 悬浮窗高度统一互通）
 │   │   └── popout/             # 桌面悬浮窗子组件（非路由，由 views/popout/ 引用）
 │   │       ├── HubExpandedBody.vue# 悬浮窗展开面板内容（任务/待办/番茄钟/人生/设置 Tabs）
 │   │       ├── HubTasks.vue      # 悬挂任务列表子模块
@@ -191,6 +193,8 @@ docs/
 | `NoteListPanel.vue` | 知识库浏览器 Master 面板。搜索筛选 + 分类/全部/收藏三 Tab + 分类树递归折叠 + 笔记条目列表（选中高亮） | Props: `selectedId` / Emits: `select` |
 | `NoteReaderPanel.vue` | 知识库浏览器 Detail 面板。嵌入式阅读/编辑器，切换笔记时自动退出编辑。复用 MarkdownRenderer、MilkdownEditor、SplitEditor、BacklinksPanel | Props: `noteId` / Emits: `navigate`, `deleted` |
 | `NoteOutline.vue` | 笔记目录大纲侧边栏。字数/段落/章节统计、阅读进度条、从 Markdown 标题解析 TOC 导航（滚动跟踪高亮 + 点击跳转）。无标题时显示统计信息 + 提示 | Props: `content`, `scrollContainer` |
+| `ThemeSwitcher.vue` | 阅读主题切换器（v-model 绑定，支持深浅色与预设组合，三方共用） | v-model: `modelValue`, Props: `compact` |
+| `shared/CountdownModule.vue` | 现代化并轨番茄钟 / 倒计时核心面板。负责与全局 Tasks 引擎交互，带有高频视图绑定与自适应光影 UI | 依赖: `useTasksStore` |
 
 **编辑器架构说明**：`MilkdownEditor` 和 `MilkdownEditorCore` 必须拆分为两个组件，因为 `useEditor()` 需要在 `MilkdownProvider` 的 inject 上下文内调用。如果合并为一个组件会导致 `Symbol(editorInfoCtxKey) not found` 错误。
 

@@ -2,6 +2,7 @@
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { useTasksStore } from '../stores/tasks'
 import TimePicker from '../components/TimePicker.vue'
+import CountdownModule from '../components/shared/CountdownModule.vue'
 
 const store = useTasksStore()
 
@@ -114,19 +115,7 @@ function handleAddMessage() {
 }
 
 /* ─── 倒计时器 ─── */
-const customMinutes = ref(25)
-
-function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60)
-  const s = seconds % 60
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-}
-
-const countdownProgress = computed(() => {
-  const cd = store.countdown
-  if (cd.totalSeconds === 0) return 0
-  return ((cd.totalSeconds - cd.remainingSeconds) / cd.totalSeconds) * 100
-})
+// 已重构抽离为 CountdownModule 共用组件
 
 /* ─── 设置面板 ─── */
 const showSettings = ref(false)
@@ -451,65 +440,7 @@ const timeDisplay = computed(() => {
           </div>
         </div>
 
-        <div class="cd-display">
-          <svg class="cd-ring" viewBox="0 0 120 120">
-            <circle cx="60" cy="60" r="52" class="ring-bg" />
-            <circle
-              cx="60" cy="60" r="52"
-              class="ring-fg"
-              :class="{ active: store.countdown.isRunning, paused: store.countdown.isPaused, done: store.countdownFinished }"
-              :style="{ strokeDashoffset: (1 - countdownProgress / 100) * 326.73 }"
-            />
-          </svg>
-          <span class="cd-time" :class="{ done: store.countdownFinished }">
-            {{ formatTime(store.countdown.remainingSeconds) }}
-          </span>
-        </div>
-
-        <div class="cd-controls">
-          <template v-if="!store.countdown.isRunning && store.countdown.remainingSeconds === store.countdown.totalSeconds">
-            <div class="preset-row">
-              <button class="btn-preset" @click="store.startCountdown(25)">25m</button>
-              <button class="btn-preset" @click="store.startCountdown(45)">45m</button>
-              <button class="btn-preset" @click="store.startCountdown(60)">60m</button>
-            </div>
-            <div class="custom-start">
-              <div class="stepper-inline">
-                <button class="stepper-dec" @click="customMinutes = Math.max(1, customMinutes - 1)">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                </button>
-                <input
-                  :value="customMinutes"
-                  class="stepper-input"
-                  inputmode="numeric"
-                  @input="(e: Event) => { const v = parseInt((e.target as HTMLInputElement).value); if (!isNaN(v) && v >= 1 && v <= 999) customMinutes = v }"
-                  @blur="(e: Event) => { const v = parseInt((e.target as HTMLInputElement).value); if (isNaN(v) || v < 1) customMinutes = 1 }"
-                />
-                <button class="stepper-inc" @click="customMinutes = Math.min(999, customMinutes + 1)">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                </button>
-              </div>
-              <span class="minutes-unit">分钟</span>
-              <button class="btn-sm btn-accent" @click="store.startCountdown(customMinutes)">开始</button>
-            </div>
-          </template>
-          <template v-else>
-            <div class="running-row">
-              <button
-                v-if="store.countdown.isRunning"
-                class="btn-sm"
-                :class="store.countdown.isPaused ? 'btn-accent' : 'btn-ghost'"
-                @click="store.pauseCountdown()"
-              >{{ store.countdown.isPaused ? '继续' : '暂停' }}</button>
-              <button class="btn-sm btn-ghost" @click="store.resetCountdown()">重置</button>
-            </div>
-          </template>
-        </div>
+        <CountdownModule />
       </section>
 
       <!-- ═══ 右下：健康提醒 ═══ -->
@@ -595,6 +526,8 @@ const timeDisplay = computed(() => {
 </template>
 
 <style scoped>
+
+
 /* ═══════════════════════════════
    页面框架
    ═══════════════════════════════ */
@@ -1318,161 +1251,7 @@ const timeDisplay = computed(() => {
 
 .flex-1 { flex: 1; }
 
-/* ═══════════════════════════════
-   倒计时
-   ═══════════════════════════════ */
-.cd-display {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-4) 0;
-}
 
-.cd-ring { width: 140px; height: 140px; }
-
-.ring-bg {
-  fill: none;
-  stroke: var(--color-bg-tertiary);
-  stroke-width: 6;
-}
-
-.ring-fg {
-  fill: none;
-  stroke: var(--color-accent);
-  stroke-width: 6;
-  stroke-linecap: round;
-  stroke-dasharray: 326.73;
-  stroke-dashoffset: 326.73;
-  transform: rotate(-90deg);
-  transform-origin: 50% 50%;
-  transition: stroke-dashoffset 0.5s var(--ease-out);
-}
-
-.ring-fg.active { stroke: var(--color-accent); }
-.ring-fg.paused { stroke: var(--color-warning); }
-.ring-fg.done   { stroke: var(--color-success); }
-
-.cd-time {
-  position: absolute;
-  font-family: var(--font-mono);
-  font-size: 1.8rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  letter-spacing: 0.05em;
-}
-
-.cd-time.done { color: var(--color-success); }
-
-.cd-controls {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  align-items: center;
-}
-
-.preset-row {
-  display: flex;
-  gap: var(--space-2);
-}
-
-.btn-preset {
-  font-family: var(--font-mono);
-  font-size: 0.82rem;
-  font-weight: 500;
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--color-bg-tertiary);
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-  transition: background-color var(--duration-fast) var(--ease-out),
-              color var(--duration-fast) var(--ease-out),
-              border-color var(--duration-fast) var(--ease-out);
-}
-
-.btn-preset:active { transform: scale(0.98); }
-
-@media (hover: hover) {
-  .btn-preset:hover {
-    background: var(--color-accent-muted);
-    color: var(--color-accent);
-    border-color: var(--color-accent);
-  }
-}
-
-.custom-start {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.stepper-inline {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  background: var(--color-bg-tertiary);
-}
-
-.stepper-dec,
-.stepper-inc {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-tertiary);
-  transition: background-color var(--duration-fast) var(--ease-out),
-              color var(--duration-fast) var(--ease-out);
-}
-
-.stepper-dec:active,
-.stepper-inc:active {
-  transform: scale(0.92);
-  background: var(--color-accent-muted);
-  color: var(--color-accent);
-}
-
-@media (hover: hover) {
-  .stepper-dec:hover,
-  .stepper-inc:hover {
-    background: var(--color-bg-hover);
-    color: var(--color-text-primary);
-  }
-}
-
-.stepper-input {
-  width: 44px;
-  text-align: center;
-  font-family: var(--font-mono);
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  background: transparent;
-  border: none;
-  border-left: 1px solid var(--color-border);
-  border-right: 1px solid var(--color-border);
-  padding: 0;
-  height: 32px;
-  line-height: 32px;
-}
-
-.stepper-input:focus-visible {
-  background: var(--color-accent-muted);
-  outline: none;
-  box-shadow: none;
-}
-
-.minutes-unit {
-  font-size: 0.78rem;
-  color: var(--color-text-tertiary);
-}
-
-.running-row {
-  display: flex;
-  gap: var(--space-2);
-}
 
 /* ═══════════════════════════════
    健康提醒
