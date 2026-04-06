@@ -10,7 +10,7 @@ import { useTodosStore } from '../../stores/todos'
 const todosStore = useTodosStore()
 
 type ViewTab = 'today' | 'week' | 'month' | 'all'
-const activeView = ref<ViewTab>('today')
+const activeView = ref<ViewTab>('all')
 
 const quickTitle = ref('')
 
@@ -85,6 +85,28 @@ const viewTabs: { id: ViewTab; label: string }[] = [
   { id: 'month', label: '本月' },
   { id: 'all', label: '全部' },
 ]
+
+const tabCounts = computed(() => {
+  const pending = todosStore.pendingTodos
+  const today = todayStr()
+  const weekEnd = weekEndStr()
+  const monthEnd = monthEndStr()
+  let todayC = 0, weekC = 0, monthC = 0
+
+  for (const t of pending) {
+    if (!t.dueDate) continue
+    if (t.dueDate <= today) todayC++
+    if (t.dueDate <= weekEnd) weekC++
+    if (t.dueDate <= monthEnd) monthC++
+  }
+
+  return {
+    today: todayC,
+    week: weekC,
+    month: monthC,
+    all: 0
+  }
+})
 </script>
 
 <template>
@@ -108,6 +130,7 @@ const viewTabs: { id: ViewTab; label: string }[] = [
         @click="activeView = tab.id"
       >
         {{ tab.label }}
+        <span v-if="tabCounts[tab.id] > 0" class="sub-badge">{{ tabCounts[tab.id] > 99 ? '99+' : tabCounts[tab.id] }}</span>
       </button>
     </div>
 
@@ -227,14 +250,35 @@ const viewTabs: { id: ViewTab; label: string }[] = [
 }
 
 .hub-view-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
   flex: 1;
   padding: 3px 0;
   font-size: 0.65rem;
   font-weight: 500;
   border-radius: 4px;
+  border: none;
+  background: transparent;
   color: var(--color-text-tertiary);
-  text-align: center;
   transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.sub-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 12px;
+  height: 12px;
+  padding: 0 3px;
+  font-size: 0.5rem;
+  font-weight: 700;
+  background: var(--color-danger, #ef4444);
+  color: #fff;
+  border-radius: 6px;
+  transform: translateY(-0.5px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
 @media (hover: hover) {
