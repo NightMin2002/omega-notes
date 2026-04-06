@@ -49,7 +49,8 @@ omega-v2/
 │   │   ├── SidebarShortcutPanel.vue # 快捷键配置唤起入口（全新向导按钮）
 │   │   ├── MilkdownEditor.vue  # Markdown 编辑器外壳（提供 Provider）
 │   │   ├── MilkdownEditorCore.vue # 编辑器核心（Milkdown 插件注册）
-│   │   ├── MarkdownRenderer.vue # Markdown → HTML 渲染（阅读模式）+ Mermaid 图表
+│   │   ├── MarkdownRenderer.vue # Markdown → HTML 渲染（阅读模式）+ Mermaid 图表 + 图片/图表灯箱放大
+│   │   ├── ImageLightbox.vue  # 全屏灯箱组件（图片/Mermaid SVG 放大查看，缩放/平移/键盘操控）
 │   │   ├── QuickNote.vue       # Ctrl+Q 快速笔记弹窗
 │   │   ├── SearchDialog.vue    # Ctrl+K 全局搜索弹窗
 │   │   ├── EditorToolbar.vue   # Markdown 格式化工具栏（14 按钮，分屏/WYSIWYG 通用）
@@ -67,7 +68,7 @@ omega-v2/
 │   │   ├── DatePicker.vue      # 自定义日期选择器（Teleport 弹出日历面板，替代原生 input[type=date]）
 │   │   ├── TemplateEditorDialog.vue # 自定义笔记模板编辑弹窗（新建/编辑，含名称/描述/分类/内容字段）
 │   │   ├── NoteListPanel.vue  # 知识库浏览器 Master 面板（搜索 + 分类树折叠 + 笔记列表，emit select 不跳路由）
-│   │   ├── NoteReaderPanel.vue # 知识库浏览器 Detail 面板（嵌入式阅读/编辑器，复用 MarkdownRenderer + MilkdownEditor）
+│   │   ├── NoteReaderPanel.vue # 知识库浏览器 Detail 面板（嵌入式阅读/编辑器，编辑模式含主题切换，复用 MarkdownRenderer + MilkdownEditor）
 │   │   ├── NoteOutline.vue    # 笔记目录大纲侧边栏（字数统计 + 阅读进度 + 标题 TOC 导航）
 │   │   ├── ThemeSwitcher.vue  # 阅读主题切换器（v-model 绑定，支持紧凑模式，三方共用）
 │   │   ├── shared/             # 跨视图共享独立业务模块
@@ -174,7 +175,8 @@ docs/
 | `SidebarShortcutPanel.vue` | 呼出 `ShortcutManagerDialog` 的底部静态按钮 | *无外部接口* |
 | `MilkdownEditor.vue` | 编辑器外壳。提供 `MilkdownProvider` inject 上下文 | Props: `modelValue`, `readonly` / Emits: `update:modelValue` |
 | `MilkdownEditorCore.vue` | 编辑器核心。注册 commonmark/GFM/history/indent/clipboard/**math**/smartPaste 插件，监听 `markdownUpdated`。**智能粘贴**：DOM 层拦截粘贴事件，图片自动转 base64 image 节点，Markdown 文本自动解析为富文本 | Props: `modelValue` / Emits: `update:modelValue` |
-| `MarkdownRenderer.vue` | 只读渲染。markdown-it + highlight.js + **texmath (KaTeX)** + **task-lists** + **Mermaid.js 图表**。支持 `[[title]]` 双向链接语法（渲染为可点击链接 + 跳转导航）。Mermaid 代码块自动渲染为 SVG，支持流程图/序列图/甘特图等 | Props: `content` |
+| `MarkdownRenderer.vue` | 只读渲染。markdown-it + highlight.js + **texmath (KaTeX)** + **task-lists** + **Mermaid.js 图表**。支持 `[[title]]` 双向链接语法（渲染为可点击链接 + 跳转导航）。Mermaid 代码块自动渲染为 SVG，支持流程图/序列图/甘特图等。**内嵌 ImageLightbox 灯箱**：点击图片或 Mermaid 图表全屏放大查看 | Props: `content` |
+| `ImageLightbox.vue` | 全屏灯箱放大查看组件。支持图片和 SVG（Mermaid 图表）两种内容模式，提供缩放（滚轮/按钮 ±/0 重置）、拖拽平移、键盘快捷键（Esc 关闭），Teleport 到 body 层 | Props: `open`, `src`, `svgContent`, `alt` / Emits: `close` |
 | `QuickNote.vue` | 快速笔记弹窗。`<dialog>` 模态框，Markdown 输入 + Ctrl+Enter 保存到收件箱 | Props: `visible` / Emits: `close` |
 | `SearchDialog.vue` | 全局搜索弹窗。全文搜索 + 关键词高亮 + 键盘导航（↑↓ Enter） | Props: `visible` / Emits: `close` |
 | `EditorToolbar.vue` | Markdown 格式化工具栏（14 按钮），分屏/WYSIWYG 通用 | Emits: `insert`, `wrap` |
@@ -191,7 +193,7 @@ docs/
 | `DraftToast.vue` | 用于通知“已恢复草稿”等非阻塞信息的底部优雅提示条，内置 3 秒自动消失机制 | Props: `show`, `message` / Emits: `close` |
 | `DatePicker.vue` | 自定义日期选择器，替代原生 `input[type=date]`。Teleport 弹出日历面板，支持待办圆点、清除日期、今天快捷键 | v-model: `modelValue` / Props: `placeholder`, `dotMap` |
 | `NoteListPanel.vue` | 知识库浏览器 Master 面板。搜索筛选 + 分类/全部/收藏三 Tab + 分类树递归折叠 + 笔记条目列表（选中高亮） | Props: `selectedId` / Emits: `select` |
-| `NoteReaderPanel.vue` | 知识库浏览器 Detail 面板。嵌入式阅读/编辑器，切换笔记时自动退出编辑。复用 MarkdownRenderer、MilkdownEditor、SplitEditor、BacklinksPanel | Props: `noteId` / Emits: `navigate`, `deleted` |
+| `NoteReaderPanel.vue` | 知识库浏览器 Detail 面板。嵌入式阅读/编辑器，切换笔记时自动退出编辑。编辑模式含主题切换（ThemeSwitcher）+ 编辑表单样式与 NoteDetailView 统一。复用 MarkdownRenderer、MilkdownEditor、SplitEditor、BacklinksPanel | Props: `noteId` / Emits: `navigate`, `deleted` |
 | `NoteOutline.vue` | 笔记目录大纲侧边栏。字数/段落/章节统计、阅读进度条、从 Markdown 标题解析 TOC 导航（滚动跟踪高亮 + 点击跳转）。无标题时显示统计信息 + 提示 | Props: `content`, `scrollContainer` |
 | `ThemeSwitcher.vue` | 阅读主题切换器（v-model 绑定，支持深浅色与预设组合，三方共用） | v-model: `modelValue`, Props: `compact` |
 | `shared/CountdownModule.vue` | 现代化并轨番茄钟 / 倒计时核心面板。负责与全局 Tasks 引擎交互，带有高频视图绑定与自适应光影 UI | 依赖: `useTasksStore` |

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUpdated, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, onUpdated, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
@@ -10,6 +10,7 @@ import DOMPurify from 'dompurify'
 import { useNotesStore } from '../stores/notes'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import mermaid from 'mermaid'
+import ImageLightbox from './ImageLightbox.vue'
 import 'highlight.js/styles/github-dark.min.css'
 
 /* Mermaid 初始化 */
@@ -41,6 +42,30 @@ const emit = defineEmits<{
 const router = useRouter()
 const notesStore = useNotesStore()
 const containerRef = ref<HTMLElement | null>(null)
+
+/* ─── 灯箱状态 ─── */
+const lightboxOpen = ref(false)
+const lightboxSrc = ref('')
+const lightboxSvgContent = ref('')
+const lightboxAlt = ref('')
+
+function openImageLightbox(src: string, alt?: string) {
+  lightboxSrc.value = src
+  lightboxSvgContent.value = ''
+  lightboxAlt.value = alt || ''
+  lightboxOpen.value = true
+}
+
+function openMermaidLightbox(svgHtml: string) {
+  lightboxSrc.value = ''
+  lightboxSvgContent.value = svgHtml
+  lightboxAlt.value = 'Mermaid 图表'
+  lightboxOpen.value = true
+}
+
+function closeLightbox() {
+  lightboxOpen.value = false
+}
 
 let mermaidIdCounter = 0
 
@@ -118,9 +143,30 @@ const rendered = computed(() => {
   return renderWikiLinks(safeHtml)
 })
 
-/** 点击 wiki-link 导航到对应笔记，点击外部链接用系统浏览器打开 */
+/** 点击 wiki-link 导航到对应笔记，点击外部链接用系统浏览器打开，点击图片/Mermaid 打开灯箱 */
 function handleClick(e: Event) {
-  const target = (e.target as HTMLElement).closest('a') as HTMLAnchorElement | null
+  const el = e.target as HTMLElement
+
+  /* 图片点击 → 灯箱 */
+  if (el.tagName === 'IMG') {
+    e.preventDefault()
+    const img = el as HTMLImageElement
+    openImageLightbox(img.src, img.alt)
+    return
+  }
+
+  /* Mermaid 图表点击 → 灯箱 */
+  const mermaidBlock = el.closest('.mermaid-block') as HTMLElement | null
+  if (mermaidBlock) {
+    const svg = mermaidBlock.querySelector('svg')
+    if (svg) {
+      e.preventDefault()
+      openMermaidLightbox(mermaidBlock.innerHTML)
+      return
+    }
+  }
+
+  const target = el.closest('a') as HTMLAnchorElement | null
   if (!target) return
 
   /* wiki-link */
@@ -209,10 +255,20 @@ function bindHandlers() {
 
 onMounted(bindHandlers)
 onUpdated(bindHandlers)
+onUnmounted(() => {
+  containerRef.value?.removeEventListener('click', handleClick)
+})
 </script>
 
 <template>
   <div ref="containerRef" class="md-rendered" v-html="rendered" />
+  <ImageLightbox
+    :open="lightboxOpen"
+    :src="lightboxSrc"
+    :svg-content="lightboxSvgContent"
+    :alt="lightboxAlt"
+    @close="closeLightbox"
+  />
 </template>
 
 <style scoped>
@@ -298,6 +354,18 @@ onUpdated(bindHandlers)
   border-radius: var(--radius-md);
   text-align: center;
   overflow-x: auto;
+  cursor: zoom-in;
+  position: relative;
+  transition: box-shadow 200ms ease-out,
+              border-color 200ms ease-out;
+}
+
+@media (hover: hover) {
+  .md-rendered :deep(.mermaid-block:hover) {
+    border-color: var(--color-accent-muted);
+    box-shadow: 0 4px 16px oklch(0% 0 0 / 0.1),
+                0 0 0 1px var(--color-accent-muted);
+  }
 }
 
 .md-rendered :deep(.mermaid-block svg) {
@@ -552,6 +620,17 @@ onUpdated(bindHandlers)
   max-width: 100%;
   border-radius: var(--radius-md);
   margin: var(--space-3) 0;
+  cursor: zoom-in;
+  transition: box-shadow 200ms ease-out,
+              transform 200ms ease-out;
+}
+
+@media (hover: hover) {
+  .md-rendered :deep(img:hover) {
+    box-shadow: 0 4px 20px oklch(0% 0 0 / 0.15),
+                0 0 0 2px var(--color-accent-muted);
+    transform: translateY(-1px);
+  }
 }
 
 /* ─── highlight.js 覆盖 ─── */

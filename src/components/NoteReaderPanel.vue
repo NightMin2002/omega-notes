@@ -191,6 +191,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
                 <span>分屏</span>
               </button>
             </div>
+            <!-- 编辑模式下的主题切换 -->
+            <ThemeSwitcher v-model="readingTheme" compact />
           </template>
         </div>
 
@@ -223,7 +225,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
           </button>
         </div>
 
-        <!-- 主题切换器（紧凑➡️工具栏内） -->
+        <!-- 主题切换器（阅读模式时） -->
         <ThemeSwitcher v-if="!isEditing" v-model="readingTheme" compact />
       </div>
 
@@ -258,7 +260,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
       <div ref="readerContentRef" class="reader-content" :class="{ 'split-active': isEditing && editorMode === 'split' }">
         <!-- 编辑模式 -->
         <template v-if="isEditing">
-          <form class="reader-edit-form" :class="`theme-${readingTheme}`" @submit.prevent="saveEdit" novalidate>
+          <form class="edit-form" :class="`theme-${readingTheme}`" @submit.prevent="saveEdit" novalidate>
             <input v-model="editTitle" type="text" class="edit-title" placeholder="笔记标题">
 
             <template v-if="editorMode === 'wysiwyg'">
@@ -513,7 +515,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
   flex-direction: column;
 }
 
-.reader-content.split-active > .reader-edit-form {
+.reader-content.split-active > .edit-form {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -541,42 +543,64 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
 }
 
 /* ─── 编辑表单 ─── */
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
 .edit-title {
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   font-weight: 700;
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-2);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   color: var(--color-text-primary);
-  border: none;
-  background: none;
-  padding: 0;
-  margin-bottom: var(--space-4);
   width: 100%;
+  transition: border-color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
 }
 
 .edit-title:focus {
-  box-shadow: none;
-  border-color: transparent;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px oklch(from var(--color-accent) l c h / 0.12);
+}
+
+.edit-title::placeholder {
+  color: var(--color-text-tertiary);
+  font-weight: 400;
 }
 
 .edit-meta-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-top: var(--space-4);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  margin-top: var(--space-2);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
 .edit-input {
-  flex: 1;
   padding: var(--space-2) var(--space-3);
-  background: var(--color-bg-tertiary);
+  background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
   font-size: 0.85rem;
+  transition: border-color var(--duration-fast) var(--ease-out);
 }
 
 .edit-input:focus {
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-muted);
+}
+
+.edit-input::placeholder {
+  color: var(--color-text-tertiary);
 }
 
 /* ─── 阅读文章 ─── */
