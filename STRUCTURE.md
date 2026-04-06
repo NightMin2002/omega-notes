@@ -65,6 +65,7 @@ omega-v2/
 │   │   ├── NoteListPanel.vue  # 知识库浏览器 Master 面板（搜索 + 分类树折叠 + 笔记列表，emit select 不跳路由）
 │   │   ├── NoteReaderPanel.vue # 知识库浏览器 Detail 面板（嵌入式阅读/编辑器，复用 MarkdownRenderer + MilkdownEditor）
 │   │   ├── NoteOutline.vue    # 笔记目录大纲侧边栏（字数统计 + 阅读进度 + 标题 TOC 导航）
+│   │   ├── ThemeSwitcher.vue  # 阅读主题切换器（v-model 绑定，支持紧凑模式，三方共用）
 │   │   └── popout/             # 桌面悬浮窗子组件（非路由，由 views/popout/ 引用）
 │   │       ├── HubExpandedBody.vue# 悬浮窗展开面板内容（任务/待办/番茄钟/人生/设置 Tabs）
 │   │       ├── HubTasks.vue      # 悬挂任务列表子模块
@@ -98,6 +99,7 @@ omega-v2/
 │   │
 │   ├── composables/            # Vue Composable 函数
 │   │   ├── useEditorActions.ts # 编辑器共用操作（图片/链接/工具栏/粘贴）
+│   │   ├── useReadingTheme.ts  # 阅读主题状态管理（localStorage + BroadcastChannel 跨窗口同步）
 │   │   └── useDraft.ts         # 草稿自动保存（防抖 localStorage + 恢复检测）
 │   │
 │   ├── utils/                  # 工具函数

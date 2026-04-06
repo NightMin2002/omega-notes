@@ -10,9 +10,11 @@ import WikiLinkPicker from '../components/WikiLinkPicker.vue'
 import SplitEditor from '../components/SplitEditor.vue'
 import BacklinksPanel from '../components/BacklinksPanel.vue'
 import NoteOutline from '../components/NoteOutline.vue'
+import ThemeSwitcher from '../components/ThemeSwitcher.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import CategoryPicker from '../components/CategoryPicker.vue'
 import { useEditorActions } from '../composables/useEditorActions'
+import { useReadingTheme } from '../composables/useReadingTheme'
 import type { EditorMode } from '../types'
 
 const route = useRoute()
@@ -32,13 +34,7 @@ const editorKey = ref(0)
 const milkdownEditorRef = shallowRef<InstanceType<typeof MilkdownEditor> | null>(null)
 const detailContentRef = ref<HTMLElement | null>(null)
 
-// 支持的阅读模式方案
-const readingTheme = ref(localStorage.getItem('omega-reading-theme') || 'aurora')
-const readingThemeChannel = new BroadcastChannel('omega-reading-theme-channel')
-watch(readingTheme, (newVal) => {
-  localStorage.setItem('omega-reading-theme', newVal)
-  readingThemeChannel.postMessage({ theme: newVal })
-})
+const { readingTheme } = useReadingTheme()
 
 const {
   insertImageFromFile,
@@ -225,33 +221,7 @@ async function popoutNote() {
             </div>
 
             <!-- 编辑时也可切换视觉主题 -->
-            <div class="mode-switcher">
-              <button class="mode-btn" :class="{ active: readingTheme === 'aurora' }" @click="readingTheme = 'aurora'" data-tooltip="精读" data-tooltip-pos="bottom">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 2v2" /><path d="M12 20v2" /><path d="M4.93 4.93l1.41 1.41" /><path d="M17.66 17.66l1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="M6.34 17.66l-1.41 1.41" /><path d="M19.07 4.93l-1.41 1.41" />
-                </svg>
-              </button>
-              <button class="mode-btn" :class="{ active: readingTheme === 'ink' }" @click="readingTheme = 'ink'" data-tooltip="笔墨" data-tooltip-pos="bottom">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 19l7-7 3 3-7 7-3-3z" /><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="M2 2l7.586 7.586" /><circle cx="11" cy="11" r="2" />
-                </svg>
-              </button>
-              <button class="mode-btn" :class="{ active: readingTheme === 'terminal' }" @click="readingTheme = 'terminal'" data-tooltip="终端" data-tooltip-pos="bottom">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" />
-                </svg>
-              </button>
-              <button class="mode-btn" :class="{ active: readingTheme === 'parchment' }" @click="readingTheme = 'parchment'" data-tooltip="羊皮纸" data-tooltip-pos="bottom">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-                </svg>
-              </button>
-              <button class="mode-btn" :class="{ active: readingTheme === 'source' }" @click="readingTheme = 'source'" data-tooltip="源码" data-tooltip-pos="bottom">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
-                </svg>
-              </button>
-            </div>
+            <ThemeSwitcher v-model="readingTheme" compact />
 
             <!-- 编辑模式：顶栏保存按钮 -->
             <button class="toolbar-btn toolbar-btn--save" :disabled="!editContent.trim()" @click="saveEdit">
@@ -266,68 +236,7 @@ async function popoutNote() {
           
           <template v-else>
             <!-- 阅读模式：视觉方案切换 -->
-            <div class="mode-switcher">
-              <button
-                class="mode-btn"
-                :class="{ active: readingTheme === 'aurora' }"
-                @click="readingTheme = 'aurora'"
-                data-tooltip="精读模式"
-                data-tooltip-pos="bottom"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 2v2" /><path d="M12 20v2" /><path d="M4.93 4.93l1.41 1.41" /><path d="M17.66 17.66l1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="M6.34 17.66l-1.41 1.41" /><path d="M19.07 4.93l-1.41 1.41" />
-                </svg>
-                <span>精读</span>
-              </button>
-              <button
-                class="mode-btn"
-                :class="{ active: readingTheme === 'ink' }"
-                @click="readingTheme = 'ink'"
-                data-tooltip="笔墨模式"
-                data-tooltip-pos="bottom"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 19l7-7 3 3-7 7-3-3z" /><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="M2 2l7.586 7.586" /><circle cx="11" cy="11" r="2" />
-                </svg>
-                <span>笔墨</span>
-              </button>
-              <button
-                class="mode-btn"
-                :class="{ active: readingTheme === 'terminal' }"
-                @click="readingTheme = 'terminal'"
-                data-tooltip="终端模式"
-                data-tooltip-pos="bottom"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" />
-                </svg>
-                <span>终端</span>
-              </button>
-              <button
-                class="mode-btn"
-                :class="{ active: readingTheme === 'parchment' }"
-                @click="readingTheme = 'parchment'"
-                data-tooltip="羊皮纸模式"
-                data-tooltip-pos="bottom"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-                </svg>
-                <span>羊皮纸</span>
-              </button>
-              <button
-                class="mode-btn"
-                :class="{ active: readingTheme === 'source' }"
-                @click="readingTheme = 'source'"
-                data-tooltip="源码模式"
-                data-tooltip-pos="bottom"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
-                </svg>
-                <span>源码</span>
-              </button>
-            </div>
+            <ThemeSwitcher v-model="readingTheme" />
           </template>
 
           <button class="toolbar-btn btn-favorite" :class="{ 'is-active': note.isFavorite }" @click="toggleFavorite">

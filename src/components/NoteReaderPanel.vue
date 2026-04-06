@@ -12,9 +12,12 @@ import EditorToolbar from './EditorToolbar.vue'
 import WikiLinkPicker from './WikiLinkPicker.vue'
 import SplitEditor from './SplitEditor.vue'
 import BacklinksPanel from './BacklinksPanel.vue'
+import NoteOutline from './NoteOutline.vue'
+import ThemeSwitcher from './ThemeSwitcher.vue'
 import CategoryPicker from './CategoryPicker.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
 import { useEditorActions } from '../composables/useEditorActions'
+import { useReadingTheme } from '../composables/useReadingTheme'
 import type { EditorMode } from '../types'
 
 const props = defineProps<{
@@ -39,10 +42,9 @@ const editorMode = ref<EditorMode>(settingsStore.defaultEditorMode)
 const detailTextareaRef = ref<HTMLTextAreaElement | null>(null)
 const editorKey = ref(0)
 const milkdownEditorRef = shallowRef<InstanceType<typeof MilkdownEditor> | null>(null)
+const readerContentRef = ref<HTMLElement | null>(null)
 
-// 阅读主题
-const readingTheme = ref(localStorage.getItem('omega-reading-theme') || 'aurora')
-watch(readingTheme, (v) => localStorage.setItem('omega-reading-theme', v))
+const { readingTheme } = useReadingTheme()
 
 const {
   insertImageFromFile,
@@ -207,6 +209,9 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
           </button>
         </div>
+
+        <!-- 主题切换器（紧凑➡️工具栏内） -->
+        <ThemeSwitcher v-if="!isEditing" v-model="readingTheme" compact />
       </div>
 
       <!-- WYSIWYG 编辑器工具条（不滚动） -->
@@ -237,7 +242,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
       </template>
 
       <!-- 内容区域 -->
-      <div class="reader-content" :class="{ 'split-active': isEditing && editorMode === 'split' }">
+      <div ref="readerContentRef" class="reader-content" :class="{ 'split-active': isEditing && editorMode === 'split' }">
         <!-- 编辑模式 -->
         <template v-if="isEditing">
           <form class="reader-edit-form" :class="`theme-${readingTheme}`" @submit.prevent="saveEdit" novalidate>
@@ -272,29 +277,37 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
 
         <!-- 阅读模式 -->
         <template v-else>
-          <article class="reader-article" :class="`theme-${readingTheme}`">
-            <header class="note-hero">
-              <h1 class="note-title">{{ note.title || '未命名笔记' }}</h1>
-              <div class="note-meta">
-                <span class="meta-category">{{ note.category }}</span>
-                <span class="meta-date">创建于 {{ formatDate(note.createdAt) }}</span>
-                <span v-if="note.createdAt !== note.updatedAt" class="meta-date">
-                  · 更新于 {{ formatDate(note.updatedAt) }}
-                </span>
+          <div class="reader-reading-layout">
+            <article class="reader-article" :class="`theme-${readingTheme}`">
+              <header class="note-hero">
+                <h1 class="note-title">{{ note.title || '未命名笔记' }}</h1>
+                <div class="note-meta">
+                  <span class="meta-category">{{ note.category }}</span>
+                  <span class="meta-date">创建于 {{ formatDate(note.createdAt) }}</span>
+                  <span v-if="note.createdAt !== note.updatedAt" class="meta-date">
+                    · 更新于 {{ formatDate(note.updatedAt) }}
+                  </span>
+                </div>
+                <div v-if="note.tags.length > 0" class="note-tags">
+                  <span v-for="tag in note.tags" :key="tag" class="tag">{{ tag }}</span>
+                </div>
+              </header>
+              <div class="note-body">
+                <button class="copy-content-btn" :class="{ copied: copySuccess }" @click="copyContent" :data-tooltip="copySuccess ? '已复制' : '复制内容'">
+                  <svg v-if="!copySuccess" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                  <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                </button>
+                <MarkdownRenderer :content="note.content" />
               </div>
-              <div v-if="note.tags.length > 0" class="note-tags">
-                <span v-for="tag in note.tags" :key="tag" class="tag">{{ tag }}</span>
-              </div>
-            </header>
-            <div class="note-body">
-              <button class="copy-content-btn" :class="{ copied: copySuccess }" @click="copyContent" :data-tooltip="copySuccess ? '已复制' : '复制内容'">
-                <svg v-if="!copySuccess" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
-                <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-              </button>
-              <MarkdownRenderer :content="note.content" />
-            </div>
-            <BacklinksPanel :backlinks="backlinks" />
-          </article>
+              <BacklinksPanel :backlinks="backlinks" />
+            </article>
+
+            <!-- 右侧目录大纲 -->
+            <NoteOutline
+              :content="note.content"
+              :scroll-container="readerContentRef"
+            />
+          </div>
         </template>
       </div>
     </template>
@@ -496,10 +509,23 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
   max-width: none;
 }
 
-.reader-content > form,
-.reader-content > article {
+.reader-content > form {
   max-width: 800px;
   margin: 0 auto;
+}
+
+/* 阅读模式双栏布局 */
+.reader-reading-layout {
+  display: flex;
+  gap: var(--space-4);
+  max-width: 900px;
+  margin: 0 auto;
+  align-items: flex-start;
+}
+
+.reader-reading-layout > .reader-article {
+  flex: 1;
+  min-width: 0;
 }
 
 /* ─── 编辑表单 ─── */
