@@ -9,6 +9,7 @@ import EditorToolbar from '../components/EditorToolbar.vue'
 import WikiLinkPicker from '../components/WikiLinkPicker.vue'
 import SplitEditor from '../components/SplitEditor.vue'
 import BacklinksPanel from '../components/BacklinksPanel.vue'
+import NoteOutline from '../components/NoteOutline.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import CategoryPicker from '../components/CategoryPicker.vue'
 import { useEditorActions } from '../composables/useEditorActions'
@@ -29,6 +30,7 @@ const editorMode = ref<EditorMode>(settingsStore.defaultEditorMode)
 const detailTextareaRef = ref<HTMLTextAreaElement | null>(null)
 const editorKey = ref(0)
 const milkdownEditorRef = shallowRef<InstanceType<typeof MilkdownEditor> | null>(null)
+const detailContentRef = ref<HTMLElement | null>(null)
 
 // 支持的阅读模式方案
 const readingTheme = ref(localStorage.getItem('omega-reading-theme') || 'aurora')
@@ -431,7 +433,7 @@ async function popoutNote() {
       </template>
 
       <!-- 内容区域（阅读/WYSIWYG 滚动，分屏时 flex 填充） -->
-      <div class="detail-content" :class="{ 'split-active': isEditing && editorMode === 'split' }">
+      <div ref="detailContentRef" class="detail-content" :class="{ 'split-active': isEditing && editorMode === 'split' }">
         <!-- 编辑模式 -->
         <template v-if="isEditing">
           <form class="edit-form" :class="`theme-${readingTheme}`" @submit.prevent="saveEdit" novalidate>
@@ -468,46 +470,54 @@ async function popoutNote() {
 
         <!-- 阅读模式 -->
         <template v-else>
-          <article class="note-article" :class="`theme-${readingTheme}`">
-            <header class="note-hero">
-              <h1 class="note-title">{{ note.title || '未命名笔记' }}</h1>
+          <div class="reading-layout">
+            <article class="note-article" :class="`theme-${readingTheme}`">
+              <header class="note-hero">
+                <h1 class="note-title">{{ note.title || '未命名笔记' }}</h1>
 
-              <div class="note-meta">
-                <span class="meta-category">{{ note.category }}</span>
-                <span class="meta-date">创建于 {{ formatDate(note.createdAt) }}</span>
-                <span v-if="note.createdAt !== note.updatedAt" class="meta-date">
-                  · 更新于 {{ formatDate(note.updatedAt) }}
-                </span>
+                <div class="note-meta">
+                  <span class="meta-category">{{ note.category }}</span>
+                  <span class="meta-date">创建于 {{ formatDate(note.createdAt) }}</span>
+                  <span v-if="note.createdAt !== note.updatedAt" class="meta-date">
+                    · 更新于 {{ formatDate(note.updatedAt) }}
+                  </span>
+                </div>
+
+                <div v-if="note.tags.length > 0" class="note-tags">
+                  <span v-for="tag in note.tags" :key="tag" class="tag">{{ tag }}</span>
+                </div>
+              </header>
+
+              <div class="note-body">
+                <button class="copy-content-btn" :class="{ copied: copySuccess }" @click="copyContent" :data-tooltip="copySuccess ? '已复制' : '复制内容'">
+                  <svg v-if="!copySuccess" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                  <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </button>
+                <template v-if="readingTheme === 'source'">
+                  <pre class="source-raw"><code>{{ note.content }}</code></pre>
+                </template>
+                <MarkdownRenderer
+                  v-else
+                  :content="note.content"
+                  :editable-content="note.content"
+                  @update:editable-content="(val: string) => { if (note) notesStore.updateNote(note.id, { content: val }) }"
+                />
               </div>
 
-              <div v-if="note.tags.length > 0" class="note-tags">
-                <span v-for="tag in note.tags" :key="tag" class="tag">{{ tag }}</span>
-              </div>
-            </header>
+              <BacklinksPanel :backlinks="backlinks" />
+            </article>
 
-            <div class="note-body">
-              <button class="copy-content-btn" :class="{ copied: copySuccess }" @click="copyContent" :data-tooltip="copySuccess ? '已复制' : '复制内容'">
-                <svg v-if="!copySuccess" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="9" y="9" width="13" height="13" rx="2" />
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                </svg>
-                <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              </button>
-              <template v-if="readingTheme === 'source'">
-                <pre class="source-raw"><code>{{ note.content }}</code></pre>
-              </template>
-              <MarkdownRenderer
-                v-else
-                :content="note.content"
-                :editable-content="note.content"
-                @update:editable-content="(val: string) => { if (note) notesStore.updateNote(note.id, { content: val }) }"
-              />
-            </div>
-
-            <BacklinksPanel :backlinks="backlinks" />
-          </article>
+            <!-- 右侧目录大纲 -->
+            <NoteOutline
+              :content="note.content"
+              :scroll-container="detailContentRef"
+            />
+          </div>
         </template>
       </div>
     </template>
@@ -602,11 +612,28 @@ async function popoutNote() {
   min-height: 0;
 }
 
-/* 内容区域内的表单/文章居中约束 */
-.detail-content > form,
-.detail-content > article {
+/* 内容区域内的表单居中约束 */
+.detail-content > form {
   max-width: 960px;
   margin: 0 auto;
+}
+
+/* 阅读模式 Grid 三栏居中布局 */
+.reading-layout {
+  display: grid;
+  grid-template-columns: 1fr minmax(0, 780px) 1fr;
+  gap: 0 var(--space-6);
+  width: 100%;
+}
+
+.reading-layout > .note-article {
+  grid-column: 2;
+  min-width: 0;
+}
+
+.reading-layout > :deep(.note-outline) {
+  grid-column: 3;
+  justify-self: start;
 }
 
 /* 分屏模式下不限制宽度 */
