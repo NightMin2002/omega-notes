@@ -6,6 +6,7 @@
 import { ref, computed, watch } from 'vue'
 import { useNotesStore } from '../stores/notes'
 import { useDraft } from '../composables/useDraft'
+import { useAppShortcuts } from '../composables/useAppShortcuts'
 
 const props = defineProps<{
   open: boolean
@@ -17,6 +18,8 @@ const emit = defineEmits<{
 
 const notesStore = useNotesStore()
 const { draftContent: draftQuick, clearDraft, wasRestored } = useDraft('quick-note')
+const { matchShortcut } = useAppShortcuts()
+
 const content = ref(draftQuick.value)
 const isSaving = ref(false)
 const justSaved = ref(false)
@@ -85,7 +88,7 @@ function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
     emit('close')
   }
-  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+  if (matchShortcut(e, 'app-save-quick')) {
     e.preventDefault()
     save()
   }
@@ -118,7 +121,7 @@ function handleKeydown(e: KeyboardEvent) {
         ref="textareaRef"
         v-model="content"
         class="quick-note-input"
-        placeholder="想到什么，先记下来…&#10;&#10;支持 Markdown 格式&#10;Ctrl+Enter 保存"
+        placeholder="想到什么，先记下来…&#10;&#10;支持 Markdown 格式"
         spellcheck="false"
         autofocus
       />

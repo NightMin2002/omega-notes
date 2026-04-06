@@ -148,9 +148,12 @@ function formatDate(dateStr: string): string {
 
 const backlinks = computed(() => props.noteId ? notesStore.getBacklinks(props.noteId) : [])
 
-/* Ctrl+S 保存 */
+import { useAppShortcuts } from '../composables/useAppShortcuts'
+const { matchShortcut } = useAppShortcuts()
+
+/* 保存快捷键 */
 function handleGlobalKey(e: KeyboardEvent) {
-  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+  if (matchShortcut(e, 'app-save-note')) {
     e.preventDefault()
     if (isEditing.value) saveEdit()
   }

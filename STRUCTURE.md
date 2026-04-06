@@ -17,9 +17,12 @@ omega-v2/
 ├── STRUCTURE.md                # 本文件 — 结构索引
 ├── SETUP.md                    # 开发环境配置指南（Tauri 依赖说明）
 ├── RELEASE.md                  # 发布流程手册（版本发布检查清单 & 步骤）
+├── RELEASE_NOTES.md            # 版本发布日志
+├── 生成发版日志.bat             # 一键提取commit消息脚本
 │
 ├── scripts/                    # 工具脚本
 │   └── bump-version.js         # 版本号三处同步脚本（package.json / tauri.conf.json / Cargo.toml）
+│   └── update-changelog.js     # 提交信息生成脚本
 │
 ├── .github/workflows/          # CI/CD 工作流
 │   └── release.yml             # 自动构建发布（tag push 触发 → 编译签名 → GitHub Releases）
@@ -42,7 +45,8 @@ omega-v2/
 │   │   ├── AppSidebar.vue      # 侧边栏导航（组装层：路由链接 + 子组件编排）
 │   │   ├── SidebarFolderTree.vue # 侧边栏文件夹树（递归展平 + 展开/折叠 + 右键菜单 + 新建子分类）
 │   │   ├── SidebarFooter.vue   # 侧边栏底部（设置入口 + 桌面微件 + 导入/导出 + 版本号）
-│   │   ├── SidebarShortcutPanel.vue # 快捷键面板（展开/折叠 + kbd 列表）
+│   │   ├── ShortcutManagerDialog.vue # 自定义快捷键管理中心（分组卡片界面、支持即时按键录入测试、状态持久化控制）
+│   │   ├── SidebarShortcutPanel.vue # 快捷键配置唤起入口（全新向导按钮）
 │   │   ├── MilkdownEditor.vue  # Markdown 编辑器外壳（提供 Provider）
 │   │   ├── MilkdownEditorCore.vue # 编辑器核心（Milkdown 插件注册）
 │   │   ├── MarkdownRenderer.vue # Markdown → HTML 渲染（阅读模式）+ Mermaid 图表
@@ -163,7 +167,8 @@ docs/
 | `AppSidebar.vue` | 侧边栏组装层。支持“首页/知识库”双标签切换。路由链接分类编排（主页、新建笔记、任务 vs 笔记库、收藏夹、最近打开、收件箱），编排 `SidebarFolderTree` + `SidebarFooter` 子组件 | Props: `collapsed` / Emits: `collapse` |
 | `SidebarFolderTree.vue` | 📁 文件夹树。递归展平分类树 + 无限嵌套展开/折叠 + 右键菜单（新建笔记/子分类/删除） | Emits: `collapseIfMobile` |
 | `SidebarFooter.vue` | 侧边栏底部。设置入口 + 桌面微件按钮 + 导入/导出 + 版本号 + 快捷键面板 | Emits: `collapseIfMobile` |
-| `SidebarShortcutPanel.vue` | 快捷键面板。展开/折叠的键盘快捷键速查表 | *无外部接口* |
+| `ShortcutManagerDialog.vue` | 全局自定义快捷键管理器。涵盖系统与应用内全系列捕捉设定，带有高级按键录制盒与卡片分组。 | Props: `open` / Emits: `close` |
+| `SidebarShortcutPanel.vue` | 呼出 `ShortcutManagerDialog` 的底部静态按钮 | *无外部接口* |
 | `MilkdownEditor.vue` | 编辑器外壳。提供 `MilkdownProvider` inject 上下文 | Props: `modelValue`, `readonly` / Emits: `update:modelValue` |
 | `MilkdownEditorCore.vue` | 编辑器核心。注册 commonmark/GFM/history/indent/clipboard/**math**/smartPaste 插件，监听 `markdownUpdated`。**智能粘贴**：DOM 层拦截粘贴事件，图片自动转 base64 image 节点，Markdown 文本自动解析为富文本 | Props: `modelValue` / Emits: `update:modelValue` |
 | `MarkdownRenderer.vue` | 只读渲染。markdown-it + highlight.js + **texmath (KaTeX)** + **task-lists** + **Mermaid.js 图表**。支持 `[[title]]` 双向链接语法（渲染为可点击链接 + 跳转导航）。Mermaid 代码块自动渲染为 SVG，支持流程图/序列图/甘特图等 | Props: `content` |
@@ -223,6 +228,7 @@ docs/
 |---|---|---|
 | `useEditorActions.ts` | `useEditorActions` | 提取 WYSIWYG / 源码模式下通用的 Markdown 编辑器控制逻辑（图片插入、Wiki 链接、工具栏快捷插入/包裹、粘贴拦截转存） |
 | `useDraft.ts` | `useDraft` | 利用 localStorage 实现高配的草稿自动化引擎：800ms 防抖热挂载保存，按组件销毁周期执行缓冲清洗和强制保存 |
+| `useAppShortcuts.ts`| `useAppShortcuts` | 按键事件拦截与解析组合 API，主要提供 `matchShortcut` 供各面板快速应用自定义或读取的快捷键配置 |
 
 ### 工具层 (`src/utils/`)
 
@@ -255,6 +261,7 @@ docs/
 | `notes.ts` | `notes[]`, `currentCategory`, `searchQuery`, `isLoading`, `recentIds`, `draggingNoteId`（跨组件拖拽状态）, `noteMap`（computed Map 索引） | `init`, `addNote`, `updateNote`, `deleteNote`, `restoreNote`, `permanentlyDelete`, `emptyTrash`, `togglePin`, `toggleFavorite`, `recordOpen`, `importBatch`, `reorderNotes`, `moveNoteToCategory`, `getNoteById`, `findNoteByTitle`, `getBacklinks` | 委托 `storage.ts` + localStorage |
 | | 计算属性: `activeNotes`, `filteredNotes`, `categories`, `categoryTree`, `allTags`, `favoriteNotes`, `recentNotes`, `trashNotes`, `totalCount`, `pinnedCount`, `favoriteCount`, `trashCount` | | |
 | `settings.ts` | `settings`（单一状态源），computed getters: `defaultEditorMode`, `fontFamily`, `trashAutoCleanDays`, `contentZoom`, `customTemplates` | `setDefaultEditorMode`, `setFontFamily`, `setTrashAutoCleanDays`, `setContentZoom`, `addCustomTemplate`, `updateCustomTemplate`, `removeCustomTemplate`, `init` | localStorage `omega-settings` |
+| `shortcuts.ts` | `shortcuts[]`，分类 getters (`globalShortcuts`, `appShortcuts`) | `updateShortcut`, `toggleShortcut`, `resetToDefault`, `resetAll` | localStorage `omega-shortcuts` |
 | `tasks.ts` | `config`, `tasks`, `records`, `healthReminder`, `countdown` | `addTask`, `toggleComplete`, `startCountdown`, `notifyCountdownOnce` 等丰富日常管理接口 | 委托 localStorage 支持多窗口同步 |
 | `todos.ts` | `todos[]`, `autoCleanDays` | `addTodo`, `updateTodo`, `removeTodo`, `toggleComplete`, `clearCompleted`, `importTodos`, `setAutoCleanDays` | localStorage `omega-todos` |
 | | 计算属性: `pendingTodos`, `completedTodos`, `overdueTodos`, `todayTodos`, `upcomingTodos`, `pendingCount`, `overdueCount`, `datePriorityMap` | | |

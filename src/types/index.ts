@@ -190,3 +190,26 @@ export interface TodoItem {
   /** 排序权重 */
   sortOrder: number
 }
+
+/* ═══════════════════════════════════
+   快捷键系统类型
+   ═══════════════════════════════════ */
+
+/** 快捷键定义 */
+export interface ShortcutDefinition {
+  id: string
+  name: string
+  /** 描述说明 */
+  description?: string
+  /** 默认绑定的按键组合（如 ['Control', 'k']） */
+  defaultKeys: string[]
+  /** 当前绑定的按键组合 */
+  currentKeys: string[]
+  /** 是否启用 */
+  enabled: boolean
+  /** 
+   * 是否为全局（Tauri 系统级别）快捷键
+   * 若为 true，将在系统层级注册，否则只在浏览器焦点下触发
+   */
+  isGlobal?: boolean
+}

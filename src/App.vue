@@ -4,9 +4,12 @@ import AppHeader from './components/AppHeader.vue'
 import QuickNote from './components/QuickNote.vue'
 import SearchDialog from './components/SearchDialog.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { useAppShortcuts } from '@/composables/useAppShortcuts'
 
 const route = useRoute()
+const router = useRouter()
+const { matchShortcut } = useAppShortcuts()
 
 /** popout 窗口（悬挂/悬浮球）不渲染主布局 */
 const isPopout = computed(() => !!route.meta.popout)
@@ -21,17 +24,36 @@ function toggleSidebar() {
 
 function handleGlobalKeydown(e: KeyboardEvent) {
   if (isPopout.value) return
-  /* Ctrl+K → 搜索 */
-  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+  /* app-search → 搜索 */
+  if (matchShortcut(e, 'app-search')) {
     e.preventDefault()
     showSearch.value = !showSearch.value
     showQuickNote.value = false
   }
-  /* Ctrl+Q → 快速笔记 */
-  if ((e.ctrlKey || e.metaKey) && e.key === 'q') {
+  /* app-quick-note → 快速笔记 */
+  if (matchShortcut(e, 'app-quick-note')) {
     e.preventDefault()
     showQuickNote.value = !showQuickNote.value
     showSearch.value = false
+    return
+  }
+
+  /* 导航路由快捷键 */
+  if (matchShortcut(e, 'app-go-home')) {
+    e.preventDefault()
+    router.push('/')
+  }
+  if (matchShortcut(e, 'app-go-kb')) {
+    e.preventDefault()
+    router.push('/kb-home')
+  }
+  if (matchShortcut(e, 'app-go-todos')) {
+    e.preventDefault()
+    router.push('/todos')
+  }
+  if (matchShortcut(e, 'app-go-settings')) {
+    e.preventDefault()
+    router.push('/settings')
   }
 }
 
