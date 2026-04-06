@@ -113,7 +113,8 @@ omega-v2/
 │   │   ├── templates.ts        # 笔记模板定义（5 种预设，待办清单已改为跳转入口）
 │   │   ├── images.ts           # 图片粘贴处理（base64 转换）
 │   │   ├── dataio.ts           # 数据导入/导出（JSON + .md 支持）
-│   │   └── scheduler.ts        # 后台调度器（任务提醒 + 健康提醒巡检）
+│   │   ├── scheduler.ts        # 后台调度器（任务提醒 + 健康提醒巡检）
+│   │   └── tooltip.ts          # 全局 JS Tooltip 引擎（解决 CSS overflow 截断问题）
 │   │
 │   ├── types/                  # 共享类型定义
 │   │   └── index.ts            # Note / DailyTask / HealthReminder / CountdownState / CustomTemplate 等

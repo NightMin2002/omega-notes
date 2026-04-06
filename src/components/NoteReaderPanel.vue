@@ -18,6 +18,8 @@ import CategoryPicker from './CategoryPicker.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
 import { useEditorActions } from '../composables/useEditorActions'
 import { useReadingTheme } from '../composables/useReadingTheme'
+import { useShortcutsStore } from '../stores/shortcuts'
+import { useAppShortcuts } from '../composables/useAppShortcuts'
 import type { EditorMode } from '../types'
 
 const props = defineProps<{
@@ -31,6 +33,13 @@ const emit = defineEmits<{
 
 const notesStore = useNotesStore()
 const settingsStore = useSettingsStore()
+const shortcutsStore = useShortcutsStore()
+const { matchShortcut, formatKeysForDisplay } = useAppShortcuts()
+
+const saveShortcutKeys = computed(() => {
+  const sc = shortcutsStore.getShortcut('app-save-note')
+  return (sc && sc.enabled) ? ` (${formatKeysForDisplay(sc.currentKeys).replace(/ \+ /g, '+')})` : ''
+})
 
 const isEditing = ref(false)
 const editTitle = ref('')
@@ -148,9 +157,6 @@ function formatDate(dateStr: string): string {
 
 const backlinks = computed(() => props.noteId ? notesStore.getBacklinks(props.noteId) : [])
 
-import { useAppShortcuts } from '../composables/useAppShortcuts'
-const { matchShortcut } = useAppShortcuts()
-
 /* 保存快捷键 */
 function handleGlobalKey(e: KeyboardEvent) {
   if (matchShortcut(e, 'app-save-note')) {
@@ -197,7 +203,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
           </button>
 
           <template v-if="isEditing">
-            <button class="rt-btn rt-btn--save" :disabled="!editContent.trim()" @click="saveEdit">
+            <button class="rt-btn rt-btn--save" :disabled="!editContent.trim()" @click="saveEdit" :data-tooltip="saveShortcutKeys ? `保存${saveShortcutKeys}` : null" data-tooltip-pos="bottom">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></svg>
               <span>保存</span>
             </button>

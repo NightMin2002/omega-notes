@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, shallowRef, onMounted, onUnmounted } from 'vue'
+import { ref, shallowRef, computed, onMounted, onUnmounted } from 'vue'
 import { useNotesStore } from '../stores/notes'
 import { useSettingsStore } from '../stores/settings'
 import { useRouter, useRoute } from 'vue-router'
@@ -106,8 +106,15 @@ async function handleSubmit() {
 
 
 import { useAppShortcuts } from '../composables/useAppShortcuts'
+import { useShortcutsStore } from '../stores/shortcuts'
 
-const { matchShortcut } = useAppShortcuts()
+const { matchShortcut, formatKeysForDisplay } = useAppShortcuts()
+const shortcutsStore = useShortcutsStore()
+
+const saveShortcutKeys = computed(() => {
+  const sc = shortcutsStore.getShortcut('app-save-note')
+  return (sc && sc.enabled) ? ` (${formatKeysForDisplay(sc.currentKeys).replace(/ \+ /g, '+')})` : ''
+})
 
 /* ... */
 
@@ -237,6 +244,8 @@ function confirmDeleteTemplate() {
           :class="{ 'is-loading': isSaving }"
           :disabled="!content.trim() || isSaving || hasSubmitted"
           @click="handleSubmit"
+          :data-tooltip="saveShortcutKeys ? `保存${saveShortcutKeys}` : null"
+          data-tooltip-pos="bottom"
         >
           <span v-if="hasSubmitted && !isSaving" class="save-check">✓</span>
           <template v-else-if="!isSaving">

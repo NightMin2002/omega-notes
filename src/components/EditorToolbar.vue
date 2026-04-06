@@ -225,39 +225,8 @@ function handleClick(tool: ToolItem) {
   color: inherit;
 }
 
-/* 自定义 tooltip */
-.toolbar-btn::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%) scale(0.9);
-  padding: 2px 6px;
-  background: var(--color-bg-elevated);
-  color: var(--color-text-primary);
-  font-size: 0.65rem;
-  font-weight: 500;
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border);
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity var(--duration-fast) var(--ease-out),
-              transform var(--duration-fast) var(--ease-out);
-  z-index: var(--z-dropdown);
-}
-
-@media (hover: hover) {
-  .toolbar-btn:hover::after {
-    opacity: 1;
-    transform: translateX(-50%) scale(1);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .toolbar-btn,
-  .toolbar-btn::after {
+  .toolbar-btn {
     transition: none;
   }
 }

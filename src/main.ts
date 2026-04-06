@@ -17,6 +17,7 @@ import { useUpdaterStore } from './stores/updater'
 import { registerGlobalShortcuts } from './utils/shortcuts'
 import { startScheduler } from './utils/scheduler'
 import { isTauri } from './utils/storage'
+import { initGlobalTooltips } from './utils/tooltip'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -25,6 +26,9 @@ app.use(pinia)
 app.use(router)
 
 app.mount('#app')
+
+// 初始化真正的全域无裁剪 JS Tooltip
+initGlobalTooltips()
 
 // ─── 悬挂窗口路由跳转 ───
 // Rust open_popout 通过 ?popout_route=/popout/tasks 传递目标路由

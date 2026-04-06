@@ -6,6 +6,7 @@
 import { ref, computed, watch } from 'vue'
 import { useNotesStore } from '../stores/notes'
 import { useDraft } from '../composables/useDraft'
+import { useShortcutsStore } from '../stores/shortcuts'
 import { useAppShortcuts } from '../composables/useAppShortcuts'
 
 const props = defineProps<{
@@ -17,8 +18,14 @@ const emit = defineEmits<{
 }>()
 
 const notesStore = useNotesStore()
+const shortcutsStore = useShortcutsStore()
 const { draftContent: draftQuick, clearDraft, wasRestored } = useDraft('quick-note')
-const { matchShortcut } = useAppShortcuts()
+const { matchShortcut, formatKeysForDisplay } = useAppShortcuts()
+
+const saveShortcutKeys = computed(() => {
+  const sc = shortcutsStore.getShortcut('app-save-quick')
+  return (sc && sc.enabled) ? ` (${formatKeysForDisplay(sc.currentKeys).replace(/ \+ /g, '+')})` : ''
+})
 
 const content = ref(draftQuick.value)
 const isSaving = ref(false)
@@ -143,6 +150,8 @@ function handleKeydown(e: KeyboardEvent) {
             class="quick-note-save"
             :disabled="!content.trim() || isSaving"
             @click="save"
+            :data-tooltip="saveShortcutKeys ? `保存${saveShortcutKeys}` : null"
+            data-tooltip-pos="top"
           >
             <span v-if="!isSaving">保存</span>
             <span v-else class="spinner" />

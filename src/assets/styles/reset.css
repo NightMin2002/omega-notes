@@ -189,17 +189,9 @@ textarea::placeholder {
   flex-direction: column;
 }
 
-/* ─── 全局 Tooltip（data-tooltip） ─── */
-[data-tooltip] {
-  position: relative;
-}
-
-[data-tooltip]::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%) translateY(4px);
+/* ─── 全局 Tooltip 样式 (由 src/utils/tooltip.ts 动态挂载至 body) ─── */
+.global-js-tooltip {
+  position: fixed;
   padding: var(--space-1) var(--space-2);
   font-size: 0.7rem;
   font-weight: 500;
@@ -210,49 +202,9 @@ textarea::placeholder {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  z-index: var(--z-toast);
+  z-index: 999999;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity var(--duration-fast) var(--ease-out),
-              transform var(--duration-fast) var(--ease-out);
-}
-
-@media (hover: hover) {
-  [data-tooltip]:hover::after {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
-
-/* 触屏降级：focus 触发 */
-[data-tooltip]:focus-visible::after {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-/* ─── Tooltip 底部定位（用于顶部区域，防止被窗口标题栏裁剪） ─── */
-[data-tooltip-pos="bottom"]::after {
-  bottom: auto;
-  top: calc(100% + 6px);
-  transform: translateX(-50%) translateY(-4px);
-}
-
-@media (hover: hover) {
-  [data-tooltip-pos="bottom"]:hover::after {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
-
-[data-tooltip-pos="bottom"]:focus-visible::after {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  [data-tooltip]::after {
-    transition: none;
-  }
+  transition: opacity var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
 }
 
 /* ─── SortableJS 拖拽：全局样式（fallback 克隆体挂在 body 上，scoped 无效） ─── */

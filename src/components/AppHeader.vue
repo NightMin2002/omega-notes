@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useThemeStore } from '../stores/theme'
+import { useShortcutsStore } from '../stores/shortcuts'
+import { useAppShortcuts } from '../composables/useAppShortcuts'
 
 defineProps<{
   sidebarCollapsed: boolean
@@ -12,6 +15,18 @@ const emit = defineEmits<{
 }>()
 
 const themeStore = useThemeStore()
+const shortcutsStore = useShortcutsStore()
+const { formatKeysForDisplay } = useAppShortcuts()
+
+const searchKeys = computed(() => {
+  const sc = shortcutsStore.getShortcut('app-search')
+  return (sc && sc.enabled) ? formatKeysForDisplay(sc.currentKeys).replace(/ \+ /g, ' ') : ''
+})
+
+const quickNoteKeys = computed(() => {
+  const sc = shortcutsStore.getShortcut('app-quick-note')
+  return (sc && sc.enabled) ? ` ${formatKeysForDisplay(sc.currentKeys).replace(/ \+ /g, '+')}` : ''
+})
 </script>
 
 <template>
@@ -36,11 +51,11 @@ const themeStore = useThemeStore()
           <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
         <span class="search-trigger-label">搜索</span>
-        <kbd class="search-trigger-kbd">Ctrl K</kbd>
+        <kbd v-if="searchKeys" class="search-trigger-kbd">{{ searchKeys }}</kbd>
       </button>
 
       <!-- 快速笔记按钮 -->
-      <button class="header-btn" aria-label="快速笔记" @click="emit('openQuickNote')" data-tooltip="快速笔记 Ctrl+Q" data-tooltip-pos="bottom">
+      <button class="header-btn" aria-label="快速笔记" @click="emit('openQuickNote')" :data-tooltip="`快速笔记${quickNoteKeys}`" data-tooltip-pos="bottom">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
         </svg>

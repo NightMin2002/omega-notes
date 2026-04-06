@@ -27,6 +27,34 @@ const fixedShortcuts = [
   { name: '文本斜体 (编辑模式)', keys: ['Ctrl', 'I'] }
 ]
 
+function getConflictMessage(item: { id: string, currentKeys: string[], enabled: boolean }): string | null {
+  if (!item.enabled || !item.currentKeys || item.currentKeys.length === 0) return null
+  
+  const targetDisplay = formatKeysForDisplay(item.currentKeys)
+
+  // 1. 系统/其它内设固定键粗略判断
+  const fixed = fixedShortcuts.find(f => {
+    const fStr = f.keys.map(k => {
+      let l = k.toLowerCase()
+      if (l === 'ctrl') return 'Ctrl'
+      if (l === 'shift') return 'Shift'
+      if (l === 'alt') return 'Alt'
+      if (l === 'esc') return 'Esc'
+      return l.charAt(0).toUpperCase() + l.slice(1)
+    }).join(' + ')
+    return fStr === targetDisplay
+  })
+  if (fixed) return `冲突：系统保留按键 (${fixed.name})`
+
+  // 2. 其它启用的自定义快捷键
+  const allShortcuts = [...store.globalShortcuts, ...store.appShortcuts]
+  const conflictItem = allShortcuts.find(s => s.id !== item.id && s.enabled && formatKeysForDisplay(s.currentKeys) === targetDisplay)
+  
+  if (conflictItem) return `冲突：同 "${conflictItem.name}" 设为了相同键！`
+
+  return null
+}
+
 function startRecord(id: string) {
   recordingId.value = id
 }
@@ -135,12 +163,16 @@ function handleDialogKeydown(e: KeyboardEvent) {
               <div class="item-actions">
                 <div
                   class="key-recorder"
-                  :class="{ recording: recordingId === item.id }"
+                  :class="{ 
+                    recording: recordingId === item.id,
+                    'has-conflict': recordingId !== item.id && getConflictMessage(item) != null
+                  }"
                   tabindex="0"
                   @click="startRecord(item.id)"
                   @blur="cancelRecord"
                   @keydown.prevent.stop="handleRecord($event, item.id)"
-                  :title="recordingId === item.id ? '请按下组合键...' : '点击修改快捷键'"
+                  :data-tooltip="recordingId === item.id ? '请按下组合键...' : (getConflictMessage(item) || '点击修改快捷键')"
+                  data-tooltip-pos="top"
                 >
                   {{ recordingId === item.id ? '请按键...' : formatKeysForDisplay(item.currentKeys) }}
                 </div>
@@ -186,12 +218,16 @@ function handleDialogKeydown(e: KeyboardEvent) {
               <div class="item-actions">
                 <div
                   class="key-recorder"
-                  :class="{ recording: recordingId === item.id }"
+                  :class="{ 
+                    recording: recordingId === item.id,
+                    'has-conflict': recordingId !== item.id && getConflictMessage(item) != null
+                  }"
                   tabindex="0"
                   @click="startRecord(item.id)"
                   @blur="cancelRecord"
                   @keydown.prevent.stop="handleRecord($event, item.id)"
-                  :title="recordingId === item.id ? '请按下组合键...' : '点击修改快捷键'"
+                  :data-tooltip="recordingId === item.id ? '请按下组合键...' : (getConflictMessage(item) || '点击修改快捷键')"
+                  data-tooltip-pos="top"
                 >
                   {{ recordingId === item.id ? '请按键...' : formatKeysForDisplay(item.currentKeys) }}
                 </div>
@@ -457,6 +493,12 @@ function handleDialogKeydown(e: KeyboardEvent) {
   background: var(--color-bg-primary);
   box-shadow: inset 0 0 0 1px var(--color-accent), 0 0 0 4px color-mix(in oklch, var(--color-accent) 15%, transparent);
   animation: pulse-recording 1.5s infinite;
+}
+
+.key-recorder.has-conflict {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+  background: var(--color-danger-muted);
 }
 
 @keyframes pulse-recording {
