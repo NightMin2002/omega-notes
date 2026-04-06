@@ -1,52 +1,65 @@
-功能：桌面微件固定+更新UI优化+待办跳转+自定义模板
- - 悬浮窗设置新增「展开面板后固定」开关，启用后鼠标离开不自动收缩
- - 更新日志区域适配 Markdown 渲染（markdown-it 轻量转换）
- - 下载进度显示安装包大小（如 12.5 MB / 25.0 MB）
- - 错误提示区域增大内边距和间距，改善呼吸空间
- - 新建笔记「待办清单」模板改为跳转到待办事项页面的快捷入口
- - 新增自定义笔记模板功能（创建/编辑/删除/右键管理）
- - 新增 TemplateEditorDialog 组件（Teleport 弹窗）
- - settings store 扩展 customTemplates CRUD 和持久化
- - updater store 新增 downloadTotalBytes 状态跟踪
- - types 新增 CustomTemplate 接口和 AppSettings.customTemplates 字段
- - 同步更新 STRUCTURE.md 项目结构文档
+## 更新日志 - 2026-04-06
 
-修复：面板固定开关+模板弹窗呼吸空间+面板尺寸适配
- - 修复固定展开开关无效：拦截 hub:collapse-request、handleMouseLeave 两处路径
- - PANEL_HEIGHT 从 380 增至 440（前后端同步），容纳全部设置开关
- - HubExpandedBody hub-content 改为 overflow-y: auto 支持内容滚动
- - TemplateEditorDialog 增大内边距、字段间距、textarea 高度
- - Rust lib.rs PROGRESS_PANEL_HEIGHT 同步更新为 440
+### 优化：大纲目录邻近高亮+复制按钮移至工具栏+源码主题修复
+- NoteOutline 重写为索引匹配+getBoundingClientRect滚动追踪，废弃文本ID匹配
+- 实现邻近高亮效果：当前章节全亮，距离1/2的条目渐弱高亮
+- 复制正文按钮从正文区域移到顶部工具栏
+- NoteReaderPanel添加源码主题支持
 
- 修复：面板自动收缩+模板弹窗呼吸空间+面板尺寸适配
- - 实现跨窗口悬停检测：面板窗口通过 BroadcastChannel 发送 hover 状态
- - 新增 evaluateAutoCollapse：当两个窗口都无悬停且未固定时 1.5s 后自动收缩
- - panelPinned=true 时所有收缩路径均被拦截，面板保持固定
- - PANEL_HEIGHT 从 380 增至 440（前端+Rust 后端同步）
- - HubExpandedBody hub-content 改为 overflow-y: auto 支持内容滚动
- - 模板弹窗标题栏、表单区域、底部按钮区域全面增大内边距和间距
+### 重构：提取 ThemeSwitcher 组件 + useReadingTheme composable
+- 新增 useReadingTheme.ts：统一管理阅读主题状态（localStorage + BroadcastChannel 跨窗口同步）
+ - 新增 ThemeSwitcher.vue：v-model 绑定的主题切换器，支持紧凑模式（仅图标）
+ - NoteDetailView：替换两处重复的主题按钮组为 ThemeSwitcher 组件（消除 130+ 行重复代码）
+ - NoteReaderPanel：集成 ThemeSwitcher（紧凑模式嵌入工具栏）+ NoteOutline 目录大纲
+ - 两个视图的阅读主题现在通过 BroadcastChannel 跨窗口实时同步
+ - 更新 STRUCTURE.md 反映新组件和 composable
 
- 重构：待办事项五项优化 — 自定义日历替换原生日期选择器、日历日期继承新建、新建按钮微光美化、桌面微件分组视图
- - 新增 DatePicker.vue 自定义日期选择器组件（Teleport 弹出日历、清除、今天快捷、待办圆点标记）
- - 替换全部 input[type=date] 为自定义 DatePicker
- - 日历选中日期后新建自动继承该日期作为截止日
- - 新建按钮升级为渐变微光呼吸动效 + 旋转关闭 icon
- - 新建表单增大 padding/gap 呼吸空间、textarea 替代 input 输入备注
- - 筛选 tabs 添加 SVG 图标增强可辨识度
- - 日历选中日期时列表标题增加快速添加按钮
- - 新增今日/本周/本月/全部分组 tabs 切换视图
- - 待办项显示备注摘要（截断至 40 字符）
- - 优化空状态为 SVG 占位 + 友好文案
+### 新增：笔记阅读模式目录大纲 + Grid 居中布局优化
+- 新增 NoteOutline.vue 组件：字数/段落统计、阅读进度条、Markdown 标题 TOC 导航（滚动跟踪 + 点击跳转）
 
- 优化：待办布局重构 + 全局按钮呼吸空间
- - 新建表单从内联展开改为 Teleport Modal 弹窗，不再推挤页面内容
- - 页面采用 flex 固定高度布局，列表区域独立滚动，解决长列表撑破页面问题
- - 所有操作按钮 padding 增大至 10px 24px
- - 空状态按钮 padding 增大至 10px 28px
+ - 阅读模式改为 CSS Grid 三栏居中布局（1fr | 780px 文章 | 1fr），文章视觉居中不偏移
 
- 修复待办与笔记视图工具栏样式及溢出裁剪缺陷
- - 修改 Todos 列表页顶部操作按钮，令其 Tooltip 向下弹出以避免顶端裁剪
- - 优化 Notes 详情页顶行按钮布局（不折行且保持包裹性换行），解决文本变长时的被挤压变形
- - 重构核心状态视觉：将「收藏」与「置顶」激活态分别独立为醒目的警告色（黄）与成功色（绿）
- - 修复 Notes 详情页在浅色主题下，「保存」按钮 Hover 时文字色意外退化为黑色的 Bug
- - 对齐 Notes 详情页面顶端的所有视图模式切换及比例缩放项，令 Tooltip 朝安全区（下方）展现
+ - 大纲组件利用右侧 1fr 空间，无标题笔记也显示统计信息
+
+ - 窄屏（≤1100px）自动隐藏大纲
+
+ - 更新 STRUCTURE.md 反映新组件和布局变更
+
+### 重构：提取笔记详情页主题样式为独立 CSS 文件
+- 从 NoteDetailView.vue（2491 行）提取阅读主题和编辑器主题样式
+
+ - 新增 reading-themes.css（972 行）：5 套阅读视觉方案（极光/笔墨/终端/羊皮纸/源码）
+
+ - 新增 editor-themes.css（549 行）：编辑模式主题适配 + WYSIWYG 穿透样式
+
+ - NoteDetailView.vue 瘦身至 978 行（减少 61%）
+
+ - main.ts 新增两个 CSS 文件的全局引入
+
+ - 更新 STRUCTURE.md 反映新的样式文件结构
+
+### 知识库体验全面升级：主从布局浏览器 + 卡片UI优化 + 视图切换
+- 新增 ExplorerView 主从布局页面（/explorer/:id?），左侧分类树+笔记列表，右侧实时阅读/编辑
+ - 新增 NoteListPanel 组件（Master 面板：搜索筛选 + 分类/全部/收藏三Tab + 分类树折叠 + 笔记条目列表）
+ - 新增 NoteReaderPanel 组件（Detail 面板：嵌入式阅读/编辑器，切换笔记自动退出编辑，复用核心组件）
+ - ExplorerView 支持分隔条拖拽调整宽度（持久化 localStorage）、URL 同步选中笔记、窄屏上下分栏降级
+ - NotesView 新增网格/列表视图切换（localStorage 持久化），卡片网格自适应 2-3 列
+ - NotesView 卡片 UI 全面升级：增大呼吸空间、标题与预览间分隔线、footer 底部对齐、视觉层次优化
+ - NotesView 头部新增笔记数量统计徽章
+ - AppSidebar 路由匹配改为显式 isKbRoute() 函数，修复 /explorer/:id 不被识别为知识库标签的问题
+ - AppSidebar 双标签切换器增加 ARIA 无障碍属性（role=tablist/tab/tabpanel、aria-selected）
+ - 侧边栏知识库标签新增「浏览器」导航入口
+ - 路由表新增 /explorer/:id? 路由
+ - 更新 STRUCTURE.md 项目结构文档
+
+### UI: 重构首页并建立知识库专属总览
+- 将主页拆分为纯粹的效率模块（HomeView）与知识库底座（KnowledgeBaseView）
+ - 优化主页 UI 设计，增强问候与任务环的视觉层级和光效悬浮感
+ - 加入侧边栏多标签路由记忆模型，使双页导航互不干扰
+ - 增加 /kb-home 作为点击知识库 Tab 时的默认门户页面
+ - 修正组件内部间距与宽高比例重排，提供高级感舒适排版
+ - 更新项目架构说明文档相关路由及页面变更
+
+### UI: 将新建笔记移至知识库标签并清理相关跨标签入口
+
+### UI: 重构侧边栏多标签与移除非必要返回按钮
