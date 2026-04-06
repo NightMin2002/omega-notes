@@ -33,7 +33,9 @@ omega-v2/
 │   ├── assets/                 # 项目资产
 │   │   └── styles/             # 全局样式
 │   │       ├── variables.css   # Design Token 体系
-│   │       └── reset.css       # 浏览器默认样式重置
+│   │       ├── reset.css       # 浏览器默认样式重置
+│   │       ├── reading-themes.css # 笔记阅读主题（极光/笔墨/终端/羊皮纸/源码）
+│   │       └── editor-themes.css  # 笔记编辑模式主题适配 + WYSIWYG 穿透样式
 │   │
 │   ├── components/             # 全局/共享组件
 │   │   ├── AppHeader.vue       # 顶部导航栏（含搜索/快速笔记入口）
@@ -145,8 +147,10 @@ docs/
 |---|---|---|
 | `variables.css` | 定义所有 Design Token：颜色、间距、圆角、阴影、动效参数、层叠上下文。暗色主题为默认，亮色主题通过 `[data-theme='light']` 覆盖 | 低 — 仅在调整全局视觉时修改 |
 | `reset.css` | 消灭浏览器默认样式。包含 `box-sizing`、滚动条定制、焦点样式、表单元素重置、`::selection`、`prefers-reduced-motion` 降级、**SortableJS 拖拽克隆体全局样式**、**底部定位 tooltip (`data-tooltip-pos`)** | 极低 — 几乎不需要改 |
+| `reading-themes.css` | 笔记阅读模式 5 套视觉主题：**极光 (Aurora)**、**笔墨 (Ink)**、**终端 (Terminal)**、**羊皮纸 (Parchment)**、**源码 (Source)**。从 `NoteDetailView.vue` 提取，以 `.theme-xxx` 前缀隔离，含深/浅色模式双端适配 | 低 — 仅在调整阅读主题视觉时修改 |
+| `editor-themes.css` | 笔记编辑模式各主题适配：`.edit-form.theme-xxx` 表单样式 + Milkdown/ProseMirror WYSIWYG 穿透样式。从 `NoteDetailView.vue` 提取 | 低 — 仅在调整编辑器主题时修改 |
 
-**加载顺序**：`main.ts` 中先 `import variables.css` 再 `import reset.css`，确保 Token 在重置规则可用。
+**加载顺序**：`main.ts` 中依次 `import variables.css` → `reset.css` → `reading-themes.css` → `editor-themes.css`，确保 Token 在后续样式中可用。
 
 ### 组件层 (`src/components/`)
 

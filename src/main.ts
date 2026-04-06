@@ -1,5 +1,7 @@
 import './assets/styles/variables.css'
 import './assets/styles/reset.css'
+import './assets/styles/reading-themes.css'
+import './assets/styles/editor-themes.css'
 import 'katex/dist/katex.min.css'
 
 import { createApp } from 'vue'

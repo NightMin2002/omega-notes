@@ -1,0 +1,971 @@
+/* ═══════════════════════════════════════════════════════════════
+   笔记阅读主题样式
+   从 NoteDetailView.vue 提取的 5 套阅读视觉方案
+   极光 (Aurora) / 笔墨 (Ink) / 终端 (Terminal) / 羊皮纸 (Parchment) / 源码 (Source)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* =========================================
+   阅读模式 — 视觉方案：极光微光 (Aurora)
+   青绿渐变光晕、真实北极光色调
+   ========================================= */
+.theme-aurora {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.theme-aurora .note-hero {
+  padding: var(--space-8) var(--space-8) var(--space-6);
+  background:
+    linear-gradient(135deg, oklch(0.25 0.06 170 / 0.18) 0%, transparent 50%),
+    linear-gradient(225deg, oklch(0.3 0.06 200 / 0.12) 0%, transparent 50%),
+    var(--color-bg-primary);
+  border-radius: var(--radius-lg);
+  border: 1px solid oklch(0.5 0.08 170 / 0.15);
+  box-shadow:
+    0 4px 24px oklch(0.5 0.1 170 / 0.1),
+    0 0 0 1px oklch(0.5 0.06 170 / 0.08),
+    inset 0 1px 0 oklch(0.8 0.04 170 / 0.2);
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.4s ease, transform 0.3s ease;
+}
+
+/* 极光光带装饰 */
+.theme-aurora .note-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 200%;
+  height: 3px;
+  background: linear-gradient(90deg,
+    transparent,
+    oklch(0.65 0.18 170),
+    oklch(0.7 0.15 200),
+    oklch(0.6 0.16 140),
+    transparent
+  );
+  opacity: 0.6;
+  animation: aurora-shimmer 8s ease-in-out infinite;
+}
+
+@keyframes aurora-shimmer {
+  0%, 100% { transform: translateX(-20%); opacity: 0.4; }
+  50% { transform: translateX(20%); opacity: 0.8; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-aurora .note-hero::before { animation: none; opacity: 0.6; }
+}
+
+.theme-aurora .note-hero:hover {
+  box-shadow:
+    0 8px 32px oklch(0.5 0.12 170 / 0.18),
+    0 0 0 1px oklch(0.5 0.08 170 / 0.15),
+    inset 0 1px 0 oklch(0.8 0.05 170 / 0.25);
+  transform: translateY(-1px);
+}
+
+.theme-aurora .note-body {
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+/* note-body 顶部微光渐变 */
+.theme-aurora .note-body::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(
+    180deg,
+    oklch(0.5 0.05 170 / 0.06) 0%,
+    transparent 100%
+  );
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  pointer-events: none;
+}
+
+/* 渐变色标题 */
+.theme-aurora .note-title {
+  font-size: clamp(1.5rem, 4vw, 2.2rem);
+  font-weight: 800;
+  background: linear-gradient(135deg,
+    oklch(0.7 0.15 170),
+    oklch(0.65 0.14 200),
+    oklch(0.7 0.16 140)
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: var(--space-4);
+}
+
+/* 浅色模式下标题渐变更深 */
+[data-theme='light'] .theme-aurora .note-title {
+  background: linear-gradient(135deg,
+    oklch(0.42 0.15 170),
+    oklch(0.38 0.14 200),
+    oklch(0.42 0.16 140)
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+.theme-aurora .note-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+
+/* 渐变分类药丸 */
+.theme-aurora .meta-category {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+  padding: 3px var(--space-3);
+  background: linear-gradient(135deg, oklch(0.5 0.14 170), oklch(0.48 0.12 200));
+  border-radius: var(--radius-full);
+  box-shadow: 0 2px 8px oklch(0.5 0.12 170 / 0.3);
+}
+
+.theme-aurora .meta-date {
+  font-size: 0.8rem;
+  color: var(--color-text-tertiary);
+}
+
+.theme-aurora .note-tags {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.theme-aurora .tag {
+  font-size: 0.75rem;
+  color: oklch(0.6 0.12 170);
+  padding: var(--space-1) var(--space-2);
+  background: oklch(0.5 0.08 170 / 0.1);
+  border: 1px solid oklch(0.5 0.08 170 / 0.15);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+[data-theme='light'] .theme-aurora .tag {
+  color: oklch(0.4 0.12 170);
+  background: oklch(0.5 0.08 170 / 0.08);
+  border-color: oklch(0.5 0.08 170 / 0.12);
+}
+
+@media (hover: hover) {
+  .theme-aurora .tag:hover {
+    background: oklch(0.5 0.08 170 / 0.2);
+  }
+}
+
+/* =========================================
+   阅读模式 — 视觉方案：笔墨 (Ink)
+   横线纸纹理 + 左侧红线 + 首字下沉
+   ========================================= */
+.theme-ink {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.theme-ink .note-hero {
+  padding: var(--space-8) var(--space-8) var(--space-6);
+  border-bottom: 2px solid var(--color-border);
+  position: relative;
+}
+
+/* 左侧红色竖线 */
+.theme-ink .note-hero::after {
+  content: '';
+  position: absolute;
+  left: var(--space-6);
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: oklch(0.65 0.2 25);
+}
+
+/* 页眉底部装饰线 */
+.theme-ink .note-hero::before {
+  content: '✦';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-primary);
+  padding: 0 var(--space-3);
+  z-index: 1;
+}
+
+.theme-ink .note-title {
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-4);
+  padding-left: var(--space-6);
+}
+
+.theme-ink .note-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+  padding-left: var(--space-6);
+}
+
+.theme-ink .meta-category {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+}
+
+.theme-ink .meta-date {
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  color: var(--color-text-tertiary);
+}
+
+.theme-ink .note-tags {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding-left: var(--space-6);
+}
+
+.theme-ink .tag {
+  font-size: 0.75rem;
+  color: var(--color-text-tertiary);
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px dashed var(--color-text-tertiary);
+}
+
+.theme-ink .note-body {
+  padding: var(--space-6) var(--space-8) var(--space-12);
+  position: relative;
+  min-height: 300px;
+  /* 横线纸纹理 */
+  background-image: repeating-linear-gradient(
+    180deg,
+    transparent,
+    transparent 31px,
+    oklch(0.5 0.01 250 / 0.1) 31px,
+    oklch(0.5 0.01 250 / 0.1) 32px
+  );
+  background-size: 100% 32px;
+  background-position-y: 15px;
+}
+
+/* 左侧红色竖线延续 */
+.theme-ink .note-body::before {
+  content: '';
+  position: absolute;
+  left: var(--space-6);
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: oklch(0.65 0.2 25);
+}
+
+.theme-ink .note-body .md-rendered {
+  padding-left: var(--space-6);
+  line-height: 2;  /* 与横线间距对齐 */
+}
+
+/* 浅色模式横线颜色 */
+[data-theme='light'] .theme-ink .note-body {
+  background-image: repeating-linear-gradient(
+    180deg,
+    transparent,
+    transparent 31px,
+    oklch(0.7 0.02 250 / 0.2) 31px,
+    oklch(0.7 0.02 250 / 0.2) 32px
+  );
+}
+
+/* =========================================
+   阅读模式 — 视觉方案：终端 (Terminal)
+   CRT 扫描线 + 窗口标题栏 + 打字光标
+   ========================================= */
+.theme-terminal {
+  background: oklch(0.14 0.005 160);
+  border-radius: var(--radius-lg);
+  border: 1px solid oklch(0.25 0.04 145);
+  overflow: hidden;
+  position: relative;
+}
+
+/* CRT 扫描线效果 */
+.theme-terminal::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    oklch(0 0 0 / 0.03) 2px,
+    oklch(0 0 0 / 0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+  border-radius: var(--radius-lg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-terminal::after { opacity: 0.5; }
+}
+
+/* 窗口标题栏 */
+.theme-terminal .note-hero {
+  padding: var(--space-2) var(--space-4) var(--space-4);
+  border-bottom: 1px solid oklch(0.25 0.04 145);
+  position: relative;
+}
+
+/* 三色窗口按钮 */
+.theme-terminal .note-hero::after {
+  content: '● ● ●';
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-4);
+  font-size: 0.5rem;
+  letter-spacing: 4px;
+  background: linear-gradient(90deg,
+    oklch(0.65 0.2 25) 0%, oklch(0.65 0.2 25) 28%,
+    oklch(0.75 0.18 95) 28%, oklch(0.75 0.18 95) 61%,
+    oklch(0.65 0.15 145) 61%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.theme-terminal .note-hero::before {
+  content: '~/notes >';
+  color: oklch(0.5 0.08 145);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  display: block;
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.theme-terminal .note-title {
+  font-family: var(--font-mono);
+  font-size: clamp(1.1rem, 3vw, 1.5rem);
+  font-weight: 600;
+  color: oklch(0.85 0.18 145);
+  display: inline;
+}
+
+/* 打字闪烁光标 */
+.theme-terminal .note-title::after {
+  content: '█';
+  font-weight: 400;
+  color: oklch(0.7 0.18 145);
+  animation: cursor-blink 1s step-end infinite;
+  margin-left: 2px;
+}
+
+@keyframes cursor-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-terminal .note-title::after { animation: none; }
+}
+
+.theme-terminal .note-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: var(--space-3);
+}
+
+.theme-terminal .meta-category {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: oklch(0.7 0.12 200);
+  padding: 1px var(--space-2);
+  border: 1px solid oklch(0.35 0.08 200);
+  border-radius: var(--radius-sm);
+}
+
+.theme-terminal .meta-date {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: oklch(0.5 0.02 160);
+}
+
+.theme-terminal .note-tags {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: var(--space-2);
+}
+
+.theme-terminal .tag {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: oklch(0.6 0.1 80);
+  padding: 0 var(--space-1);
+}
+
+.theme-terminal .tag::before { content: '#'; }
+
+.theme-terminal .note-body {
+  padding: var(--space-4) var(--space-6) var(--space-8);
+}
+
+.theme-terminal .note-body .md-rendered {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: oklch(0.78 0.06 145);
+}
+
+.theme-terminal .note-body .md-rendered h1,
+.theme-terminal .note-body .md-rendered h2,
+.theme-terminal .note-body .md-rendered h3 {
+  color: oklch(0.85 0.18 145);
+  border-bottom: 1px dashed oklch(0.3 0.04 145);
+  padding-bottom: var(--space-1);
+}
+
+.theme-terminal .note-body .md-rendered code {
+  color: oklch(0.8 0.14 80);
+  background: oklch(0.18 0.005 160);
+}
+
+.theme-terminal .note-body .md-rendered a {
+  color: oklch(0.7 0.15 200);
+  text-decoration: underline;
+}
+
+.theme-terminal .copy-content-btn {
+  background: oklch(0.18 0.005 160);
+  border-color: oklch(0.3 0.04 145);
+  color: oklch(0.6 0.1 145);
+}
+
+/* 终端主题 — 浅色模式适配 */
+[data-theme='light'] .theme-terminal {
+  background: oklch(0.96 0.008 200);
+  border-color: oklch(0.82 0.03 200);
+}
+
+[data-theme='light'] .theme-terminal .note-hero {
+  border-bottom-color: oklch(0.85 0.025 200);
+}
+
+[data-theme='light'] .theme-terminal .note-hero::before {
+  color: oklch(0.45 0.15 160);
+}
+
+[data-theme='light'] .theme-terminal .note-title {
+  color: oklch(0.3 0.12 160);
+}
+
+[data-theme='light'] .theme-terminal .meta-category {
+  color: oklch(0.4 0.1 200);
+  border-color: oklch(0.75 0.06 200);
+}
+
+[data-theme='light'] .theme-terminal .meta-date {
+  color: oklch(0.55 0.02 200);
+}
+
+[data-theme='light'] .theme-terminal .tag {
+  color: oklch(0.45 0.08 80);
+}
+
+[data-theme='light'] .theme-terminal .note-body .md-rendered {
+  color: oklch(0.3 0.04 200);
+}
+
+[data-theme='light'] .theme-terminal .note-body .md-rendered h1,
+[data-theme='light'] .theme-terminal .note-body .md-rendered h2,
+[data-theme='light'] .theme-terminal .note-body .md-rendered h3 {
+  color: oklch(0.3 0.12 160);
+  border-bottom-color: oklch(0.82 0.03 160);
+}
+
+[data-theme='light'] .theme-terminal .note-body .md-rendered code {
+  color: oklch(0.4 0.12 80);
+  background: oklch(0.92 0.01 200);
+}
+
+[data-theme='light'] .theme-terminal .note-body .md-rendered a {
+  color: oklch(0.4 0.12 200);
+}
+
+[data-theme='light'] .theme-terminal .copy-content-btn {
+  background: oklch(0.93 0.008 200);
+  border-color: oklch(0.82 0.03 200);
+  color: oklch(0.5 0.08 160);
+}
+
+/* =========================================
+   阅读模式 — 视觉方案：羊皮纸 (Parchment)
+   纸张做旧纹理 + 古典装饰 + 首字下沉
+   ========================================= */
+.theme-parchment {
+  background: oklch(0.93 0.03 80);
+  border-radius: var(--radius-lg);
+  border: 1px solid oklch(0.82 0.04 75);
+  box-shadow:
+    inset 0 0 60px oklch(0.85 0.03 70 / 0.4),
+    inset 0 0 120px oklch(0.8 0.02 65 / 0.2);
+  overflow: hidden;
+  position: relative;
+}
+
+/* 纸张做旧肌理（角落深色渐变 + 噪点纹理） */
+.theme-parchment::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 0% 0%, oklch(0.7 0.04 60 / 0.18), transparent 50%),
+    radial-gradient(ellipse at 100% 100%, oklch(0.7 0.04 60 / 0.15), transparent 50%),
+    radial-gradient(ellipse at 100% 0%, oklch(0.72 0.03 55 / 0.08), transparent 40%),
+    radial-gradient(ellipse at 0% 100%, oklch(0.72 0.03 55 / 0.08), transparent 40%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 噪点纹理 — 模拟磨砂磨砗的古纸表面 */
+.theme-parchment::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: var(--radius-lg);
+}
+
+.theme-parchment .note-hero {
+  padding: var(--space-8) var(--space-8) var(--space-6);
+  text-align: center;
+  border-bottom: none;
+  position: relative;
+  z-index: 1;
+}
+
+/* 装饰性分割线 */
+.theme-parchment .note-hero::after {
+  content: '— ✦ —';
+  display: block;
+  margin-top: var(--space-4);
+  font-size: 0.8rem;
+  color: oklch(0.6 0.06 60);
+  letter-spacing: 8px;
+}
+
+.theme-parchment .note-title {
+  font-family: 'Georgia', 'Noto Serif SC', serif;
+  font-size: clamp(1.5rem, 4vw, 2.2rem);
+  font-weight: 700;
+  color: oklch(0.3 0.04 50);
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-4);
+}
+
+.theme-parchment .note-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+
+.theme-parchment .meta-category {
+  font-size: 0.72rem;
+  font-weight: 500;
+  font-variant: small-caps;
+  letter-spacing: 0.08em;
+  color: oklch(0.45 0.1 30);
+  padding: var(--space-1) var(--space-3);
+  background: oklch(0.88 0.04 60);
+  border-radius: var(--radius-full);
+}
+
+.theme-parchment .meta-date {
+  font-size: 0.8rem;
+  color: oklch(0.5 0.03 60);
+  font-style: italic;
+}
+
+.theme-parchment .note-tags {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.theme-parchment .tag {
+  font-size: 0.72rem;
+  color: oklch(0.5 0.06 50);
+  padding: var(--space-1) var(--space-2);
+  background: oklch(0.9 0.025 70);
+  border-radius: var(--radius-sm);
+}
+
+.theme-parchment .note-body {
+  padding: var(--space-8) var(--space-10) var(--space-12);
+  position: relative;
+  z-index: 1;
+}
+
+/* 页脚装饰 */
+.theme-parchment .note-body::after {
+  content: '❧';
+  display: block;
+  text-align: center;
+  margin-top: var(--space-8);
+  font-size: 1.5rem;
+  color: oklch(0.65 0.06 60);
+}
+
+.theme-parchment .note-body .md-rendered {
+  font-family: 'Georgia', 'Noto Serif SC', serif;
+  font-size: 1rem;
+  line-height: 2;
+  color: oklch(0.28 0.03 50);
+  text-align: justify;
+}
+
+/* 古典羊皮纸阅读域整体左缩进 */
+.theme-parchment .note-body .md-rendered {
+  padding-left: clamp(1rem, 5vw, 3rem) !important;
+  padding-right: clamp(1rem, 5vw, 3rem) !important;
+}
+
+.theme-parchment .note-body .md-rendered blockquote {
+  margin-left: -1rem; /* 让引用微微跳出排版网格，显出复古感 */
+}
+
+/* 列表缩进优化 */
+.theme-parchment .note-body .md-rendered ul,
+.theme-parchment .note-body .md-rendered ol {
+  padding-left: 1.5rem;
+}
+
+.theme-parchment .note-body .md-rendered h1,
+.theme-parchment .note-body .md-rendered h2,
+.theme-parchment .note-body .md-rendered h3 {
+  color: oklch(0.3 0.06 40);
+  font-family: 'Georgia', 'Noto Serif SC', serif;
+}
+
+.theme-parchment .note-body .md-rendered blockquote {
+  border-left-color: oklch(0.6 0.08 50);
+  background: oklch(0.9 0.03 75);
+  color: oklch(0.35 0.04 50);
+  font-style: italic;
+}
+
+.theme-parchment .note-body .md-rendered a {
+  color: oklch(0.4 0.12 30);
+}
+
+/* 羊皮纸：表格适配 */
+.theme-parchment .note-body .md-rendered table {
+  border-collapse: collapse;
+}
+
+.theme-parchment .note-body .md-rendered th {
+  background: oklch(0.88 0.035 70);
+  color: oklch(0.3 0.04 50);
+  border-color: oklch(0.78 0.04 65);
+}
+
+.theme-parchment .note-body .md-rendered td {
+  border-color: oklch(0.82 0.035 70);
+  color: oklch(0.28 0.03 50);
+}
+
+.theme-parchment .note-body .md-rendered tr:nth-child(even) {
+  background: oklch(0.91 0.025 75);
+}
+
+/* 羊皮纸：代码块适配 */
+.theme-parchment .note-body .md-rendered pre {
+  background: oklch(0.96 0.015 75);
+  border-color: oklch(0.82 0.035 70);
+}
+
+.theme-parchment .note-body .md-rendered pre code {
+  color: oklch(0.3 0.02 50);
+}
+
+.theme-parchment .note-body .md-rendered .hljs {
+  background: oklch(0.96 0.015 75) !important;
+}
+
+/* highlight.js 语法色 — 羊皮纸浅色暖调 */
+.theme-parchment .note-body .hljs-keyword,
+.theme-parchment .note-body .hljs-selector-tag,
+.theme-parchment .note-body .hljs-built_in,
+.theme-parchment .note-body .hljs-type {
+  color: oklch(0.45 0.18 310);
+}
+
+.theme-parchment .note-body .hljs-string,
+.theme-parchment .note-body .hljs-attr {
+  color: oklch(0.42 0.14 25);
+}
+
+.theme-parchment .note-body .hljs-number,
+.theme-parchment .note-body .hljs-literal {
+  color: oklch(0.48 0.15 55);
+}
+
+.theme-parchment .note-body .hljs-comment {
+  color: oklch(0.55 0.02 60);
+  font-style: italic;
+}
+
+.theme-parchment .note-body .hljs-function,
+.theme-parchment .note-body .hljs-title {
+  color: oklch(0.4 0.14 200);
+}
+
+/* 羊皮纸：行内代码适配 */
+.theme-parchment .note-body .md-rendered code {
+  background: oklch(0.9 0.025 70);
+  color: oklch(0.38 0.1 30);
+}
+
+/* 羊皮纸：分割线 */
+.theme-parchment .note-body .md-rendered hr {
+  border-top-color: oklch(0.78 0.04 65);
+}
+
+.theme-parchment .copy-content-btn {
+  background: oklch(0.9 0.03 70);
+  border-color: oklch(0.78 0.04 65);
+  color: oklch(0.5 0.04 50);
+}
+
+/* 羊皮纸 暗色模式适配 */
+[data-theme='dark'] .theme-parchment {
+  background: oklch(0.22 0.02 60);
+  border-color: oklch(0.32 0.03 55);
+  box-shadow: inset 0 0 40px oklch(0.18 0.02 50 / 0.5);
+}
+
+[data-theme='dark'] .theme-parchment .note-hero {
+  border-bottom-color: oklch(0.35 0.03 55);
+}
+
+[data-theme='dark'] .theme-parchment .note-title {
+  color: oklch(0.82 0.05 60);
+}
+
+[data-theme='dark'] .theme-parchment .meta-category {
+  color: oklch(0.75 0.08 40);
+  background: oklch(0.28 0.03 50);
+}
+
+[data-theme='dark'] .theme-parchment .meta-date {
+  color: oklch(0.6 0.03 55);
+}
+
+[data-theme='dark'] .theme-parchment .tag {
+  color: oklch(0.65 0.04 55);
+  background: oklch(0.25 0.02 55);
+}
+
+[data-theme='dark'] .theme-parchment .note-body .md-rendered {
+  color: oklch(0.78 0.02 60);
+}
+
+[data-theme='dark'] .theme-parchment .note-body .md-rendered h1,
+[data-theme='dark'] .theme-parchment .note-body .md-rendered h2,
+[data-theme='dark'] .theme-parchment .note-body .md-rendered h3 {
+  color: oklch(0.82 0.05 50);
+}
+
+[data-theme='dark'] .theme-parchment .note-body .md-rendered blockquote {
+  border-left-color: oklch(0.45 0.06 50);
+  background: oklch(0.25 0.02 55);
+  color: oklch(0.7 0.03 55);
+}
+
+[data-theme='dark'] .theme-parchment .note-body .md-rendered a {
+  color: oklch(0.7 0.1 40);
+}
+
+[data-theme='dark'] .theme-parchment .copy-content-btn {
+  background: oklch(0.25 0.02 55);
+  border-color: oklch(0.35 0.03 50);
+  color: oklch(0.6 0.04 55);
+}
+
+/* 羊皮纸暗色：表格 */
+[data-theme='dark'] .theme-parchment .note-body .md-rendered th {
+  background: oklch(0.28 0.025 55);
+  color: oklch(0.78 0.04 60);
+  border-color: oklch(0.35 0.03 50);
+}
+
+[data-theme='dark'] .theme-parchment .note-body .md-rendered td {
+  border-color: oklch(0.32 0.025 55);
+  color: oklch(0.75 0.02 60);
+}
+
+[data-theme='dark'] .theme-parchment .note-body .md-rendered tr:nth-child(even) {
+  background: oklch(0.24 0.018 55);
+}
+
+/* 羊皮纸暗色：代码块 */
+[data-theme='dark'] .theme-parchment .note-body .md-rendered pre {
+  background: oklch(0.19 0.015 55);
+  border-color: oklch(0.32 0.025 50);
+}
+
+[data-theme='dark'] .theme-parchment .note-body .md-rendered .hljs {
+  background: oklch(0.19 0.015 55) !important;
+}
+
+[data-theme='dark'] .theme-parchment .note-body .md-rendered code {
+  background: oklch(0.25 0.02 55);
+  color: oklch(0.72 0.08 40);
+}
+
+[data-theme='dark'] .theme-parchment .note-body .md-rendered hr {
+  border-top-color: oklch(0.35 0.03 55);
+}
+
+/* 笔墨主题下复制按钮位置调整 */
+.theme-ink .copy-content-btn {
+  right: var(--space-4);
+  top: var(--space-4);
+}
+
+/* =========================================
+   阅读模式 — 视觉方案：源码 (Source)
+   原始 Markdown 文本，等宽字体，无渲染
+   ========================================= */
+.theme-source {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.theme-source .note-hero {
+  padding: var(--space-6) var(--space-8);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-accent);
+}
+
+.theme-source .note-title {
+  font-size: clamp(1.3rem, 3vw, 1.8rem);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.theme-source .note-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+
+.theme-source .meta-category {
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--color-accent);
+  padding: 2px var(--space-2);
+  background: var(--color-accent-muted);
+  border-radius: var(--radius-sm);
+}
+
+.theme-source .meta-date {
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  color: var(--color-text-tertiary);
+}
+
+.theme-source .note-tags {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.theme-source .tag {
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  color: var(--color-text-secondary);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.theme-source .note-body {
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6) var(--space-8);
+  border: 1px solid var(--color-border);
+  position: relative;
+}
+
+/* 源码原文展示块 */
+.source-raw {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  tab-size: 4;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  line-height: 1.75;
+  color: var(--color-text-primary);
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.source-raw code {
+  font-family: inherit;
+  font-size: inherit;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  border: none;
+}

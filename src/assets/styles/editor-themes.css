@@ -1,0 +1,548 @@
+/* ═══════════════════════════════════════════════════════════════
+   笔记编辑模式主题适配样式
+   从 NoteDetailView.vue 提取的编辑表单 + WYSIWYG 穿透样式
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ════════════════════════════════════════════════
+   编辑模式 — 主题适配
+   ════════════════════════════════════════════════ */
+
+/* ── Aurora 极光 ── */
+.edit-form.theme-aurora {
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08),
+              0 0 0 1px rgba(99, 102, 241, 0.1);
+}
+
+.edit-form.theme-aurora .edit-title {
+  background: var(--color-bg-secondary);
+  border-color: rgba(99, 102, 241, 0.15);
+}
+
+.edit-form.theme-aurora .edit-title:focus {
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.edit-form.theme-aurora .edit-meta-row {
+  background: rgba(99, 102, 241, 0.03);
+  border-color: rgba(99, 102, 241, 0.1);
+}
+
+
+.edit-form.theme-aurora .split-editor {
+  border-color: rgba(99, 102, 241, 0.15);
+}
+
+/* ── Ink 笔墨 ── */
+.edit-form.theme-ink {
+  border-left: 3px solid var(--color-accent-muted);
+  padding-left: var(--space-6);
+}
+
+.edit-form.theme-ink .edit-title {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  padding-left: 0;
+  font-weight: 600;
+}
+
+.edit-form.theme-ink .edit-title:focus {
+  border-bottom-color: var(--color-accent);
+  box-shadow: none;
+}
+
+.edit-form.theme-ink .edit-meta-row {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  padding: var(--space-3) 0;
+}
+
+.edit-form.theme-ink .edit-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+}
+
+
+.edit-form.theme-ink .split-editor {
+  border-radius: var(--radius-sm);
+}
+
+/* ── Terminal 终端 ── */
+.edit-form.theme-terminal {
+  background: oklch(0.16 0.015 250);
+  border: 1px solid oklch(0.3 0.03 160);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  font-family: var(--font-mono);
+}
+
+.edit-form.theme-terminal .edit-title {
+  font-family: var(--font-mono);
+  color: oklch(0.85 0.15 160);
+  background: oklch(0.14 0.01 250);
+  border-color: oklch(0.3 0.03 160);
+}
+
+.edit-form.theme-terminal .edit-title:focus {
+  border-color: oklch(0.6 0.15 160);
+  box-shadow: 0 0 0 3px oklch(0.3 0.08 145 / 0.3);
+}
+
+.edit-form.theme-terminal .edit-title::placeholder {
+  color: oklch(0.4 0.04 145);
+}
+
+.edit-form.theme-terminal .edit-meta-row {
+  background: oklch(0.14 0.01 250);
+  border-color: oklch(0.3 0.03 160);
+}
+
+.edit-form.theme-terminal .edit-input {
+  background: oklch(0.12 0.005 250);
+  border-color: oklch(0.28 0.02 160);
+  color: oklch(0.78 0.06 145);
+  font-family: var(--font-mono);
+}
+
+.edit-form.theme-terminal .edit-input::placeholder {
+  color: oklch(0.4 0.04 145);
+}
+
+
+.edit-form.theme-terminal .split-editor {
+  border-color: oklch(0.3 0.03 160);
+  background: oklch(0.14 0.01 250);
+}
+
+.edit-form.theme-terminal .pane-header {
+  background: oklch(0.18 0.01 250);
+  border-bottom-color: oklch(0.3 0.03 160);
+}
+
+.edit-form.theme-terminal .pane-label {
+  color: oklch(0.6 0.1 160);
+}
+
+.edit-form.theme-terminal .source-textarea {
+  color: oklch(0.78 0.06 145);
+  font-family: var(--font-mono);
+}
+
+/* 终端编辑模式 — 浅色适配 */
+[data-theme='light'] .edit-form.theme-terminal {
+  background: oklch(0.96 0.008 200);
+  border-color: oklch(0.82 0.03 200);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .edit-title {
+  color: oklch(0.3 0.12 160);
+  background: oklch(0.94 0.006 200);
+  border-color: oklch(0.82 0.03 200);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .edit-title:focus {
+  border-color: oklch(0.45 0.12 160);
+  box-shadow: 0 0 0 3px oklch(0.5 0.1 160 / 0.15);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .edit-title::placeholder {
+  color: oklch(0.6 0.03 200);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .edit-meta-row {
+  background: oklch(0.94 0.006 200);
+  border-color: oklch(0.82 0.03 200);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .edit-input {
+  background: oklch(0.97 0.004 200);
+  border-color: oklch(0.84 0.02 200);
+  color: oklch(0.3 0.04 200);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .edit-input::placeholder {
+  color: oklch(0.6 0.03 200);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .split-editor {
+  border-color: oklch(0.82 0.03 200);
+  background: oklch(0.94 0.006 200);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .pane-header {
+  background: oklch(0.92 0.008 200);
+  border-bottom-color: oklch(0.82 0.03 200);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .pane-label {
+  color: oklch(0.4 0.08 160);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .source-textarea {
+  color: oklch(0.3 0.04 200);
+}
+
+/* ── Parchment 羊皮纸 ── */
+.edit-form.theme-parchment {
+  background: oklch(0.95 0.02 80);
+  border: 1px solid oklch(0.8 0.04 80);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+}
+
+.edit-form.theme-parchment .edit-title {
+  background: oklch(0.93 0.015 75);
+  border-color: oklch(0.82 0.035 70);
+  color: oklch(0.28 0.03 50);
+  font-family: 'Georgia', 'Noto Serif SC', serif;
+}
+
+.edit-form.theme-parchment .edit-title:focus {
+  border-color: oklch(0.6 0.08 50);
+  box-shadow: 0 0 0 3px oklch(0.7 0.06 60 / 0.2);
+}
+
+.edit-form.theme-parchment .edit-title::placeholder {
+  color: oklch(0.6 0.03 65);
+}
+
+.edit-form.theme-parchment .edit-meta-row {
+  background: oklch(0.93 0.015 75);
+  border-color: oklch(0.82 0.035 70);
+}
+
+.edit-form.theme-parchment .edit-input {
+  background: oklch(0.96 0.01 80);
+  border-color: oklch(0.84 0.03 70);
+  color: oklch(0.3 0.03 50);
+}
+
+
+.edit-form.theme-parchment .split-editor {
+  border-color: oklch(0.82 0.035 70);
+  background: oklch(0.93 0.015 75);
+}
+
+.edit-form.theme-parchment .pane-header {
+  background: oklch(0.9 0.025 75);
+  border-bottom-color: oklch(0.82 0.035 70);
+}
+
+.edit-form.theme-parchment .source-textarea {
+  color: oklch(0.28 0.03 50);
+}
+
+/* ── Parchment 暗色模式 ── */
+[data-theme='dark'] .edit-form.theme-parchment {
+  background: oklch(0.22 0.02 55);
+  border-color: oklch(0.35 0.03 50);
+}
+
+[data-theme='dark'] .edit-form.theme-parchment .edit-title {
+  background: oklch(0.2 0.015 55);
+  border-color: oklch(0.32 0.025 50);
+  color: oklch(0.82 0.04 60);
+}
+
+[data-theme='dark'] .edit-form.theme-parchment .edit-title:focus {
+  border-color: oklch(0.5 0.06 50);
+}
+
+[data-theme='dark'] .edit-form.theme-parchment .edit-meta-row {
+  background: oklch(0.2 0.015 55);
+  border-color: oklch(0.32 0.025 50);
+}
+
+[data-theme='dark'] .edit-form.theme-parchment .edit-input {
+  background: oklch(0.18 0.01 55);
+  border-color: oklch(0.3 0.02 50);
+  color: oklch(0.78 0.03 60);
+}
+
+
+[data-theme='dark'] .edit-form.theme-parchment .split-editor {
+  border-color: oklch(0.32 0.025 50);
+  background: oklch(0.2 0.015 55);
+}
+
+[data-theme='dark'] .edit-form.theme-parchment .pane-header {
+  background: oklch(0.24 0.018 55);
+  border-bottom-color: oklch(0.32 0.025 50);
+}
+
+[data-theme='dark'] .edit-form.theme-parchment .source-textarea {
+  color: oklch(0.78 0.03 60);
+}
+
+/* Parchment 编辑模式分屏预览内容适配 */
+.edit-form.theme-parchment .md-rendered table { border-collapse: collapse; }
+
+.edit-form.theme-parchment .md-rendered th {
+  background: oklch(0.88 0.035 70); color: oklch(0.3 0.04 50); border-color: oklch(0.78 0.04 65);
+}
+.edit-form.theme-parchment .md-rendered td {
+  border-color: oklch(0.82 0.035 70); color: oklch(0.28 0.03 50); background: transparent;
+}
+.edit-form.theme-parchment .md-rendered tr:nth-child(even) { background: oklch(0.91 0.025 75); }
+.edit-form.theme-parchment .md-rendered pre { background: oklch(0.96 0.015 75); border-color: oklch(0.82 0.035 70); }
+.edit-form.theme-parchment .md-rendered pre code { color: oklch(0.3 0.02 50); }
+.edit-form.theme-parchment .md-rendered .hljs { background: oklch(0.96 0.015 75) !important; }
+.edit-form.theme-parchment .hljs-keyword,
+.edit-form.theme-parchment .hljs-selector-tag,
+.edit-form.theme-parchment .hljs-built_in,
+.edit-form.theme-parchment .hljs-type { color: oklch(0.45 0.18 310); }
+.edit-form.theme-parchment .hljs-string,
+.edit-form.theme-parchment .hljs-attr { color: oklch(0.42 0.14 25); }
+.edit-form.theme-parchment .hljs-number,
+.edit-form.theme-parchment .hljs-literal { color: oklch(0.48 0.15 55); }
+.edit-form.theme-parchment .hljs-comment { color: oklch(0.55 0.02 60); font-style: italic; }
+.edit-form.theme-parchment .hljs-function,
+.edit-form.theme-parchment .hljs-title { color: oklch(0.4 0.14 200); }
+.edit-form.theme-parchment .md-rendered code { background: oklch(0.9 0.025 70); color: oklch(0.38 0.1 30); }
+.edit-form.theme-parchment .md-rendered hr { border-top-color: oklch(0.78 0.04 65); }
+
+[data-theme='dark'] .edit-form.theme-parchment .md-rendered th { background: oklch(0.28 0.025 55); color: oklch(0.78 0.04 60); border-color: oklch(0.35 0.03 50); }
+[data-theme='dark'] .edit-form.theme-parchment .md-rendered td { border-color: oklch(0.32 0.025 55); color: oklch(0.75 0.02 60); background: transparent; }
+[data-theme='dark'] .edit-form.theme-parchment .md-rendered tr:nth-child(even) { background: oklch(0.24 0.018 55); }
+[data-theme='dark'] .edit-form.theme-parchment .md-rendered pre { background: oklch(0.19 0.015 55); border-color: oklch(0.32 0.025 50); }
+[data-theme='dark'] .edit-form.theme-parchment .md-rendered .hljs { background: oklch(0.19 0.015 55) !important; }
+[data-theme='dark'] .edit-form.theme-parchment .md-rendered code { background: oklch(0.25 0.02 55); color: oklch(0.72 0.08 40); }
+
+/* WYSIWYG 羊皮纸覆盖已移至 MilkdownEditor.vue 的全局样式 */
+
+/* ── Aurora 编辑器 ── */
+.edit-form.theme-aurora .milkdown-wrapper {
+  background: var(--color-bg-primary);
+  border-color: rgba(99, 102, 241, 0.15);
+}
+
+.edit-form.theme-aurora .milkdown-wrapper:focus-within {
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* ── Ink 编辑器 ── */
+.edit-form.theme-ink .milkdown-wrapper {
+  border-radius: 0;
+  border-left: 2px solid var(--color-accent-muted);
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  background: transparent;
+}
+
+.edit-form.theme-ink .milkdown .ProseMirror {
+  line-height: 1.9 !important;
+}
+
+.edit-form.theme-ink .milkdown-wrapper:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: none;
+}
+
+/* ── Terminal 编辑器 ── */
+.edit-form.theme-terminal .milkdown-wrapper {
+  background: oklch(0.14 0.005 160);
+  border-color: oklch(0.25 0.04 145);
+}
+
+.edit-form.theme-terminal .milkdown-wrapper:focus-within {
+  border-color: oklch(0.5 0.15 145);
+  box-shadow: 0 0 0 3px oklch(0.3 0.08 145 / 0.3);
+}
+
+.edit-form.theme-terminal .milkdown .ProseMirror {
+  font-family: var(--font-mono) !important;
+  font-size: 0.88rem !important;
+  line-height: 1.7 !important;
+  color: oklch(0.78 0.06 145) !important;
+}
+
+.edit-form.theme-terminal .milkdown .ProseMirror h1,
+.edit-form.theme-terminal .milkdown .ProseMirror h2,
+.edit-form.theme-terminal .milkdown .ProseMirror h3 {
+  color: oklch(0.85 0.18 145) !important;
+  border-bottom: 1px dashed oklch(0.3 0.04 145);
+  padding-bottom: var(--space-1);
+}
+
+.edit-form.theme-terminal .milkdown .ProseMirror code {
+  color: oklch(0.8 0.14 80) !important;
+  background: oklch(0.18 0.005 160) !important;
+}
+
+.edit-form.theme-terminal .milkdown .ProseMirror pre {
+  background: oklch(0.12 0.005 160) !important;
+  border-color: oklch(0.25 0.04 145) !important;
+}
+
+.edit-form.theme-terminal .milkdown .ProseMirror a {
+  color: oklch(0.7 0.15 200) !important;
+}
+
+.edit-form.theme-terminal .milkdown .ProseMirror blockquote {
+  border-left-color: oklch(0.5 0.15 145) !important;
+  color: oklch(0.65 0.06 145) !important;
+}
+
+.edit-form.theme-terminal .milkdown .ProseMirror p.is-editor-empty:first-child::before {
+  color: oklch(0.4 0.04 145) !important;
+}
+
+/* Terminal WYSIWYG — 浅色模式 */
+[data-theme='light'] .edit-form.theme-terminal .milkdown-wrapper {
+  background: oklch(0.96 0.008 200);
+  border-color: oklch(0.82 0.03 200);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown-wrapper:focus-within {
+  border-color: oklch(0.45 0.12 160);
+  box-shadow: 0 0 0 3px oklch(0.5 0.1 160 / 0.15);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror {
+  color: oklch(0.3 0.04 200) !important;
+  background: transparent !important;
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror h1,
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror h2,
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror h3,
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror h4,
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror h5,
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror h6 {
+  color: oklch(0.3 0.12 160) !important;
+  border-bottom-color: oklch(0.82 0.03 160);
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror code {
+  color: oklch(0.4 0.12 80) !important;
+  background: oklch(0.92 0.01 200) !important;
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror pre {
+  background: oklch(0.93 0.006 200) !important;
+  border-color: oklch(0.82 0.03 200) !important;
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror pre code {
+  background: transparent !important;
+  color: oklch(0.3 0.04 200) !important;
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror a {
+  color: oklch(0.4 0.12 200) !important;
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror blockquote {
+  border-left-color: oklch(0.45 0.12 160) !important;
+  color: oklch(0.4 0.05 200) !important;
+  background: oklch(0.93 0.006 200) !important;
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror strong {
+  color: oklch(0.25 0.06 200) !important;
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror hr {
+  border-color: oklch(0.82 0.03 200) !important;
+}
+
+/* ProseMirror 表格浅色适配 */
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror table {
+  border-collapse: collapse !important;
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror th {
+  background: oklch(0.92 0.01 200) !important;
+  color: oklch(0.3 0.1 160) !important;
+  border-color: oklch(0.82 0.03 200) !important;
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror td {
+  background: transparent !important;
+  color: oklch(0.3 0.04 200) !important;
+  border-color: oklch(0.85 0.02 200) !important;
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror tr:nth-child(even) td {
+  background: oklch(0.94 0.006 200) !important;
+}
+
+/* ProseMirror 列表标记颜色 */
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror li::marker {
+  color: oklch(0.45 0.1 160) !important;
+}
+
+[data-theme='light'] .edit-form.theme-terminal .milkdown .ProseMirror p.is-editor-empty:first-child::before {
+  color: oklch(0.6 0.03 200) !important;
+}
+
+/* ── Parchment 编辑器 ── */
+.edit-form.theme-parchment .milkdown-wrapper {
+  background: oklch(0.95 0.02 80);
+  border-color: oklch(0.82 0.04 75);
+}
+
+.edit-form.theme-parchment .milkdown-wrapper:focus-within {
+  border-color: oklch(0.6 0.08 50);
+  box-shadow: 0 0 0 3px oklch(0.7 0.06 60 / 0.2);
+}
+
+.edit-form.theme-parchment .milkdown .ProseMirror {
+  font-family: 'Georgia', 'Noto Serif SC', serif !important;
+  line-height: 2 !important;
+  color: oklch(0.28 0.03 50) !important;
+}
+
+.edit-form.theme-parchment .milkdown .ProseMirror h1,
+.edit-form.theme-parchment .milkdown .ProseMirror h2,
+.edit-form.theme-parchment .milkdown .ProseMirror h3 {
+  color: oklch(0.3 0.06 40) !important;
+  font-family: 'Georgia', 'Noto Serif SC', serif !important;
+}
+
+.edit-form.theme-parchment .milkdown .ProseMirror blockquote {
+  border-left-color: oklch(0.6 0.08 50) !important;
+  background: oklch(0.9 0.03 75) !important;
+  color: oklch(0.35 0.04 50) !important;
+}
+
+.edit-form.theme-parchment .milkdown .ProseMirror a {
+  color: oklch(0.4 0.12 30) !important;
+}
+
+.edit-form.theme-parchment .milkdown .ProseMirror p.is-editor-empty:first-child::before {
+  color: oklch(0.6 0.04 60) !important;
+}
+
+/* Parchment 暗色模式 */
+[data-theme='dark'] .edit-form.theme-parchment .milkdown-wrapper {
+  background: oklch(0.22 0.02 60);
+  border-color: oklch(0.32 0.03 55);
+}
+
+[data-theme='dark'] .edit-form.theme-parchment .milkdown .ProseMirror {
+  color: oklch(0.78 0.02 60) !important;
+}
+
+[data-theme='dark'] .edit-form.theme-parchment .milkdown .ProseMirror h1,
+[data-theme='dark'] .edit-form.theme-parchment .milkdown .ProseMirror h2,
+[data-theme='dark'] .edit-form.theme-parchment .milkdown .ProseMirror h3 {
+  color: oklch(0.82 0.05 50) !important;
+}
+
+[data-theme='dark'] .edit-form.theme-parchment .milkdown .ProseMirror blockquote {
+  border-left-color: oklch(0.45 0.06 50) !important;
+  background: oklch(0.25 0.02 55) !important;
+  color: oklch(0.7 0.03 55) !important;
+}
