@@ -200,6 +200,10 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
             </button>
           </template>
           <template v-else>
+            <button class="rt-btn" :class="{ 'is-active': copySuccess }" @click="copyContent" data-tooltip-pos="bottom" :data-tooltip="copySuccess ? '已复制' : '复制正文'">
+              <svg v-if="!copySuccess" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+              <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+            </button>
             <button class="rt-btn" @click="startEdit" data-tooltip="编辑" data-tooltip-pos="bottom">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
             </button>
@@ -293,11 +297,10 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
                 </div>
               </header>
               <div class="note-body">
-                <button class="copy-content-btn" :class="{ copied: copySuccess }" @click="copyContent" :data-tooltip="copySuccess ? '已复制' : '复制内容'">
-                  <svg v-if="!copySuccess" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
-                  <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                </button>
-                <MarkdownRenderer :content="note.content" />
+                <template v-if="readingTheme === 'source'">
+                  <pre class="source-raw"><code>{{ note.content }}</code></pre>
+                </template>
+                <MarkdownRenderer v-else :content="note.content" />
               </div>
               <BacklinksPanel :backlinks="backlinks" />
             </article>

@@ -9,10 +9,9 @@ const props = defineProps<{
 interface Heading {
   level: number
   text: string
-  id: string
 }
 
-/** 从 Markdown 内容中提取标题 */
+/** 从 Markdown 内容中提取标题（纯展示用） */
 const headings = computed<Heading[]>(() => {
   if (!props.content) return []
   const lines = props.content.split('\n')
@@ -35,11 +34,7 @@ const headings = computed<Heading[]>(() => {
         .replace(/`(.+?)`/g, '$1')
         .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
         .trim()
-      result.push({
-        level: match[1].length,
-        text,
-        id: text.toLowerCase().replace(/[^\w\u4e00-\u9fff]+/g, '-').replace(/(^-|-$)/g, ''),
-      })
+      result.push({ level: match[1].length, text })
     }
   }
   return result
@@ -47,8 +42,8 @@ const headings = computed<Heading[]>(() => {
 
 const hasToc = computed(() => headings.value.length >= 2)
 
-/** 当前激活的标题 ID */
-const activeId = ref('')
+/** 当前激活的标题索引（-1 = 无） */
+const activeIndex = ref(-1)
 
 /** 字数统计 */
 const wordCount = computed(() => {
@@ -64,51 +59,64 @@ const paragraphCount = computed(() => {
   return props.content.split(/\n\s*\n/).filter(p => p.trim()).length
 })
 
-/** 预计阅读时间（分钟） */
+/** 预计阅读时间 */
 const readingTime = computed(() => Math.max(1, Math.ceil(wordCount.value / 300)))
 
 /** 阅读进度 */
 const readProgress = ref(0)
 
-/** 滚动到指定标题 */
-function scrollToHeading(heading: Heading) {
-  if (!props.scrollContainer) return
-  const container = props.scrollContainer
-  const allHeadings = container.querySelectorAll('h1, h2, h3, h4')
-
-  for (const el of allHeadings) {
-    const text = (el as HTMLElement).textContent?.trim() || ''
-    if (text === heading.text) {
-      const containerRect = container.getBoundingClientRect()
-      const elRect = el.getBoundingClientRect()
-      const scrollTop = container.scrollTop + (elRect.top - containerRect.top) - 80
-      container.scrollTo({ top: scrollTop, behavior: 'smooth' })
-      break
-    }
-  }
+/** 获取渲染区域内的标题 DOM 元素 */
+function getRenderedHeadings(): HTMLElement[] {
+  if (!props.scrollContainer) return []
+  const rendered = props.scrollContainer.querySelector('.md-rendered, .source-raw')
+  if (!rendered) return []
+  return Array.from(rendered.querySelectorAll('h1, h2, h3, h4')) as HTMLElement[]
 }
 
-/** 监听滚动 */
+/** 通过索引滚动到指定标题 */
+function scrollToHeading(index: number) {
+  if (!props.scrollContainer) return
+  const container = props.scrollContainer
+  const elements = getRenderedHeadings()
+  const el = elements[index]
+  if (!el) return
+
+  const containerRect = container.getBoundingClientRect()
+  const elRect = el.getBoundingClientRect()
+  const scrollTop = container.scrollTop + (elRect.top - containerRect.top) - 80
+  container.scrollTo({ top: scrollTop, behavior: 'smooth' })
+}
+
+/** 滚动追踪 + 进度 + 当前章节 */
 function onScroll() {
   const container = props.scrollContainer
   if (!container) return
 
+  // 阅读进度
   const scrollable = container.scrollHeight - container.clientHeight
   readProgress.value = scrollable > 0 ? Math.round((container.scrollTop / scrollable) * 100) : 0
 
   if (!hasToc.value) return
-  const allHeadings = container.querySelectorAll('h1, h2, h3, h4')
-  const containerRect = container.getBoundingClientRect()
-  let currentId = ''
+  const elements = getRenderedHeadings()
+  if (elements.length === 0) return
 
-  for (const el of allHeadings) {
-    const elRect = el.getBoundingClientRect()
-    if (elRect.top - containerRect.top < containerRect.height * 0.3) {
-      const text = (el as HTMLElement).textContent?.trim() || ''
-      currentId = text.toLowerCase().replace(/[^\w\u4e00-\u9fff]+/g, '-').replace(/(^-|-$)/g, '')
+  // 到底部 → 高亮最后一个
+  const isAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 5
+  if (isAtBottom) {
+    activeIndex.value = elements.length - 1
+    return
+  }
+
+  // 核心逻辑：找到最后一个 top <= 容器顶部 + 100px 的标题
+  const containerTop = container.getBoundingClientRect().top
+  let current = -1
+  for (let i = 0; i < elements.length; i++) {
+    const el = elements[i]
+    if (el && el.getBoundingClientRect().top <= containerTop + 100) {
+      current = i
     }
   }
-  activeId.value = currentId
+  activeIndex.value = current
 }
 
 let scrollEl: HTMLElement | null = null
@@ -152,22 +160,28 @@ onUnmounted(() => {
         <span class="stat-item">{{ paragraphCount }} 段落</span>
         <span v-if="hasToc" class="stat-item">{{ headings.length }} 章节</span>
       </div>
-      <!-- 阅读进度条 -->
       <div class="progress-track">
         <div class="progress-fill" :style="{ width: readProgress + '%' }" />
       </div>
     </div>
 
-    <!-- 目录导航（仅当有足够标题时） -->
+    <!-- 目录导航 -->
     <template v-if="hasToc">
       <div class="outline-label">目录</div>
       <nav class="outline-nav">
         <button
-          v-for="h in headings"
-          :key="h.id"
+          v-for="(h, idx) in headings"
+          :key="idx"
           class="outline-item"
-          :class="[`level-${h.level}`, { active: activeId === h.id }]"
-          @click="scrollToHeading(h)"
+          :class="[
+            `level-${h.level}`,
+            {
+              active: activeIndex === idx,
+              'near-1': activeIndex >= 0 && Math.abs(idx - activeIndex) === 1,
+              'near-2': activeIndex >= 0 && Math.abs(idx - activeIndex) === 2,
+            }
+          ]"
+          @click="scrollToHeading(idx)"
         >
           <span class="outline-indicator" />
           <span class="outline-text">{{ h.text }}</span>
@@ -175,7 +189,7 @@ onUnmounted(() => {
       </nav>
     </template>
 
-    <!-- 无目录时的提示 -->
+    <!-- 无目录提示 -->
     <div v-else class="outline-empty">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="empty-icon">
         <line x1="3" y1="6" x2="21" y2="6" />
@@ -217,9 +231,7 @@ onUnmounted(() => {
   flex-wrap: wrap;
 }
 
-.stat-row--secondary {
-  opacity: 0.7;
-}
+.stat-row--secondary { opacity: 0.7; }
 
 .stat-item {
   display: flex;
@@ -328,6 +340,27 @@ onUnmounted(() => {
 .outline-item.active {
   color: var(--color-accent);
   background: var(--color-accent-muted);
+}
+
+/* 邻近高亮：距离 1 */
+.outline-item.near-1 {
+  color: color-mix(in oklch, var(--color-accent), var(--color-text-tertiary) 50%);
+  background: color-mix(in oklch, var(--color-accent-muted), transparent 60%);
+}
+
+.outline-item.near-1 .outline-indicator {
+  background: color-mix(in oklch, var(--color-accent), var(--color-border) 50%);
+  transform: scale(1.2);
+}
+
+/* 邻近高亮：距离 2 */
+.outline-item.near-2 {
+  color: color-mix(in oklch, var(--color-accent), var(--color-text-tertiary) 80%);
+}
+
+.outline-item.near-2 .outline-indicator {
+  background: color-mix(in oklch, var(--color-accent), var(--color-border) 75%);
+  transform: scale(1.1);
 }
 
 .outline-item.active .outline-indicator {
