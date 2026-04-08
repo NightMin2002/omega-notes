@@ -80,7 +80,10 @@ async function closeWindow() {
         <span v-for="tag in note.tags" :key="tag" class="mini-tag">{{ tag }}</span>
       </div>
       <div class="note-popout-content">
-        <MarkdownRenderer :content="note.content" />
+        <template v-if="readingTheme === 'source'">
+          <pre class="source-raw"><code>{{ note.content }}</code></pre>
+        </template>
+        <MarkdownRenderer v-else :content="note.content" />
       </div>
     </div>
 
@@ -93,6 +96,22 @@ async function closeWindow() {
     </div>
   </div>
 </template>
+
+<style>
+/* 悬挂窗口必须将 html/body 设为透明，否则圆角外会漏出 body 背景色 */
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+#app {
+  height: 100vh;
+  display: flex;
+  background: transparent !important;
+}
+</style>
 
 <style scoped>
 .popout-shell {
