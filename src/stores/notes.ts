@@ -111,10 +111,32 @@ export const useNotesStore = defineStore('notes', () => {
 
   // ─── 计算属性 ───
 
-  /** 未删除的活跃笔记 */
-  const activeNotes = computed<Note[]>(() =>
+  /** 未删除的活跃笔记（含子笔记） */
+  const allActiveNotes = computed<Note[]>(() =>
     notes.value.filter(n => !n.isDeleted)
   )
+
+  /** 未删除的顶级笔记（不含子笔记，用于列表/分类/统计） */
+  const activeNotes = computed<Note[]>(() =>
+    allActiveNotes.value.filter(n => !n.parentId)
+  )
+
+  /** 获取指定笔记的子笔记列表（按 sortOrder → 创建时间排序） */
+  function getChildNotes(parentId: string): Note[] {
+    return allActiveNotes.value
+      .filter(n => n.parentId === parentId)
+      .sort((a, b) => {
+        const sa = a.sortOrder ?? Infinity
+        const sb = b.sortOrder ?? Infinity
+        if (sa !== sb) return sa - sb
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      })
+  }
+
+  /** 获取指定笔记的子笔记数量 */
+  function getChildCount(parentId: string): number {
+    return allActiveNotes.value.filter(n => n.parentId === parentId).length
+  }
 
   const categories = computed<string[]>(() => {
     const set = new Set<string>()
@@ -290,6 +312,10 @@ export const useNotesStore = defineStore('notes', () => {
       isPinned: false,
       isFavorite: false,
     }
+    // 子笔记支持：继承父笔记的 parentId
+    if (data.parentId) {
+      note.parentId = data.parentId
+    }
     notes.value.unshift(note)
     await saveNote(note)
     return note
@@ -309,7 +335,7 @@ export const useNotesStore = defineStore('notes', () => {
     await saveNote(updated)
   }
 
-  /** 软删除笔记（移入回收站） */
+  /** 软删除笔记（移入回收站），若为父笔记则级联删除子笔记 */
   async function deleteNote(id: string) {
     const note = noteMap.value.get(id)
     if (!note) return
@@ -319,21 +345,48 @@ export const useNotesStore = defineStore('notes', () => {
     // 同时从最近打开中移除
     recentIds.value = recentIds.value.filter(rid => rid !== id)
     localStorage.setItem(RECENT_KEY, JSON.stringify(recentIds.value))
+    // 级联删除子笔记（仅父笔记删除时）
+    if (!note.parentId) {
+      const children = notes.value.filter(n => n.parentId === id && !n.isDeleted)
+      for (const child of children) {
+        child.isDeleted = true
+        child.deletedAt = note.deletedAt
+        await saveNote(child)
+        recentIds.value = recentIds.value.filter(rid => rid !== child.id)
+      }
+      if (children.length > 0) {
+        localStorage.setItem(RECENT_KEY, JSON.stringify(recentIds.value))
+      }
+    }
   }
 
-  /** 从回收站恢复笔记 */
+  /** 从回收站恢复笔记（父笔记恢复时级联恢复子笔记） */
   async function restoreNote(id: string) {
     const note = noteMap.value.get(id)
     if (!note) return
     note.isDeleted = false
     note.deletedAt = undefined
     await saveNote(note)
+    // 级联恢复子笔记
+    if (!note.parentId) {
+      const children = notes.value.filter(n => n.parentId === id && n.isDeleted)
+      for (const child of children) {
+        child.isDeleted = false
+        child.deletedAt = undefined
+        await saveNote(child)
+      }
+    }
   }
 
-  /** 永久删除笔记（物理删除文件） */
+  /** 永久删除笔记（物理删除文件），父笔记级联删除子笔记 */
   async function permanentlyDelete(id: string) {
-    notes.value = notes.value.filter(n => n.id !== id)
+    // 先收集要删除的子笔记
+    const childIds = notes.value.filter(n => n.parentId === id).map(n => n.id)
+    notes.value = notes.value.filter(n => n.id !== id && n.parentId !== id)
     await deleteNoteFile(id)
+    for (const cid of childIds) {
+      await deleteNoteFile(cid)
+    }
   }
 
   /** 清空回收站 */
@@ -460,6 +513,7 @@ export const useNotesStore = defineStore('notes', () => {
   return {
     notes,
     activeNotes,
+    allActiveNotes,
     currentCategory,
     searchQuery,
     isLoading,
@@ -494,5 +548,7 @@ export const useNotesStore = defineStore('notes', () => {
     moveNoteToCategory,
     addCustomCategory,
     deleteCategory,
+    getChildNotes,
+    getChildCount,
   }
 })

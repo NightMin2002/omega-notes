@@ -34,6 +34,9 @@ function noteToMarkdown(note: Note): string {
     lines.push(`deleted: true`)
     lines.push(`deletedAt: ${note.deletedAt || ''}`)
   }
+  if (note.parentId) {
+    lines.push(`parentId: ${escapeYaml(note.parentId)}`)
+  }
   lines.push('---')
   lines.push('')
   lines.push(note.content)
@@ -95,6 +98,9 @@ function markdownToNote(filename: string, raw: string): Note {
   if (meta['deleted'] === 'true') {
     note.isDeleted = true
     note.deletedAt = meta['deletedAt'] || ''
+  }
+  if (meta['parentId']) {
+    note.parentId = meta['parentId']
   }
   return note
 }

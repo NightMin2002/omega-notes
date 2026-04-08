@@ -20,6 +20,8 @@ export interface Note {
   deletedAt?: string
   /** 自定义排序权重（越小越靠前） */
   sortOrder?: number
+  /** 父笔记 ID（子笔记专属，大笔记无此字段）。仅支持单层嵌套 */
+  parentId?: string
 }
 
 /** 文件夹树节点（侧边栏层级导航） */

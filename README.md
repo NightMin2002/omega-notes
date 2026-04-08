@@ -173,4 +173,4 @@ updatedAt: 2026-03-18T12:30:00.000Z
 
 ---
 
-*Created by Code Agent Ω — 2026.03.18 | Last updated: 2026.04.02 v2.9.1 桌面悬浮窗稳定性修复 — 双窗口展开、首开预热与边缘方向适配*
+*Created by Code Agent Ω

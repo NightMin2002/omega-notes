@@ -463,6 +463,13 @@ function handlePillMouseUp(cat: string) {
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
             <circle cx="12" cy="10" r="3" />
           </svg>
+          <span v-if="notesStore.getChildCount(note.id) > 0" class="child-count-badge" :data-tooltip="`${notesStore.getChildCount(note.id)} 个子笔记`" data-tooltip-pos="bottom">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+            {{ notesStore.getChildCount(note.id) }}
+          </span>
         </div>
         <h3 class="note-card-title">{{ note.title || '未命名笔记' }}</h3>
         <div class="note-card-content" v-html="previewHtml(note.content)" />
@@ -497,6 +504,13 @@ function handlePillMouseUp(cat: string) {
           <svg v-if="note.isFavorite" class="fav-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
           </svg>
+          <span v-if="notesStore.getChildCount(note.id) > 0" class="child-count-badge">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+            {{ notesStore.getChildCount(note.id) }}
+          </span>
         </div>
         <span class="list-row-title">{{ note.title || '未命名笔记' }}</span>
         <span class="list-row-preview">{{ previewHtml(note.content).replace(/<[^>]*>/g, '').slice(0, 80) }}</span>
@@ -879,6 +893,20 @@ function handlePillMouseUp(cat: string) {
 
 .pin-icon {
   color: var(--color-accent);
+}
+
+.child-count-badge {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--color-info, #63b3ed);
+  background: var(--color-info-muted, rgba(99, 179, 237, 0.15));
+  padding: 1px 5px;
+  border-radius: var(--radius-full);
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .note-card-title {

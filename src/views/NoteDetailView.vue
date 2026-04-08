@@ -10,6 +10,7 @@ import WikiLinkPicker from '../components/WikiLinkPicker.vue'
 import SplitEditor from '../components/SplitEditor.vue'
 import BacklinksPanel from '../components/BacklinksPanel.vue'
 import NoteOutline from '../components/NoteOutline.vue'
+import SubNotePanel from '../components/SubNotePanel.vue'
 import ThemeSwitcher from '../components/ThemeSwitcher.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import CategoryPicker from '../components/CategoryPicker.vue'
@@ -60,11 +61,62 @@ const note = computed(() => {
   return notesStore.getNoteById(id)
 })
 
-/* 记录打开 */
+/* ─── 子笔记支持 ─── */
+
+/** 当前笔记是否为子笔记 */
+const isChildNote = computed(() => !!note.value?.parentId)
+
+/** 当前笔记的父笔记（仅当正在查看子笔记时有值） */
+const parentNote = computed(() => {
+  if (!note.value?.parentId) return null
+  return notesStore.getNoteById(note.value.parentId) || null
+})
+
+/** 子笔记面板所需的父笔记 ID（查看父笔记 → 自身 ID；查看子笔记 → 其 parentId） */
+const subNotePanelParentId = computed(() => {
+  if (note.value?.parentId) return note.value.parentId
+  return (route.params.id as string) || ''
+})
+
+/** 子笔记面板当前激活的子笔记（仅当查看子笔记时高亮） */
+const activeChildId = computed(() => {
+  if (isChildNote.value) return route.params.id as string
+  return null
+})
+
+/** 导航到子笔记 */
+function navigateToChild(childId: string) {
+  notesStore.recordOpen(childId)
+  router.push(`/note/${childId}`)
+}
+
+/** 返回父笔记 */
+function navigateToParent() {
+  if (parentNote.value) {
+    router.push(`/note/${parentNote.value.id}`)
+  }
+}
+
+/** 子笔记创建后导航（带 edit 标记自动进入编辑） */
+function handleChildCreated(childId: string) {
+  notesStore.recordOpen(childId)
+  router.push(`/note/${childId}?edit=1`)
+}
+
+/* 记录打开 + 自动编辑检测 */
 {
   const id = route.params.id as string
   if (id) notesStore.recordOpen(id)
 }
+
+/* 监听 route.query.edit，自动进入编辑状态 */
+watch(() => route.query.edit, (val) => {
+  if (val === '1' && note.value && !isEditing.value) {
+    startEdit()
+    // 清除 query 避免刷新重复触发
+    router.replace({ path: route.path, query: {} })
+  }
+}, { immediate: true })
 
 function startEdit() {
   if (!note.value) return
@@ -185,20 +237,45 @@ async function popoutNote() {
       <!-- 顶部操作栏 -->
       <div class="detail-toolbar">
         <!-- 编辑模式：左侧“取消” / 阅读模式：“返回” -->
-        <button v-if="isEditing" class="toolbar-btn toolbar-btn--cancel" @click="cancelEdit">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-          <span>取消</span>
-        </button>
-        <button v-else class="toolbar-btn" @click="router.push('/notes')">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="19" y1="12" x2="5" y2="12" />
-            <polyline points="12 19 5 12 12 5" />
-          </svg>
-          <span>返回</span>
-        </button>
+        <div class="toolbar-left">
+          <button v-if="isEditing" class="toolbar-btn toolbar-btn--cancel" @click="cancelEdit">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+            <span>取消</span>
+          </button>
+          <button v-else class="toolbar-btn" @click="isChildNote ? navigateToParent() : router.push('/notes')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12" />
+              <polyline points="12 19 5 12 12 5" />
+            </svg>
+            <span>{{ isChildNote ? '返回父笔记' : '返回' }}</span>
+          </button>
+
+          <!-- 面包屑导航（子笔记时显示） -->
+          <nav v-if="isChildNote && parentNote && !isEditing" class="detail-breadcrumb">
+            <button class="breadcrumb-item" @click="navigateToParent">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+              </svg>
+              {{ parentNote.title || '未命名笔记' }}
+            </button>
+            <svg class="breadcrumb-sep" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+            <span class="breadcrumb-current">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+              {{ note.title || '未命名' }}
+            </span>
+          </nav>
+        </div>
 
         <div class="toolbar-actions">
           <!-- 编辑时：模式切换 -->
@@ -245,19 +322,22 @@ async function popoutNote() {
             <ThemeSwitcher v-model="readingTheme" />
           </template>
 
-          <button class="toolbar-btn btn-favorite" :class="{ 'is-active': note.isFavorite }" @click="toggleFavorite">
-            <svg width="16" height="16" viewBox="0 0 24 24" :fill="note.isFavorite ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-            </svg>
-            <span>{{ note.isFavorite ? '取消收藏' : '收藏' }}</span>
-          </button>
-          <button class="toolbar-btn btn-pin" :class="{ 'is-active': note.isPinned }" @click="togglePin">
-            <svg width="16" height="16" viewBox="0 0 24 24" :fill="note.isPinned ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-              <circle cx="12" cy="10" r="3" />
-            </svg>
-            <span>{{ note.isPinned ? '取消置顶' : '置顶' }}</span>
-          </button>
+          <!-- 收藏 / 置顶 / 悬挂：仅父笔记显示 -->
+          <template v-if="!isChildNote">
+            <button class="toolbar-btn btn-favorite" :class="{ 'is-active': note.isFavorite }" @click="toggleFavorite">
+              <svg width="16" height="16" viewBox="0 0 24 24" :fill="note.isFavorite ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              <span>{{ note.isFavorite ? '取消收藏' : '收藏' }}</span>
+            </button>
+            <button class="toolbar-btn btn-pin" :class="{ 'is-active': note.isPinned }" @click="togglePin">
+              <svg width="16" height="16" viewBox="0 0 24 24" :fill="note.isPinned ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+              <span>{{ note.isPinned ? '取消置顶' : '置顶' }}</span>
+            </button>
+          </template>
           <button v-if="!isEditing" class="toolbar-btn" :class="{ 'is-active': copySuccess }" @click="copyContent">
             <svg v-if="!copySuccess" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="9" y="9" width="13" height="13" rx="2" />
@@ -396,6 +476,16 @@ async function popoutNote() {
         <!-- 阅读模式 -->
         <template v-else>
           <div class="reading-layout">
+            <!-- 左侧子笔记面板（仅父笔记显示） -->
+            <SubNotePanel
+              :parent-id="subNotePanelParentId"
+              :active-child-id="activeChildId"
+              :is-child-note="isChildNote"
+              @select="navigateToChild"
+              @back="navigateToParent"
+              @created="handleChildCreated"
+            />
+
             <article class="note-article" :class="`theme-${readingTheme}`">
               <header class="note-hero">
                 <h1 class="note-title">{{ note.title || '未命名笔记' }}</h1>
@@ -482,6 +572,65 @@ async function popoutNote() {
   z-index: 10;
 }
 
+/* 工具栏左侧区域（返回按钮 + 面包屑） */
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* ─── 面包屑导航 ─── */
+.detail-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.75rem;
+  color: var(--color-text-tertiary);
+  min-width: 0;
+}
+
+.breadcrumb-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--color-text-tertiary);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+  transition: color var(--duration-fast) var(--ease-out),
+              background-color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .breadcrumb-item:hover {
+    color: var(--color-accent);
+    background: var(--color-accent-muted);
+  }
+}
+
+.breadcrumb-sep {
+  flex-shrink: 0;
+  color: var(--color-text-tertiary);
+  opacity: 0.4;
+}
+
+.breadcrumb-current {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--color-accent);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+
 /* 编辑器工具条（不滚动） */
 .editor-toolbar {
   display: flex;
@@ -534,12 +683,18 @@ async function popoutNote() {
   margin: 0 auto;
 }
 
-/* 阅读模式 Grid 三栏居中布局 */
+/* 阅读模式 Grid 三栏居中布局（子笔记面板嵌入左侧留白） */
 .reading-layout {
   display: grid;
   grid-template-columns: 1fr minmax(0, 780px) 1fr;
   gap: 0 var(--space-6);
   width: 100%;
+}
+
+/* 左侧子笔记面板：嵌入左侧 1fr 留白空间 */
+.reading-layout > :deep(.sub-note-panel) {
+  grid-column: 1;
+  justify-self: end;
 }
 
 .reading-layout > .note-article {

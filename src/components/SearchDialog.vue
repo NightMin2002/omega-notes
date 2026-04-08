@@ -32,9 +32,10 @@ watch(() => props.open, async (val) => {
 
 const results = computed(() => {
   const q = query.value.trim().toLowerCase()
-  if (!q) return notesStore.notes.slice(0, 8)
+  const allNotes = notesStore.notes.filter(n => !n.isDeleted)
+  if (!q) return allNotes.slice(0, 8)
 
-  return notesStore.notes
+  return allNotes
     .filter(n =>
       n.title.toLowerCase().includes(q)
       || n.content.toLowerCase().includes(q)
@@ -43,6 +44,13 @@ const results = computed(() => {
     )
     .slice(0, 12)
 })
+
+/** 获取子笔记的父笔记标题 */
+function getParentTitle(note: { parentId?: string }): string | null {
+  if (!note.parentId) return null
+  const parent = notesStore.getNoteById(note.parentId)
+  return parent ? (parent.title || '未命名笔记') : null
+}
 
 watch(results, () => {
   selectedIndex.value = 0
@@ -142,6 +150,13 @@ function formatDate(dateStr: string): string {
             />
           </div>
           <div class="search-item-meta">
+            <span v-if="note.parentId" class="search-item-parent">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+              </svg>
+              {{ getParentTitle(note) }}
+            </span>
             <span class="search-item-category">{{ note.category }}</span>
             <span class="search-item-date">{{ formatDate(note.updatedAt) }}</span>
           </div>
@@ -307,6 +322,22 @@ function formatDate(dateStr: string): string {
 .search-item-date {
   font-size: 0.7rem;
   color: var(--color-text-tertiary);
+}
+
+.search-item-parent {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--color-info, #63b3ed);
+  background: var(--color-info-muted, rgba(99, 179, 237, 0.12));
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ─── 高亮 ─── */
