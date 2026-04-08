@@ -10,6 +10,7 @@ import MarkdownRenderer from '../../components/MarkdownRenderer.vue'
 
 const route = useRoute()
 const notesStore = useNotesStore()
+notesStore.init()
 
 const note = computed(() => {
   const id = route.params.id as string
@@ -84,7 +85,11 @@ async function closeWindow() {
     </div>
 
     <div v-else class="popout-empty">
-      笔记不存在
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+      </svg>
+      <span>笔记不存在或已删除</span>
     </div>
   </div>
 </template>
@@ -141,6 +146,15 @@ async function closeWindow() {
   }
 }
 
+.popout-close:active {
+  transform: scale(0.9);
+}
+
+.popout-close:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-danger-muted);
+  outline: none;
+}
+
 .note-popout-body {
   flex: 1;
   overflow-y: auto;
@@ -192,10 +206,22 @@ async function closeWindow() {
 .popout-empty {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: var(--space-2);
   color: var(--color-text-tertiary);
   font-size: 0.85rem;
+}
+
+.popout-empty svg {
+  opacity: 0.35;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popout-close {
+    transition: none;
+  }
 }
 </style>
 

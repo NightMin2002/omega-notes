@@ -75,7 +75,7 @@ const indicatorStyle = computed(() => ({
   width: calc((100% - 8px) / 5);
   background: var(--color-bg-elevated);
   border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.1));
   transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
   z-index: 1;
 }
@@ -151,5 +151,14 @@ const indicatorStyle = computed(() => ({
 .hub-content::-webkit-scrollbar-thumb {
   background-color: var(--color-border-strong, rgba(255, 255, 255, 0.12));
   border-radius: var(--radius-full);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-indicator {
+    transition: none;
+  }
+  .tab-btn {
+    transition: none;
+  }
 }
 </style>

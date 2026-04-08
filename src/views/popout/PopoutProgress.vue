@@ -875,11 +875,13 @@ html, body {
 }
 
 .day-fill {
-  background: linear-gradient(90deg, #63b3ed, var(--color-accent, #6366f1));
+  background: linear-gradient(90deg, oklch(0.7 0.12 230), var(--color-accent, oklch(0.6 0.2 270)));
+  box-shadow: 0 0 6px color-mix(in oklch, var(--color-accent) 30%, transparent);
 }
 
 .year-fill {
-  background: linear-gradient(90deg, #f6e05e, #ed8936);
+  background: linear-gradient(90deg, oklch(0.8 0.15 90), oklch(0.7 0.16 55));
+  box-shadow: 0 0 6px color-mix(in oklch, oklch(0.7 0.16 55) 25%, transparent);
 }
 
 .detailed-text {
@@ -925,8 +927,8 @@ html, body {
   }
 
   .close-btn:hover {
-    background: var(--color-danger, #f43f5e);
-    color: #fff;
+    background: var(--color-danger, oklch(0.65 0.2 25));
+    color: var(--color-text-inverse, #fff);
   }
 }
 

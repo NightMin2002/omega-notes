@@ -341,6 +341,12 @@ const tabCounts = computed(() => {
   .hub-todo-check:hover { color: var(--color-accent); }
 }
 
+.hub-todo-check:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-accent-muted);
+  outline: none;
+  border-radius: var(--radius-sm);
+}
+
 /* ─── Todo Body（两行布局） ─── */
 .hub-todo-body {
   flex: 1;
@@ -438,6 +444,8 @@ const tabCounts = computed(() => {
   border-radius: 6px;
   border: 1px solid var(--color-border);
   background: var(--color-bg-tertiary);
+  appearance: none;
+  color: var(--color-text-primary);
 }
 
 .hub-quick-input:focus {
@@ -461,6 +469,15 @@ const tabCounts = computed(() => {
 }
 
 .hub-add-btn:disabled { opacity: 0.3; }
+
+.hub-add-btn:active {
+  transform: scale(0.93);
+}
+
+.hub-add-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-accent-muted);
+  outline: none;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .hub-view-tab { transition: none; }

@@ -186,10 +186,23 @@ watch(config, (val) => {
   font-weight: 600;
 }
 
+.segment input:focus-visible + .segment-label {
+  box-shadow: 0 0 0 2px var(--color-accent-muted);
+}
+
 .setting-divider {
   height: 1px;
   background: var(--color-border);
   margin: var(--space-1) 0;
   opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .setting-item,
+  .toggle-checkbox,
+  .toggle-checkbox::after,
+  .segment-label {
+    transition: none;
+  }
 }
 </style>

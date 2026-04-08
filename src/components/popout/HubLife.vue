@@ -62,10 +62,13 @@ function closeDropdown(e: MouseEvent) {
 
 // ─── 生日下拉菜单状态 ───
 const openPicker = ref<'year' | 'month' | 'day' | null>(null)
+const yearPickerRef = ref<HTMLElement | null>(null)
+const monthPickerRef = ref<HTMLElement | null>(null)
+const dayPickerRef = ref<HTMLElement | null>(null)
 const pickerRefs = {
-  year: ref<HTMLElement | null>(null),
-  month: ref<HTMLElement | null>(null),
-  day: ref<HTMLElement | null>(null),
+  year: yearPickerRef,
+  month: monthPickerRef,
+  day: dayPickerRef,
 }
 
 function togglePicker(which: 'year' | 'month' | 'day') {
@@ -188,7 +191,7 @@ const activeLog = computed(() => {
         <div class="birth-picker-row">
           <span class="birth-label">生日</span>
           <!-- 年 -->
-          <div class="mini-select" ref="pickerRefs.year">
+          <div class="mini-select" ref="yearPickerRef">
             <button class="mini-trigger" @click.stop="togglePicker('year')">
               {{ birthYear }}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -204,7 +207,7 @@ const activeLog = computed(() => {
           </div>
           <span class="birth-sep">年</span>
           <!-- 月 -->
-          <div class="mini-select" ref="pickerRefs.month">
+          <div class="mini-select" ref="monthPickerRef">
             <button class="mini-trigger" @click.stop="togglePicker('month')">
               {{ String(birthMonth).padStart(2, '0') }}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -220,7 +223,7 @@ const activeLog = computed(() => {
           </div>
           <span class="birth-sep">月</span>
           <!-- 日 -->
-          <div class="mini-select" ref="pickerRefs.day">
+          <div class="mini-select" ref="dayPickerRef">
             <button class="mini-trigger" @click.stop="togglePicker('day')">
               {{ String(birthDay).padStart(2, '0') }}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -496,6 +499,10 @@ const activeLog = computed(() => {
 .select-trigger:hover {
   border-color: var(--color-accent);
 }
+.select-trigger:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-accent-muted);
+  outline: none;
+}
 .select-trigger svg {
   width: 12px;
   height: 12px;
@@ -622,5 +629,22 @@ const activeLog = computed(() => {
   border-left: 2px solid var(--color-border);
   padding-left: 8px;
   letter-spacing: -0.2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-row .adv-glow {
+    animation: none;
+    transition: none;
+  }
+  .pulse-row .heartbeat-active {
+    transform: none;
+    transition: none;
+  }
+  .mini-trigger,
+  .mini-option,
+  .select-trigger,
+  .select-option {
+    transition: none;
+  }
 }
 </style>

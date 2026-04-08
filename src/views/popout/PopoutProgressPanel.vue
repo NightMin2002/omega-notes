@@ -72,7 +72,7 @@ onMounted(async () => {
     } catch {
       // 忽略因窗口被短暂休眠而产生的拿取异常
     }
-  }, 100)
+  }, 500)
 })
 
 onUnmounted(() => {
