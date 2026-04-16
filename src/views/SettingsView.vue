@@ -450,6 +450,23 @@ function formatBytes(bytes: number): string {
           <span class="toggle-thumb" />
         </button>
       </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <span class="setting-label">默认启动桌面微件</span>
+          <span class="setting-desc">应用启动时自动打开底部悬浮时间条微件</span>
+        </div>
+        <button
+          class="toggle-switch"
+          :class="{ active: settingsStore.autoLaunchWidget }"
+          role="switch"
+          :aria-checked="settingsStore.autoLaunchWidget"
+          aria-label="默认启动桌面微件"
+          @click="settingsStore.setAutoLaunchWidget(!settingsStore.autoLaunchWidget)"
+        >
+          <span class="toggle-thumb" />
+        </button>
+      </div>
     </section>
 
     <!-- ═══ 应用更新 ═══ -->

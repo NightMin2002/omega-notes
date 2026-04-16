@@ -30,7 +30,7 @@ omega-v2/
 ├── public/                     # 原生静态资源（用于存放不经过 Vite 处理、原样复制的文件；目前暂空）
 │
 ├── src/                        # 前端源代码
-│   ├── main.ts                 # 应用入口：挂载 Vue + Pinia + Router；检测 ?popout_route= 跳转悬挂窗口路由；启动自动更新检查（5s 延迟 + 4h 定时）
+│   ├── main.ts                 # 应用入口：挂载 Vue + Pinia + Router；检测 ?popout_route= 跳转悬挂窗口路由；启动自动更新检查（5s 延迟 + 4h 定时）；默认启动桌面微件（2s 延迟，受 autoLaunchWidget 设置控制）
 │   ├── App.vue                 # 根组件：Header + Sidebar + RouterView；route.meta.popout 时纯净渲染；定义 --app-main-padding CSS 变量供子页面负 margin 抵消
 │   │
 │   ├── assets/                 # 项目资产
@@ -206,7 +206,7 @@ docs/
 
 | 页面 | 路由 | 依赖的 Store | 功能 |
 |---|---|---|---|
-| `HomeView.vue` | `/` | `tasks`, `todos` | 效率主页：Mega Hero 看板（动态时间问候/日期/超大任务进度环）与行动卡片 |
+| `HomeView.vue` | `/` | `tasks`, `todos`, `notes` | 效率主页：Mega Hero 看板（动态时间问候/日期/超大任务进度环 + 完成庆祝效果/浮动光效装饰/今日数据亮点 Chips）与四格行动卡片（日常打卡/待办事项/新建笔记/知识库，渐变色带 + 悬浮底光） |
 | `KnowledgeBaseView.vue`| `/kb-home` | `notes` | 知识库专属底座：呈现全库统计（文章数/类目/收藏）、收件箱未理及最近更新 |
 | `NotesView.vue` | `/notes` | `notes` | 搜索框、**网格/列表视图切换（localStorage 持久化）**、分类药丸（支持拖拽放入移动分类）、面包屑（嵌套分类时）、标签云筛选（`?tag=`）、收藏夹/最近视图（`?view=`）、笔记卡片网格（自适应 2-3 列）、列表视图、笔记数量统计、**FLIP 拖拽动画**、**拖拽卡片到分类药丸/侧边栏文件夹移动分类**、**Markdown 卡片预览** |
 | `ExplorerView.vue` | `/explorer/:id?` | `notes` | **知识库浏览器（主从布局）**：左侧 NoteListPanel（Master）+ 右侧 NoteReaderPanel（Detail）+ 可拖拽分隔条（宽度持久化）+ URL 同步选中笔记 + 窄屏上下分栏降级 |
@@ -269,7 +269,7 @@ docs/
 | `theme.ts` | `theme: 'dark' \| 'light'` | `toggle()` | localStorage `omega-theme` |
 | `notes.ts` | `notes[]`, `currentCategory`, `searchQuery`, `isLoading`, `recentIds`, `draggingNoteId`（跨组件拖拽状态）, `noteMap`（computed Map 索引） | `init`, `addNote`, `updateNote`, `deleteNote`, `restoreNote`, `permanentlyDelete`, `emptyTrash`, `togglePin`, `toggleFavorite`, `recordOpen`, `importBatch`, `reorderNotes`, `moveNoteToCategory`, `getNoteById`, `findNoteByTitle`, `getBacklinks` | 委托 `storage.ts` + localStorage |
 | | 计算属性: `activeNotes`, `filteredNotes`, `categories`, `categoryTree`, `allTags`, `favoriteNotes`, `recentNotes`, `trashNotes`, `totalCount`, `pinnedCount`, `favoriteCount`, `trashCount` | | |
-| `settings.ts` | `settings`（单一状态源），computed getters: `defaultEditorMode`, `fontFamily`, `trashAutoCleanDays`, `contentZoom`, `customTemplates` | `setDefaultEditorMode`, `setFontFamily`, `setTrashAutoCleanDays`, `setContentZoom`, `addCustomTemplate`, `updateCustomTemplate`, `removeCustomTemplate`, `init` | localStorage `omega-settings` |
+| `settings.ts` | `settings`（单一状态源），computed getters: `defaultEditorMode`, `fontFamily`, `trashAutoCleanDays`, `contentZoom`, `customTemplates`, `autoLaunchWidget` | `setDefaultEditorMode`, `setFontFamily`, `setTrashAutoCleanDays`, `setContentZoom`, `setAutoLaunchWidget`, `addCustomTemplate`, `updateCustomTemplate`, `removeCustomTemplate`, `init` | localStorage `omega-settings` |
 | `shortcuts.ts` | `shortcuts[]`，分类 getters (`globalShortcuts`, `appShortcuts`) | `updateShortcut`, `toggleShortcut`, `resetToDefault`, `resetAll` | localStorage `omega-shortcuts` |
 | `tasks.ts` | `config`, `tasks`, `records`, `healthReminder`, `countdown` | `addTask`, `toggleComplete`, `startCountdown`, `notifyCountdownOnce` 等丰富日常管理接口 | 委托 localStorage 支持多窗口同步 |
 | `todos.ts` | `todos[]`, `autoCleanDays` | `addTodo`, `updateTodo`, `removeTodo`, `toggleComplete`, `clearCompleted`, `importTodos`, `setAutoCleanDays` | localStorage `omega-todos` |

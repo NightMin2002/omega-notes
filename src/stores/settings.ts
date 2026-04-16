@@ -14,6 +14,7 @@ const defaults: AppSettings = {
   trashAutoCleanDays: 30,
   contentZoom: 100,
   customTemplates: [],
+  autoLaunchWidget: true,
 }
 
 function loadSettings(): AppSettings {
@@ -46,6 +47,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const trashAutoCleanDays = computed(() => settings.value.trashAutoCleanDays)
   const contentZoom = computed(() => settings.value.contentZoom)
   const customTemplates = computed(() => settings.value.customTemplates)
+  const autoLaunchWidget = computed(() => settings.value.autoLaunchWidget)
 
   // ─── Actions ───
   function setDefaultEditorMode(mode: EditorMode) {
@@ -100,6 +102,11 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
+  function setAutoLaunchWidget(enabled: boolean) {
+    settings.value.autoLaunchWidget = enabled
+    persist(settings.value)
+  }
+
   function removeCustomTemplate(id: string) {
     settings.value.customTemplates = settings.value.customTemplates.filter(t => t.id !== id)
     persist(settings.value)
@@ -118,10 +125,12 @@ export const useSettingsStore = defineStore('settings', () => {
     trashAutoCleanDays,
     contentZoom,
     customTemplates,
+    autoLaunchWidget,
     setDefaultEditorMode,
     setFontFamily,
     setTrashAutoCleanDays,
     setContentZoom,
+    setAutoLaunchWidget,
     addCustomTemplate,
     updateCustomTemplate,
     removeCustomTemplate,

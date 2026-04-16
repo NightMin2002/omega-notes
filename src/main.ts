@@ -56,6 +56,19 @@ if (!popoutRoute) {
   startScheduler()
 }
 
+// ─── 默认启动桌面微件 ───
+if (isTauri() && !popoutRoute && settingsStore.autoLaunchWidget) {
+  // 延迟 2 秒，确保主窗口渲染+初始化完毕后再打开悬浮窗
+  setTimeout(async () => {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core')
+      await invoke('open_popout', { kind: 'progress' })
+    } catch (e) {
+      console.warn('[Omega] 自动启动桌面微件失败:', e)
+    }
+  }, 2000)
+}
+
 // ─── 自动更新检查 ───
 if (isTauri() && !popoutRoute) {
   const updaterStore = useUpdaterStore()

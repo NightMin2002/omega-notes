@@ -86,6 +86,8 @@ export interface AppSettings {
   contentZoom: number
   /** 用户自定义笔记模板 */
   customTemplates: CustomTemplate[]
+  /** 是否在启动时自动打开桌面微件（默认 true） */
+  autoLaunchWidget: boolean
 }
 
 /** 用户自定义笔记模板 */

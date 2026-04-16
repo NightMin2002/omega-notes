@@ -82,6 +82,7 @@ function collapseIfMobile() {
     <!-- 桌面微件 -->
     <div class="io-row popout-row">
       <button class="io-btn popout-btn" @click="openPopout('progress')" data-tooltip="开启桌面微件（倒计时与任务屏）">
+        <span class="popout-pulse" aria-hidden="true"></span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
         </svg>
@@ -235,6 +236,41 @@ function collapseIfMobile() {
 
 .io-btn:active {
   transform: scale(0.98);
+}
+
+/* ─── 桌面微件按钮特殊样式 ─── */
+.popout-btn {
+  position: relative;
+  background: linear-gradient(135deg, var(--color-accent-muted), var(--color-bg-tertiary));
+  border-color: var(--color-accent-muted);
+  color: var(--color-accent-text);
+  overflow: hidden;
+}
+
+@media (hover: hover) {
+  .popout-btn:hover {
+    background: linear-gradient(135deg, var(--color-accent-muted), var(--color-bg-hover));
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+    box-shadow: 0 0 12px var(--color-accent-muted);
+  }
+}
+
+.popout-pulse {
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  transform: translateY(-50%);
+  animation: popout-blink 2.5s ease-in-out infinite;
+}
+
+@keyframes popout-blink {
+  0%, 100% { opacity: 0.5; box-shadow: 0 0 0 0 var(--color-accent-muted); }
+  50% { opacity: 1; box-shadow: 0 0 6px 2px var(--color-accent-muted); }
 }
 
 .import-msg {
