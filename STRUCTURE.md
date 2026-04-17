@@ -68,7 +68,7 @@ omega-v2/
 │   │   ├── DatePicker.vue      # 自定义日期选择器（Teleport 弹出日历面板，替代原生 input[type=date]）
 │   │   ├── TemplateEditorDialog.vue # 自定义笔记模板编辑弹窗（新建/编辑，含名称/描述/分类/内容字段）
 │   │   ├── NoteListPanel.vue  # 知识库浏览器 Master 面板（搜索 + 分类树折叠 + 笔记列表，emit select 不跳路由）
-│   │   ├── NoteReaderPanel.vue # 知识库浏览器 Detail 面板（嵌入式阅读/编辑器，编辑模式含主题切换，复用 MarkdownRenderer + MilkdownEditor）
+│   │   ├── NoteReaderPanel.vue # 知识库浏览器 Detail 面板（嵌入式阅读/编辑器，编辑模式含主题切换，含子笔记面板+面包屑导航，复用 MarkdownRenderer + MilkdownEditor + SubNotePanel）
 │   │   ├── NoteOutline.vue    # 笔记目录大纲侧边栏（字数统计 + 阅读进度 + 标题 TOC 导航）
 │   │   ├── SubNotePanel.vue   # 子笔记侧边面板（可折叠抽屉，子笔记列表 + 新建 + 删除，NoteDetailView 左侧）
 │   │   ├── ThemeSwitcher.vue  # 阅读主题切换器（v-model 绑定，支持紧凑模式，三方共用）
@@ -88,7 +88,7 @@ omega-v2/
 │   │   ├── ExplorerView.vue    # 知识库浏览器（主从布局：左侧 NoteListPanel + 右侧 NoteReaderPanel + 拖拽分隔条）
 │   │   ├── WriteView.vue       # 新建笔记（模板选择器 + 自定义模板 + 待办跳转入口 + 编辑器 + 图片/链接 + 草稿自动保存）
 │   │   ├── NoteDetailView.vue  # 笔记详情（Grid 三栏居中布局：工具栏固定 + 内容区独立滚动 + 右侧目录大纲 + 分屏 + 阅读 5 主题 + 字体缩放 + 悬挂）
-│   │   ├── TrashView.vue       # 回收站（恢复/永久删除/清空）
+│   │   ├── TrashView.vue       # 回收站（主从双栏：左侧列表 + 右侧 Markdown 内容预览 + 恢复/永久删除/清空）
 │   │   ├── SettingsView.vue    # 设置页（外观/编辑器/数据/关于/字体缩放）
 │   │   ├── TasksView.vue       # 日常管理（每日任务 + 卡片/列表视图 + 3种主题 + 一键完成 + 倒计时 + 健康提醒）
 │   │   ├── TodosView.vue       # 待办事项（日历+列表双栏、Modal新建弹窗、列表独立滚动、日历日期继承、自定义DatePicker、筛选tabs带图标、逾期高亮）
@@ -194,7 +194,7 @@ docs/
 | `DraftToast.vue` | 用于通知“已恢复草稿”等非阻塞信息的底部优雅提示条，内置 3 秒自动消失机制 | Props: `show`, `message` / Emits: `close` |
 | `DatePicker.vue` | 自定义日期选择器，替代原生 `input[type=date]`。Teleport 弹出日历面板，支持待办圆点、清除日期、今天快捷键 | v-model: `modelValue` / Props: `placeholder`, `dotMap` |
 | `NoteListPanel.vue` | 知识库浏览器 Master 面板。搜索筛选 + 分类/全部/收藏三 Tab + 分类树递归折叠 + 笔记条目列表（选中高亮） | Props: `selectedId` / Emits: `select` |
-| `NoteReaderPanel.vue` | 知识库浏览器 Detail 面板。嵌入式阅读/编辑器，切换笔记时自动退出编辑。编辑模式含主题切换（ThemeSwitcher）+ 编辑表单样式与 NoteDetailView 统一。复用 MarkdownRenderer、MilkdownEditor、SplitEditor、BacklinksPanel | Props: `noteId` / Emits: `navigate`, `deleted` |
+| `NoteReaderPanel.vue` | 知识库浏览器 Detail 面板。嵌入式阅读/编辑器，切换笔记时自动退出编辑。编辑模式含主题切换（ThemeSwitcher）+ 编辑表单样式与 NoteDetailView 统一。**支持子笔记面板 + 面包屑导航**（查看子笔记时通过 navigate emit 切换，无需路由跳转）。复用 MarkdownRenderer、MilkdownEditor、SplitEditor、BacklinksPanel、SubNotePanel | Props: `noteId` / Emits: `navigate`, `deleted` |
 | `NoteOutline.vue` | 笔记目录大纲侧边栏。字数/段落/章节统计、阅读进度条、从 Markdown 标题解析 TOC 导航（滚动跟踪高亮 + 点击跳转）。无标题时显示统计信息 + 提示 | Props: `content`, `scrollContainer` |
 | `SubNotePanel.vue` | 子笔记可折叠侧边面板。折叠态显示图标+子笔记数量角标，展开态显示子笔记列表（选中高亮）、新建输入框、删除确认。仅父笔记视图显示，子笔记视图自动隐藏 | Props: `parentId`, `activeChildId`, `isChildNote` / Emits: `select`, `back`, `created` |
 | `ThemeSwitcher.vue` | 阅读主题切换器（v-model 绑定，支持深浅色与预设组合，三方共用） | v-model: `modelValue`, Props: `compact` |
@@ -211,7 +211,8 @@ docs/
 | `NotesView.vue` | `/notes` | `notes` | 搜索框、**网格/列表视图切换（localStorage 持久化）**、分类药丸（支持拖拽放入移动分类）、面包屑（嵌套分类时）、标签云筛选（`?tag=`）、收藏夹/最近视图（`?view=`）、笔记卡片网格（自适应 2-3 列）、列表视图、笔记数量统计、**FLIP 拖拽动画**、**拖拽卡片到分类药丸/侧边栏文件夹移动分类**、**Markdown 卡片预览** |
 | `ExplorerView.vue` | `/explorer/:id?` | `notes` | **知识库浏览器（主从布局）**：左侧 NoteListPanel（Master）+ 右侧 NoteReaderPanel（Detail）+ 可拖拽分隔条（宽度持久化）+ URL 同步选中笔记 + 窄屏上下分栏降级 |
 | `WriteView.vue` | `/write` | `notes`, `settings` | 模板选择器 → WYSIWYG/分屏编辑 + 图片插入 + `[[title]]` 链接插入 + 标题/分类/标签表单 + **自定义模板管理（新建/编辑/删除/右键菜单）** + **待办事项跳转入口** |
-| `NoteDetailView.vue` | `/note/:id` | `notes` | **Flex 内部滚动架构**：detail-toolbar + editor-toolbar 固定不滚动，detail-content 独立滚动（分屏时 flex 填充，pane 独立滚动）；阅读/编辑/分屏切换，收藏/置顶/删除，`[[title]]` 链接，反向链接，**4 种阅读主题 + 编辑器主题适配**，字体缩放，悬挂窗口 |
+| `NoteDetailView.vue` | `/note/:id` | `notes` | **Flex 内部滚动架构**：detail-toolbar + editor-toolbar 固定不滚动，detail-content 独立滚动（分屏时 flex 填充，pane 独立滚动）；阅读/编辑/分屏切换，收藏/置顶/删除，`[[title]]` 链接，反向链接，**5 种阅读主题 + 编辑器主题适配**，字体缩放，悬挂窗口 |
+| `TrashView.vue` | `/trash` | `notes` | **回收站（主从双栏）**：左侧已删除笔记列表（实时摘要 + 分类/标签/字数 + 悬停快捷操作）+ 右侧 Markdown 完整内容预览面板；恢复/永久删除（二次确认）/清空回收站 |
 | `TasksView.vue` | `/tasks` | `tasks` | 每日任务 + **卡片/列表视图切换** + **3种主题（默认/简约/彩色）** + **分类一键完成** + 倒计时 + 健康提醒 + 悬挂任务按钮 |
 | `TodosView.vue` | `/todos` | `todos` | 待办事项主页：**Flex 固定高度布局**（页头固定 + 列表独立滚动）；左侧自定义月历 + 筛选 tabs（全部/今天/本周/逾期，带 SVG 图标）+ 统计；右侧待办列表（优先级圆点 + 截止日期 + 逾期红边）；**Teleport Modal 新建弹窗**（不影响页面文档流）；**日历日期继承新建**；**自定义 DatePicker**；已完成折叠区 |
 | `PopoutNote.vue` | `/popout/note/:id` | `notes` | 悬挂笔记（popout，always-on-top）：完整 Markdown 阅读 |

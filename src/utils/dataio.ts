@@ -75,6 +75,7 @@ function parseMdFile(filename: string, raw: string): Partial<Note> {
   if (meta['createdAt']) result.createdAt = meta['createdAt']
   if (meta['updatedAt']) result.updatedAt = meta['updatedAt']
   if (meta['tags']) result.tags = parseTags(meta['tags'])
+  if (meta['parentId']) result.parentId = meta['parentId']
 
   /* 从文件名推断标题（如果 frontmatter 里没有） */
   if (!result.title) {

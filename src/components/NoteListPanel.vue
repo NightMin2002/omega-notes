@@ -232,6 +232,15 @@ function handleNewNote() {
             <svg v-if="note.isFavorite" class="badge-fav" width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
           </div>
           <span class="entry-title">{{ note.title || '未命名笔记' }}</span>
+          <span v-if="notesStore.getChildCount(note.id) > 0" class="entry-child-badge" :data-tooltip="`${notesStore.getChildCount(note.id)} 篇子笔记`" data-tooltip-pos="bottom">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+            </svg>
+            {{ notesStore.getChildCount(note.id) }}
+          </span>
         </div>
         <div class="entry-bottom">
           <span class="entry-cat">{{ note.category }}</span>
@@ -500,6 +509,20 @@ function handleNewNote() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.entry-child-badge {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--color-accent-text);
+  background: var(--color-accent-muted);
+  padding: 1px 5px;
+  border-radius: var(--radius-full);
+  line-height: 1.4;
 }
 
 .note-entry.selected .entry-title {

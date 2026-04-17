@@ -2,6 +2,7 @@
 /**
  * NoteReaderPanel — Explorer 主从布局的 Detail 面板
  * 嵌入式笔记阅读/编辑器，不触发路由跳转
+ * 支持子笔记浏览与面包屑导航
  */
 import { computed, ref, shallowRef, watch, onMounted, onUnmounted } from 'vue'
 import { useNotesStore } from '../stores/notes'
@@ -13,6 +14,7 @@ import WikiLinkPicker from './WikiLinkPicker.vue'
 import SplitEditor from './SplitEditor.vue'
 import BacklinksPanel from './BacklinksPanel.vue'
 import NoteOutline from './NoteOutline.vue'
+import SubNotePanel from './SubNotePanel.vue'
 import ThemeSwitcher from './ThemeSwitcher.vue'
 import CategoryPicker from './CategoryPicker.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
@@ -75,6 +77,48 @@ const {
 })
 
 const note = computed(() => notesStore.getNoteById(props.noteId))
+
+/* ─── 子笔记支持 ─── */
+
+/** 当前笔记是否为子笔记 */
+const isChildNote = computed(() => !!note.value?.parentId)
+
+/** 父笔记（仅当正在查看子笔记时有值） */
+const parentNote = computed(() => {
+  if (!note.value?.parentId) return null
+  return notesStore.getNoteById(note.value.parentId) || null
+})
+
+/** SubNotePanel 所需的父 ID */
+const subNotePanelParentId = computed(() => {
+  if (note.value?.parentId) return note.value.parentId
+  return props.noteId || ''
+})
+
+/** 当前激活的子笔记 ID */
+const activeChildId = computed(() => {
+  if (isChildNote.value) return props.noteId
+  return null
+})
+
+/** 导航到子笔记 */
+function navigateToChild(childId: string) {
+  notesStore.recordOpen(childId)
+  emit('navigate', childId)
+}
+
+/** 返回父笔记 */
+function navigateToParent() {
+  if (parentNote.value) {
+    emit('navigate', parentNote.value.id)
+  }
+}
+
+/** 子笔记创建后导航 */
+function handleChildCreated(childId: string) {
+  notesStore.recordOpen(childId)
+  emit('navigate', childId)
+}
 
 /* 切换笔记时退出编辑模式 + 记录打开 */
 watch(() => props.noteId, (id) => {
@@ -172,6 +216,29 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
 <template>
   <div class="reader-panel">
     <template v-if="note">
+      <!-- 子笔记面包屑导航 -->
+      <nav v-if="isChildNote && parentNote && !isEditing" class="reader-breadcrumb">
+        <button class="breadcrumb-item" @click="navigateToParent">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+          </svg>
+          {{ parentNote.title || '未命名笔记' }}
+        </button>
+        <svg class="breadcrumb-sep" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+        <span class="breadcrumb-current">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+          </svg>
+          {{ note.title || '未命名' }}
+        </span>
+      </nav>
+
       <!-- 简化版工具栏 -->
       <div class="reader-toolbar">
         <div class="rt-left">
@@ -292,6 +359,16 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
 
         <!-- 阅读模式 -->
         <template v-else>
+          <!-- 子笔记面板（水平内嵌式，仅父笔记时显示） -->
+          <SubNotePanel
+            :parent-id="subNotePanelParentId"
+            :active-child-id="activeChildId"
+            :is-child-note="isChildNote"
+            @select="navigateToChild"
+            @back="navigateToParent"
+            @created="handleChildCreated"
+          />
+
           <div class="reader-reading-layout">
             <article class="reader-article" :class="`theme-${readingTheme}`">
               <header class="note-hero">
@@ -350,6 +427,73 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+}
+
+/* ─── 面包屑导航 ─── */
+.reader-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.75rem;
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-tertiary);
+  border-bottom: 1px solid var(--color-divider);
+  flex-shrink: 0;
+}
+
+.breadcrumb-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--color-text-tertiary);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+  transition: color var(--duration-fast) var(--ease-out),
+              background-color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .breadcrumb-item:hover {
+    color: var(--color-accent);
+    background: var(--color-accent-muted);
+  }
+}
+
+.breadcrumb-sep {
+  flex-shrink: 0;
+  color: var(--color-text-tertiary);
+  opacity: 0.4;
+}
+
+.breadcrumb-current {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--color-accent);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+/* ─── 子笔记面板适配（水平内嵌模式） ─── */
+.reader-content > :deep(.sub-note-panel) {
+  position: relative;
+  width: 100%;
+  border-right: none;
+  border-bottom: 1px solid var(--color-divider);
+  margin-bottom: var(--space-3);
+}
+
+.reader-content > :deep(.sub-note-panel.expanded) {
+  min-height: auto;
+  max-height: 200px;
 }
 
 /* ─── 工具栏 ─── */

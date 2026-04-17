@@ -442,7 +442,7 @@ export const useNotesStore = defineStore('notes', () => {
     )
   }
 
-  /** 批量导入笔记（ID 重复则跳过；标题重复则添加后缀） */
+  /** 批量导入笔记（ID 重复则跳过；标题重复则添加后缀；保留子笔记关系） */
   async function importBatch(items: Partial<Note>[]): Promise<number> {
     const existingIds = new Set(notes.value.map(n => n.id))
     /* 构建标题索引（包含回收站内笔记） */
@@ -472,6 +472,10 @@ export const useNotesStore = defineStore('notes', () => {
         updatedAt: item.updatedAt || now,
         isPinned: item.isPinned || false,
         isFavorite: item.isFavorite || false,
+      }
+      // 保留子笔记的父级关系
+      if (item.parentId) {
+        note.parentId = item.parentId
       }
       notes.value.unshift(note)
       await saveNote(note)
