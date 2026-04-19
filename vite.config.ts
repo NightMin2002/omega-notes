@@ -33,7 +33,7 @@ export default defineConfig(async ({ mode }) => {
     clearScreen: false,
     server: {
       host: '0.0.0.0',
-      port: 8080,
+      port: 1420,
       strictPort: true,
     },
   }

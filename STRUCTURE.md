@@ -68,9 +68,9 @@ omega-v2/
 │   │   ├── DatePicker.vue      # 自定义日期选择器（Teleport 弹出日历面板，替代原生 input[type=date]）
 │   │   ├── TemplateEditorDialog.vue # 自定义笔记模板编辑弹窗（新建/编辑，含名称/描述/分类/内容字段）
 │   │   ├── NoteListPanel.vue  # 知识库浏览器 Master 面板（搜索 + 分类树折叠 + 笔记列表，emit select 不跳路由）
-│   │   ├── NoteReaderPanel.vue # 知识库浏览器 Detail 面板（嵌入式阅读/编辑器，编辑模式含主题切换，含子笔记面板+面包屑导航，复用 MarkdownRenderer + MilkdownEditor + SubNotePanel）
+│   │   ├── NoteReaderPanel.vue # 知识库浏览器 Detail 面板（嵌入式阅读/编辑器，编辑模式含主题切换，工具栏左侧嵌入 SubNotePanel dropdown 模式 + 面包屑导航，复用 MarkdownRenderer + MilkdownEditor）
 │   │   ├── NoteOutline.vue    # 笔记目录大纲侧边栏（字数统计 + 阅读进度 + 标题 TOC 导航）
-│   │   ├── SubNotePanel.vue   # 子笔记侧边面板（可折叠抽屉，子笔记列表 + 新建 + 删除，NoteDetailView 左侧）
+│   │   ├── SubNotePanel.vue   # 子笔记面板（双模式：sidebar 侧边栏用于 NoteDetailView 左侧 / dropdown 下拉面板用于 NoteReaderPanel 工具栏，子笔记列表 + 新建 + 删除）
 │   │   ├── ThemeSwitcher.vue  # 阅读主题切换器（v-model 绑定，支持紧凑模式，三方共用）
 │   │   ├── shared/             # 跨视图共享独立业务模块
 │   │   │   └── CountdownModule.vue # 全能型悬浮倒计时控制台（主面板与 Hub 悬浮窗高度统一互通）

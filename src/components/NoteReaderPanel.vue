@@ -242,6 +242,18 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
       <!-- 简化版工具栏 -->
       <div class="reader-toolbar">
         <div class="rt-left">
+          <!-- 子笔记入口（工具栏下拉，始终可见以便导航） -->
+          <SubNotePanel
+            v-if="!isEditing"
+            :parent-id="subNotePanelParentId"
+            :active-child-id="activeChildId"
+            :is-child-note="false"
+            dropdown
+            @select="navigateToChild"
+            @back="navigateToParent"
+            @created="handleChildCreated"
+          />
+
           <template v-if="isEditing">
             <button class="rt-btn rt-btn--cancel" @click="cancelEdit">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
@@ -359,16 +371,6 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
 
         <!-- 阅读模式 -->
         <template v-else>
-          <!-- 子笔记面板（水平内嵌式，仅父笔记时显示） -->
-          <SubNotePanel
-            :parent-id="subNotePanelParentId"
-            :active-child-id="activeChildId"
-            :is-child-note="isChildNote"
-            @select="navigateToChild"
-            @back="navigateToParent"
-            @created="handleChildCreated"
-          />
-
           <div class="reader-reading-layout">
             <article class="reader-article" :class="`theme-${readingTheme}`">
               <header class="note-hero">
@@ -482,18 +484,13 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
   max-width: 200px;
 }
 
-/* ─── 子笔记面板适配（水平内嵌模式） ─── */
-.reader-content > :deep(.sub-note-panel) {
-  position: relative;
-  width: 100%;
-  border-right: none;
-  border-bottom: 1px solid var(--color-divider);
-  margin-bottom: var(--space-3);
+/* ─── 子笔记面板嵌入工具栏 ─── */
+/* dropdown 面板相对于 .rt-left 定位，确保从工具栏底部弹出 */
+.rt-left > :deep(.sub-note-panel.is-dropdown) {
+  position: static;
 }
-
-.reader-content > :deep(.sub-note-panel.expanded) {
-  min-height: auto;
-  max-height: 200px;
+.rt-left > :deep(.dropdown-panel) {
+  top: calc(100% + var(--space-1));
 }
 
 /* ─── 工具栏 ─── */
@@ -508,12 +505,22 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
   background: var(--color-glass);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  overflow: visible; /* 允许子笔记下拉面板溢出 */
+  position: relative;
+  z-index: 20; /* 确保下拉面板在内容区上方 */
 }
 
 .rt-left, .rt-right {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+.rt-left {
+  position: relative;
+  overflow: visible;
+  min-width: 32px; /* 防止展开时塌缩 */
+  min-height: 32px; /* 匹配 panel-toggle 按钮高度，防止跳动 */
 }
 
 .rt-btn {
@@ -674,9 +681,9 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
 
 /* 阅读模式双栏布局 */
 .reader-reading-layout {
+  position: relative;
   display: flex;
   gap: var(--space-4);
-  max-width: 900px;
   margin: 0 auto;
   align-items: flex-start;
 }

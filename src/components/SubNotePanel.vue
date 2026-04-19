@@ -15,6 +15,8 @@ const props = defineProps<{
   activeChildId?: string | null
   /** 是否是子笔记（子笔记不允许再新建子笔记） */
   isChildNote?: boolean
+  /** 下拉模式：按钮始终可见，展开内容作为下拉面板 */
+  dropdown?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -117,13 +119,13 @@ watch(childCount, (c) => {
 </script>
 
 <template>
-  <aside v-if="shouldShow" class="sub-note-panel" :class="{ expanded }">
-    <!-- 折叠态：仅显示图标 + 数量 -->
+  <aside v-if="shouldShow" class="sub-note-panel" :class="{ expanded, 'is-dropdown': dropdown }">
+    <!-- 折叠按钮 -->
     <button
-      v-if="!expanded"
+      v-if="!expanded || dropdown"
       class="panel-toggle"
       :class="{ 'has-children': childCount > 0 }"
-      @click="expanded = true"
+      @click="expanded = !expanded"
       data-tooltip="子笔记"
       data-tooltip-pos="right"
     >
@@ -136,9 +138,10 @@ watch(childCount, (c) => {
       <span v-if="childCount > 0" class="toggle-badge">{{ childCount }}</span>
     </button>
 
-    <!-- 展开态 -->
-    <template v-else>
-      <div class="panel-header">
+    <!-- 展开态内容 -->
+    <template v-if="expanded">
+      <!-- 侧边栏模式下的头部（dropdown 模式不需要，按钮已经是 toggle） -->
+      <div v-if="!dropdown" class="panel-header">
         <div class="panel-title-row">
           <span class="panel-title">子笔记</span>
           <span class="panel-count" v-if="childCount > 0">{{ childCount }}</span>
@@ -150,84 +153,181 @@ watch(childCount, (c) => {
         </button>
       </div>
 
-      <!-- 子笔记列表 -->
-      <div class="panel-list" v-if="childNotes.length > 0">
-        <div
-          v-for="child in childNotes"
-          :key="child.id"
-          class="sub-note-item"
-          :class="{ active: activeChildId === child.id }"
-          @click="emit('select', child.id)"
-        >
-          <div class="item-icon">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
+      <!-- dropdown 模式下的下拉面板容器 -->
+      <div v-if="dropdown" class="dropdown-panel">
+        <div class="panel-header">
+          <div class="panel-title-row">
+            <span class="panel-title">子笔记</span>
+            <span class="panel-count" v-if="childCount > 0">{{ childCount }}</span>
+          </div>
+          <button class="panel-collapse-btn" @click="expanded = false">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 18 9 12 15 6" />
             </svg>
-          </div>
-          <div class="item-content">
-            <span class="item-title">{{ child.title || '未命名' }}</span>
-            <span class="item-date">{{ formatDate(child.updatedAt) }}</span>
-          </div>
-          <button
-            class="item-delete"
-            @click.stop="requestDelete(child.id, child.title)"
-            data-tooltip="删除"
-            data-tooltip-pos="left"
+          </button>
+        </div>
+
+        <!-- 子笔记列表 -->
+        <div class="panel-list" v-if="childNotes.length > 0">
+          <div
+            v-for="child in childNotes"
+            :key="child.id"
+            class="sub-note-item"
+            :class="{ active: activeChildId === child.id }"
+            @click="emit('select', child.id)"
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
+            <div class="item-icon">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+              </svg>
+            </div>
+            <div class="item-content">
+              <span class="item-title">{{ child.title || '未命名' }}</span>
+              <span class="item-date">{{ formatDate(child.updatedAt) }}</span>
+            </div>
+            <button
+              class="item-delete"
+              @click.stop="requestDelete(child.id, child.title)"
+              data-tooltip="删除"
+              data-tooltip-pos="left"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- 空状态 -->
+        <div v-else class="panel-empty">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+          </svg>
+          <span>暂无子笔记<br>点击下方新建</span>
+        </div>
+
+        <!-- 新建区域 -->
+        <div class="panel-footer">
+          <template v-if="isCreating">
+            <div class="create-form">
+              <input
+                ref="titleInputRef"
+                v-model="newTitle"
+                type="text"
+                class="create-input"
+                placeholder="输入子笔记标题…"
+                @keydown="handleTitleKeydown"
+              >
+              <div class="create-hint">创建后自动跳转编辑内容</div>
+              <div class="create-actions">
+                <button class="create-btn create-btn--confirm" :disabled="!newTitle.trim()" @click="confirmCreate">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </button>
+                <button class="create-btn create-btn--cancel" @click="cancelCreate">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </template>
+          <button v-else class="add-btn" @click="startCreate">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
+            <span>新建子笔记</span>
           </button>
         </div>
       </div>
 
-      <!-- 空状态 -->
-      <div v-else class="panel-empty">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-        </svg>
-        <span>暂无子笔记<br>点击下方新建</span>
-      </div>
-
-      <!-- 新建区域 -->
-      <div class="panel-footer">
-        <template v-if="isCreating">
-          <div class="create-form">
-            <input
-              ref="titleInputRef"
-              v-model="newTitle"
-              type="text"
-              class="create-input"
-              placeholder="输入子笔记标题…"
-              @keydown="handleTitleKeydown"
-            >
-            <div class="create-hint">创建后自动跳转编辑内容</div>
-            <div class="create-actions">
-              <button class="create-btn create-btn--confirm" :disabled="!newTitle.trim()" @click="confirmCreate">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              </button>
-              <button class="create-btn create-btn--cancel" @click="cancelCreate">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
+      <!-- 侧边栏模式下的原始展开内容 -->
+      <template v-if="!dropdown">
+        <!-- 子笔记列表 -->
+        <div class="panel-list" v-if="childNotes.length > 0">
+          <div
+            v-for="child in childNotes"
+            :key="child.id"
+            class="sub-note-item"
+            :class="{ active: activeChildId === child.id }"
+            @click="emit('select', child.id)"
+          >
+            <div class="item-icon">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+              </svg>
             </div>
+            <div class="item-content">
+              <span class="item-title">{{ child.title || '未命名' }}</span>
+              <span class="item-date">{{ formatDate(child.updatedAt) }}</span>
+            </div>
+            <button
+              class="item-delete"
+              @click.stop="requestDelete(child.id, child.title)"
+              data-tooltip="删除"
+              data-tooltip-pos="left"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
           </div>
-        </template>
-        <button v-else class="add-btn" @click="startCreate">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
+        </div>
+
+        <!-- 空状态 -->
+        <div v-else class="panel-empty">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
           </svg>
-          <span>新建子笔记</span>
-        </button>
-      </div>
+          <span>暂无子笔记<br>点击下方新建</span>
+        </div>
+
+        <!-- 新建区域 -->
+        <div class="panel-footer">
+          <template v-if="isCreating">
+            <div class="create-form">
+              <input
+                ref="titleInputRef"
+                v-model="newTitle"
+                type="text"
+                class="create-input"
+                placeholder="输入子笔记标题…"
+                @keydown="handleTitleKeydown"
+              >
+              <div class="create-hint">创建后自动跳转编辑内容</div>
+              <div class="create-actions">
+                <button class="create-btn create-btn--confirm" :disabled="!newTitle.trim()" @click="confirmCreate">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </button>
+                <button class="create-btn create-btn--cancel" @click="cancelCreate">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </template>
+          <button v-else class="add-btn" @click="startCreate">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            <span>新建子笔记</span>
+          </button>
+        </div>
+      </template>
     </template>
 
     <!-- 删除确认弹窗 -->
@@ -585,6 +685,37 @@ watch(childCount, (c) => {
 
 /* ─── 响应式 ─── */
 @media (max-width: 1100px) {
-  .sub-note-panel { display: none; }
+  .sub-note-panel:not(.is-dropdown) { display: none; }
+}
+
+/* ─── Dropdown 模式 ─── */
+.sub-note-panel.is-dropdown {
+  position: relative;
+  max-height: none;
+  flex-direction: row;
+  align-items: center;
+  width: auto;
+  transition: none;
+}
+
+.sub-note-panel.is-dropdown.expanded {
+  width: auto;
+}
+
+.dropdown-panel {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  z-index: var(--z-dropdown, 100);
+  display: flex;
+  flex-direction: column;
+  width: 220px;
+  padding: var(--space-2);
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  max-height: 400px;
+  gap: var(--space-2);
 }
 </style>
