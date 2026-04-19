@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Omega Notes",
-  "version": "2.7.2",
+  "version": "2.7.3",
   "identifier": "com.nightmin.omega-notes",
   "build": {
     "frontendDist": "../dist",

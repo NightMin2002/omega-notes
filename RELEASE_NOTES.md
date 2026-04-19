@@ -1,9 +1,10 @@
 ## 更新日志 - 2026-04-19
 
-### feat: 浏览器子笔记支持 + 回收站双栏预览 + 导入导出保留子笔记关系
-- NoteReaderPanel: 集成 SubNotePanel 子笔记面板与面包屑导航，支持在浏览器内无缝切换父/子笔记
-- NoteListPanel: 笔记条目新增子笔记数量角标指示器
-- TrashView: 重构为主从双栏布局（左侧卡片列表 + 右侧 Markdown 全文预览），新增永久删除二次确认、字数统计、悬停快捷操作
-- notes.ts importBatch: 导入时保留 parentId 子笔记关系
-- dataio.ts parseMdFile: 解析 .md frontmatter 中的 parentId 字段
-- STRUCTURE.md: 同步更新文档描述
+### feat(sub-note): SubNotePanel 双模式重构 — 工具栏 dropdown 下拉面板 + 侧边栏兼容
+- SubNotePanel 新增 dropdown prop：按钮始终可见，展开时从按钮下方弹出下拉面板
+- NoteReaderPanel 子笔记从内容区移至顶部工具栏左侧（dropdown 模式）
+- 展开/收起不再导致布局跳动（rt-left min-height: 32px）
+- 工具栏 z-index: 20 确保面板不被内容区覆盖
+- NoteDetailView 侧边栏模式行为保持不变
+- 修复 Vite 开发端口 8080→1420（避开 Hyper-V 保留端口）
+- 同步更新 STRUCTURE.md 组件描述
