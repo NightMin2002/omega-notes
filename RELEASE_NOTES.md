@@ -1,10 +1,14 @@
-## 更新日志 - 2026-04-19
+## 更新日志 - 2026-04-29
 
-### feat(sub-note): SubNotePanel 双模式重构 — 工具栏 dropdown 下拉面板 + 侧边栏兼容
-- SubNotePanel 新增 dropdown prop：按钮始终可见，展开时从按钮下方弹出下拉面板
-- NoteReaderPanel 子笔记从内容区移至顶部工具栏左侧（dropdown 模式）
-- 展开/收起不再导致布局跳动（rt-left min-height: 32px）
-- 工具栏 z-index: 20 确保面板不被内容区覆盖
-- NoteDetailView 侧边栏模式行为保持不变
-- 修复 Vite 开发端口 8080→1420（避开 Hyper-V 保留端口）
-- 同步更新 STRUCTURE.md 组件描述
+### 修复收件箱计数 Bug 并实现桌面微件位置持久化
+修复:
+- 收件箱计数将已删除笔记排除在外 (AppSidebar/KnowledgeBaseView)
+- 知识库总览「最近更新」不再显示已删除笔记
+
+新增:
+- 桌面微件位置状态持久化 (localStorage omega-widget-state)
+  - 支持 docked/free 双模式保存与恢复
+  - 吸附到边缘后关闭，下次打开自动恢复吸附位置
+  - 自由浮动位置同样记忆并恢复
+  - 窗口以 hidden 创建，定位完成后再显示，消除启动闪烁
+- Rust 层 progress 窗口改为 visible:false 创建，由前端控制显示时机
