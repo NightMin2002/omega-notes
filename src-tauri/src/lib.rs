@@ -180,7 +180,7 @@ async fn open_popout(app: tauri::AppHandle, kind: String, note_id: Option<String
         decorations,
         resizable,
         kind.as_str() != "progress",
-        true,
+        kind.as_str() != "progress",
         position,
     )?;
 

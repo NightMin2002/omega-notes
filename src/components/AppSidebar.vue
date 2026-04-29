@@ -56,7 +56,7 @@ function handleTabClick(tab: 'home' | 'kb') {
 }
 
 const inboxCount = computed(() =>
-  notesStore.notes.filter(n => n.category === '收件箱').length
+  notesStore.activeNotes.filter(n => n.category === '收件箱').length
 )
 
 const favoriteCount = computed(() => notesStore.favoriteCount)

@@ -14,7 +14,7 @@ const stats = computed(() => ({
 }))
 
 const recentNotes = computed(() =>
-  [...notesStore.notes]
+  [...notesStore.activeNotes]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 6)
 )
@@ -31,7 +31,7 @@ function formatTime(dateStr: string): string {
 }
 
 const inboxCount = computed(() =>
-  notesStore.notes.filter(n => n.category === '收件箱').length
+  notesStore.activeNotes.filter(n => n.category === '收件箱').length
 )
 </script>
 

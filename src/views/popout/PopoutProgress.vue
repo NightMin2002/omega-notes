@@ -86,6 +86,28 @@ const cssVisualDockTop = `-${COLLAPSED_HEIGHT - DOCK_VISIBLE_PX}px`
 const EDGE_THRESHOLD = 15
 const WIN_LABEL = 'popout-progress'
 const PANEL_LABEL = 'popout-progress-panel'
+const WIDGET_STATE_KEY = 'omega-widget-state'
+
+type WidgetState =
+  | { mode: 'docked'; edge: 'left' | 'right' | 'top'; y: number }
+  | { mode: 'free'; x: number; y: number }
+
+function saveWidgetState(state: WidgetState) {
+  try {
+    localStorage.setItem(WIDGET_STATE_KEY, JSON.stringify(state))
+  } catch { /* ignore */ }
+}
+
+function loadWidgetState(): WidgetState | null {
+  try {
+    const raw = localStorage.getItem(WIDGET_STATE_KEY)
+    if (!raw) return null
+    const state = JSON.parse(raw)
+    if (state?.mode === 'docked' && ['left', 'right', 'top'].includes(state.edge)) return state
+    if (state?.mode === 'free' && typeof state.x === 'number' && typeof state.y === 'number') return state
+  } catch { /* ignore */ }
+  return null
+}
 
 type GeometryOrder = 'position-first' | 'size-first'
 type WorkAreaMetrics = {
@@ -363,6 +385,10 @@ async function dockToEdge(edge: 'left' | 'right' | 'top') {
     await new Promise(r => setTimeout(r, 50))
     disableTransition.value = false
 
+    // 持久化吸附状态（记录边缘方向和Y坐标，供下次启动恢复）
+    const finalPos = await win.outerPosition()
+    saveWidgetState({ mode: 'docked', edge, y: finalPos.y })
+
   } catch (e) {
     console.error('Dock failed', e)
     dockEdge.value = previousEdge
@@ -463,6 +489,10 @@ async function checkEdgeAndDock() {
     if (pos.y <= metrics.top + metrics.edgeThresholdPx) await dockToEdge('top')
     else if (pos.x <= metrics.left + metrics.edgeThresholdPx) await dockToEdge('left')
     else if (pos.x + size.width >= metrics.right - metrics.edgeThresholdPx) await dockToEdge('right')
+    else {
+      // 微件不在任何边缘附近 → 用户主动拖离了边缘，保存自由浮动位置
+      saveWidgetState({ mode: 'free', x: pos.x, y: pos.y })
+    }
   } catch {
     // ignore
   }
@@ -510,6 +540,13 @@ function handleMouseEnter() {
 }
 
 async function closeWindow() {
+  // 关闭前保存当前位置（若处于自由浮动状态）
+  if (dockEdge.value === 'none') {
+    try {
+      const pos = await win.outerPosition()
+      saveWidgetState({ mode: 'free', x: pos.x, y: pos.y })
+    } catch { /* ignore */ }
+  }
   try {
     await invoke('close_popout', { label: WIN_LABEL })
   } catch {
@@ -527,6 +564,64 @@ function startDrag(e: MouseEvent) {
   } catch {
     // ignore
   }
+}
+
+/** 启动时无动画恢复上次保存的位置状态（吸附或自由浮动） */
+async function restoreWidgetState() {
+  const saved = loadWidgetState()
+  if (!saved) {
+    // 无保存状态，窗口以 hidden 创建，直接显示在 Rust 默认位置
+    await win.show()
+    return
+  }
+
+  // 先隐藏窗口，防止以全尺寸闪烁在 Rust 默认位置
+  await win.hide()
+  await new Promise(r => setTimeout(r, 200))
+
+  const monitor = await currentMonitor()
+  if (!monitor) {
+    await win.show()
+    return
+  }
+  const metrics = getWorkAreaMetrics(monitor)
+
+  if (saved.mode === 'free') {
+    // 恢复自由浮动位置
+    const x = clamp(saved.x, metrics.left, metrics.right - metrics.fullWidthPx)
+    const y = clamp(saved.y, metrics.top, metrics.bottom - metrics.collapsedHeightPx)
+    await updateGeometry(x, y, FULL_WIDTH, COLLAPSED_HEIGHT, 'position-first')
+    await win.show()
+    return
+  }
+
+  // mode === 'docked'：恢复吸附状态
+  const targetY = clamp(saved.y, metrics.top, metrics.bottom - metrics.collapsedHeightPx)
+  const targetX = saved.edge === 'right'
+    ? metrics.right - metrics.fullWidthPx
+    : saved.edge === 'left'
+      ? metrics.left
+      : clamp(metrics.left + Math.round((metrics.right - metrics.left - metrics.fullWidthPx) / 2), metrics.left, metrics.right - metrics.fullWidthPx)
+
+  // 设置 preDockPosition 为吸附位置对应的展开位置（非 Rust 初始位置）
+  preDockPosition = { x: targetX, y: targetY }
+
+  // 直接无动画吸附
+  disableTransition.value = true
+  dockEdge.value = saved.edge
+  await settleLayout()
+
+  if (saved.edge === 'left') {
+    await updateGeometry(metrics.left, targetY, DOCK_VISIBLE_PX, COLLAPSED_HEIGHT, 'size-first')
+  } else if (saved.edge === 'right') {
+    await updateGeometry(metrics.right - metrics.dockVisiblePx, targetY, DOCK_VISIBLE_PX, COLLAPSED_HEIGHT, 'position-first')
+  } else {
+    await updateGeometry(targetX, metrics.top, FULL_WIDTH, DOCK_VISIBLE_PX, 'size-first')
+  }
+
+  await new Promise(r => setTimeout(r, 50))
+  disableTransition.value = false
+  await win.show()
 }
 
 onMounted(async () => {
@@ -547,6 +642,9 @@ onMounted(async () => {
     if (hubConfig.value.panelPinned) return
     void toggleExpand()
   })
+
+  // 启动时恢复上次的位置状态（窗口以 hidden 创建，必须确保 show 被调用）
+  void restoreWidgetState().catch(() => { win.show().catch(() => {}) })
 })
 
 onUnmounted(() => {
