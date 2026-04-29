@@ -76,7 +76,7 @@ omega-v2/
 │   │   │   └── CountdownModule.vue # 全能型悬浮倒计时控制台（主面板与 Hub 悬浮窗高度统一互通）
 │   │   └── popout/             # 桌面悬浮窗子组件（非路由，由 views/popout/ 引用）
 │   │       ├── HubExpandedBody.vue# 悬浮窗展开面板内容（任务/待办/番茄钟/人生/控制台 Tabs）
-│   │       ├── HubTasks.vue      # 悬挂任务列表子模块
+│   │       ├── HubTasks.vue      # 悬挂任务列表子模块（分类分组/色带/进度统计/提醒时间/跳过）
 │   │       ├── HubTodos.vue      # 悬挂待办事项子模块（今日/本周/本月分组 + 备注摘要 + 快速添加）
 │   │       ├── HubTimer.vue      # 悬挂番茄钟子模块
 │   │       ├── HubLife.vue       # 悬挂人生进度条子模块
@@ -225,7 +225,7 @@ docs/
 | 组件 | 依赖的 Store | 功能 |
 |---|---|---|
 | `HubExpandedBody.vue` | - | 悬浮窗面板包装层：统一管理 5 个 Tab 子部件切换（任务/待办/番茄钟/人生进度/控制台） |
-| `HubTasks.vue` | `tasks` | 悬浮窗任务小部件（快速打卡、极简列表） |
+| `HubTasks.vue` | `tasks` | 悬浮窗任务小部件：按分类分组显示（oklch 色谱色带）、进度统计头（数字+渐变进度条）、提醒时间 badge、悬停跳过按钮、分组一键完成、快速添加 |
 | `HubTodos.vue` | `todos` | 悬浮窗待办小部件（今日/本周/本月/全部分组视图 + 备注摘要 + 快速添加，逾期红色标记） |
 | `HubTimer.vue` | `tasks` | 悬浮窗番茄钟小部件（环形 SVG 倒计时） |
 | `HubLife.vue` | - | 悬浮窗人生进度小部件（自定义极客字库 + 毫秒级心跳逻辑） |
