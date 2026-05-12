@@ -331,6 +331,20 @@ storage.ts 存储适配层
 | CSS Token | `--color-*` / `--space-*` / `--radius-*` / `--z-*` | `var(--color-accent)` |
 | 路由路径 | kebab-case | `/note/:id` |
 
+## 开发与构建脚本
+
+| 命令 | 说明 |
+|---|---|
+| `npm run dev` | 启动 Vite 开发服务器（仅前端，浏览器访问） |
+| `npm run tauri:dev` | 启动 Tauri 桌面开发模式（前端 + Rust 后端） |
+| `npm run type-check` | 运行 `vue-tsc --build`，对全量 `.vue` / `.ts` 文件做严格 TypeScript 类型检查 |
+| `npm run build` | 生产构建 = `type-check` + `vite build` 并行执行（类型检查不通过会中断构建） |
+| `npm run tauri:build` | Tauri 生产构建（内部调用 `npm run build`，因此同样包含类型检查） |
+
+> **发版前必做**：推 tag 之前先在本地跑一次 `npm run type-check`，确认无报错。
+> CI 工作流（`release.yml`）会执行 `tauri build`，其中包含严格类型检查。
+> 开发模式（`npm run dev`）**不会**执行类型检查，所以本地开发没报错不代表 CI 能过。
+
 ## 新增文件检查清单
 
 | 你要做什么 | 放在哪里 |

@@ -13,6 +13,7 @@
 ### 代码质量
 
 - [ ] 所有新功能已在 `npm run dev` 下手动测试通过
+- [ ] `npm run type-check` 类型检查通过（开发模式不会检查，**必须单独跑**）
 - [ ] 桌面端 `npx tauri dev` 运行无报错
 - [ ] 控制台无红色错误（`console.error`）
 - [ ] 浏览器端降级可用（`npm run dev` 直接打开 localhost）

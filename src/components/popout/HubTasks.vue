@@ -12,10 +12,10 @@ let hueIndex = 0
 
 function getCategoryHue(cat: string): number {
   if (!(cat in categoryHues)) {
-    categoryHues[cat] = huePool[hueIndex % huePool.length]
+    categoryHues[cat] = huePool[hueIndex % huePool.length] ?? 220
     hueIndex++
   }
-  return categoryHues[cat]
+  return categoryHues[cat] ?? 220
 }
 
 function catStyle(cat: string) {
@@ -55,7 +55,7 @@ const groupedTasks = computed(() => {
 })
 
 const hasMultipleGroups = computed(() => {
-  return groupedTasks.value.length > 1 || (groupedTasks.value.length === 1 && groupedTasks.value[0].name !== '未分类')
+  return groupedTasks.value.length > 1 || (groupedTasks.value.length === 1 && groupedTasks.value[0]?.name !== '未分类')
 })
 
 const progressPercent = computed(() => {
