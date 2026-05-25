@@ -586,8 +586,8 @@ function formatBytes(bytes: number): string {
               <div class="footer-left">
                 <div v-if="updaterStore.downloading" class="progress-container">
                   <span class="progress-status">
-                    正在下载包...
-                    <template v-if="updaterStore.downloadTotalBytes > 0">
+                    {{ updaterStore.downloadProgress === 100 ? '下载完成，正在准备重启更新...' : '正在下载包...' }}
+                    <template v-if="updaterStore.downloadTotalBytes > 0 && updaterStore.downloadProgress < 100">
                       {{ formatBytes(Math.round(updaterStore.downloadTotalBytes * updaterStore.downloadProgress / 100)) }}
                       / {{ formatBytes(updaterStore.downloadTotalBytes) }}
                     </template>

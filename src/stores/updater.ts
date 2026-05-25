@@ -163,12 +163,17 @@ export const useUpdaterStore = defineStore('updater', () => {
           } else if (event.event === 'Progress') {
             downloaded += event.data.chunkLength
             if (totalLength > 0) {
+              // 顺其自然地反映真实的下载进度推进
               downloadProgress.value = Math.round((downloaded / totalLength) * 100)
             }
           } else if (event.event === 'Finished') {
             downloadProgress.value = 100
           }
         })
+        // 确保进度拉满
+        downloadProgress.value = 100
+        // 提供 2.5 秒黄金缓冲期，让用户清晰、安心地目睹 100% 达成与准备重启的提示
+        await new Promise((resolve) => setTimeout(resolve, 2500))
         // 重启应用以完成更新
         await relaunch()
       }
