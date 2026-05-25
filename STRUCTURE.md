@@ -157,7 +157,7 @@ docs/
 
 | 文件 | 职责 | 修改频率 |
 |---|---|---|
-| `variables.css` | 定义所有 Design Token：颜色、间距、圆角、阴影、动效参数、层叠上下文。暗色主题为默认，亮色主题通过 `[data-theme='light']` 覆盖 | 低 — 仅在调整全局视觉时修改 |
+| `variables.css` | 定义所有 Design Token：颜色、间距、圆角、阴影、动效参数、层叠上下文。暗色主题为默认，亮色（light）、暖墨灰（warm-gray）、羊皮纸（sepia）主题通过对应的 `data-theme` 属性选择器进行覆盖 | 低 — 仅在调整全局视觉时修改 |
 | `reset.css` | 消灭浏览器默认样式。包含 `box-sizing`、滚动条定制、焦点样式、表单元素重置、`::selection`、`prefers-reduced-motion` 降级、**SortableJS 拖拽克隆体全局样式**、**底部定位 tooltip (`data-tooltip-pos`)** | 极低 — 几乎不需要改 |
 | `reading-themes.css` | 笔记阅读模式 5 套视觉主题：**极光 (Aurora)**、**笔墨 (Ink)**、**终端 (Terminal)**、**羊皮纸 (Parchment)**、**源码 (Source)**。从 `NoteDetailView.vue` 提取，以 `.theme-xxx` 前缀隔离，含深/浅色模式双端适配 | 低 — 仅在调整阅读主题视觉时修改 |
 | `editor-themes.css` | 笔记编辑模式各主题适配：`.edit-form.theme-xxx` 表单样式 + Milkdown/ProseMirror WYSIWYG 穿透样式。从 `NoteDetailView.vue` 提取 | 低 — 仅在调整编辑器主题时修改 |
@@ -267,7 +267,7 @@ docs/
 
 | Store | 状态 | Actions | 持久化 |
 |---|---|---|---|
-| `theme.ts` | `theme: 'dark' \| 'light'` | `toggle()` | localStorage `omega-theme` |
+| `theme.ts` | `theme: 'dark' \| 'light' \| 'warm-gray' \| 'sepia'` | `toggle()`, `setTheme()` | localStorage `omega-theme` |
 | `notes.ts` | `notes[]`, `currentCategory`, `searchQuery`, `isLoading`, `recentIds`, `draggingNoteId`（跨组件拖拽状态）, `noteMap`（computed Map 索引） | `init`, `addNote`, `updateNote`, `deleteNote`, `restoreNote`, `permanentlyDelete`, `emptyTrash`, `togglePin`, `toggleFavorite`, `recordOpen`, `importBatch`, `reorderNotes`, `moveNoteToCategory`, `getNoteById`, `findNoteByTitle`, `getBacklinks` | 委托 `storage.ts` + localStorage |
 | | 计算属性: `activeNotes`, `filteredNotes`, `categories`, `categoryTree`, `allTags`, `favoriteNotes`, `recentNotes`, `trashNotes`, `totalCount`, `pinnedCount`, `favoriteCount`, `trashCount` | | |
 | `settings.ts` | `settings`（单一状态源），computed getters: `defaultEditorMode`, `fontFamily`, `trashAutoCleanDays`, `contentZoom`, `customTemplates`, `autoLaunchWidget` | `setDefaultEditorMode`, `setFontFamily`, `setTrashAutoCleanDays`, `setContentZoom`, `setAutoLaunchWidget`, `addCustomTemplate`, `updateCustomTemplate`, `removeCustomTemplate`, `init` | localStorage `omega-settings` |

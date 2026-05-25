@@ -189,13 +189,13 @@ function formatBytes(bytes: number): string {
       <div class="setting-item">
         <div class="setting-info">
           <span class="setting-label">主题</span>
-          <span class="setting-desc">切换深色 / 浅色外观</span>
+          <span class="setting-desc">切换个性化视觉与护眼外观</span>
         </div>
         <div class="theme-switcher">
           <button
             class="theme-option"
             :class="{ active: themeStore.theme === 'dark' }"
-            @click="themeStore.theme === 'light' && themeStore.toggle()"
+            @click="themeStore.setTheme('dark')"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
@@ -205,7 +205,7 @@ function formatBytes(bytes: number): string {
           <button
             class="theme-option"
             :class="{ active: themeStore.theme === 'light' }"
-            @click="themeStore.theme === 'dark' && themeStore.toggle()"
+            @click="themeStore.setTheme('light')"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="5" />
@@ -219,6 +219,29 @@ function formatBytes(bytes: number): string {
               <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
             </svg>
             浅色
+          </button>
+          <button
+            class="theme-option"
+            :class="{ active: themeStore.theme === 'warm-gray' }"
+            @click="themeStore.setTheme('warm-gray')"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25" />
+              <line x1="8" y1="16" x2="16" y2="16" />
+              <line x1="8" y1="20" x2="14" y2="20" />
+            </svg>
+            暖墨灰
+          </button>
+          <button
+            class="theme-option"
+            :class="{ active: themeStore.theme === 'sepia' }"
+            @click="themeStore.setTheme('sepia')"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+            </svg>
+            羊皮纸
           </button>
         </div>
       </div>
@@ -748,22 +771,25 @@ function formatBytes(bytes: number): string {
 
 /* ═══ 主题切换 ═══ */
 .theme-switcher {
-  display: flex;
-  gap: var(--space-1);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
   background: var(--color-bg-tertiary);
   border-radius: var(--radius-md);
-  padding: 3px;
+  padding: 4px;
 }
 
 .theme-option {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   font-size: 0.8rem;
   font-weight: 500;
   color: var(--color-text-tertiary);
+  cursor: pointer;
   transition: background-color var(--duration-fast) var(--ease-out),
               color var(--duration-fast) var(--ease-out);
 }
@@ -776,6 +802,12 @@ function formatBytes(bytes: number): string {
 
 .theme-option:active {
   transform: scale(0.98);
+}
+
+@media (max-width: 540px) {
+  .theme-switcher {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 /* ═══ 字体选择 ═══ */

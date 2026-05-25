@@ -305,6 +305,7 @@ pub fn run() {
         // ─── 单实例：第二个进程启动时聚焦已有窗口 ───
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
+                let _ = window.center();
                 let _ = window.show();
                 let _ = window.unminimize();
                 let _ = window.set_focus();
@@ -357,9 +358,11 @@ pub fn run() {
                     .icon(app.default_window_icon().unwrap().clone())
                     .tooltip("Ω Notes")
                     .menu(&menu)
+                    .show_menu_on_left_click(false)
                     .on_menu_event(|app, event| match event.id().as_ref() {
                         "show" => {
                             if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.center();
                                 let _ = window.show();
                                 let _ = window.unminimize();
                                 let _ = window.set_focus();
@@ -386,6 +389,7 @@ pub fn run() {
                         {
                             let app = tray.app_handle();
                             if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.center();
                                 let _ = window.show();
                                 let _ = window.unminimize();
                                 let _ = window.set_focus();

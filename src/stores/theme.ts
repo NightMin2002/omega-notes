@@ -7,20 +7,29 @@ import { ref, watch } from 'vue'
 
 const THEME_KEY = 'omega-theme'
 
-export type Theme = 'dark' | 'light'
+export type Theme = 'dark' | 'light' | 'warm-gray' | 'sepia'
+
+const VALID_THEMES: Theme[] = ['dark', 'light', 'warm-gray', 'sepia']
 
 export const useThemeStore = defineStore('theme', () => {
   const theme = ref<Theme>(getInitialTheme())
 
   function getInitialTheme(): Theme {
     const saved = localStorage.getItem(THEME_KEY) as Theme | null
-    if (saved === 'dark' || saved === 'light') return saved
+    if (saved && VALID_THEMES.includes(saved)) return saved
     if (window.matchMedia('(prefers-color-scheme: light)').matches) return 'light'
     return 'dark'
   }
 
   function toggle() {
-    theme.value = theme.value === 'dark' ? 'light' : 'dark'
+    const nextIndex = (VALID_THEMES.indexOf(theme.value) + 1) % VALID_THEMES.length
+    theme.value = VALID_THEMES[nextIndex] as Theme
+  }
+
+  function setTheme(newTheme: Theme) {
+    if (VALID_THEMES.includes(newTheme)) {
+      theme.value = newTheme
+    }
   }
 
   // 响应式同步到 DOM
@@ -31,10 +40,11 @@ export const useThemeStore = defineStore('theme', () => {
 
   // 跨窗口同步监听（解决多 Webview 间状态不同步的问题）
   window.addEventListener('storage', (e) => {
-    if (e.key === THEME_KEY && (e.newValue === 'dark' || e.newValue === 'light')) {
+    if (e.key === THEME_KEY && e.newValue && VALID_THEMES.includes(e.newValue as Theme)) {
       theme.value = e.newValue as Theme
     }
   })
 
-  return { theme, toggle }
+  return { theme, toggle, setTheme }
 })
+
