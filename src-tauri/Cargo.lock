@@ -2598,7 +2598,7 @@ dependencies = [
 
 [[package]]
 name = "omega-notes"
-version = "2.7.5"
+version = "2.7.6"
 dependencies = [
  "log",
  "serde",
