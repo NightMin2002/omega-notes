@@ -28,6 +28,8 @@ function ensureMermaidInit() {
 
 const props = defineProps<{
   content: string
+  /** Wiki 链接跳转前缀，桌面默认 /note，移动端传 /m/note */
+  notePathPrefix?: string
   /**
    * 当提供此 prop 时，任务列表的 checkbox 可交互。
    * 变更后通过 update:editableContent 回写。
@@ -177,7 +179,7 @@ function handleClick(e: Event) {
     const note = notesStore.findNoteByTitle(title)
     if (note) {
       notesStore.recordOpen(note.id)
-      router.push(`/note/${note.id}`)
+      router.push(`${props.notePathPrefix || '/note'}/${note.id}`)
     }
     return
   }

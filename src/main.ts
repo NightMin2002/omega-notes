@@ -18,6 +18,7 @@ import { registerGlobalShortcuts } from './utils/shortcuts'
 import { startScheduler } from './utils/scheduler'
 import { isTauri } from './utils/storage'
 import { initGlobalTooltips } from './utils/tooltip'
+import { isMobileRoutePath, shouldAutoUseMobileMode } from './composables/useAppMode'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -38,6 +39,12 @@ if (popoutRoute) {
   router.replace(popoutRoute)
 }
 
+const initialHashPath = window.location.hash.replace(/^#/, '').split('?')[0] || '/'
+const isInitialMobileMode = !popoutRoute && (
+  isMobileRoutePath(initialHashPath) ||
+  shouldAutoUseMobileMode()
+)
+
 // 挂载后异步初始化
 const notesStore = useNotesStore()
 notesStore.init()
@@ -51,13 +58,15 @@ tasksStore.init()
 const todosStore = useTodosStore()
 todosStore.init()
 
-registerGlobalShortcuts(router)
-if (!popoutRoute) {
+if (!isInitialMobileMode) {
+  registerGlobalShortcuts(router)
+}
+if (!popoutRoute && !isInitialMobileMode) {
   startScheduler()
 }
 
 // ─── 默认启动桌面微件 ───
-if (isTauri() && !popoutRoute && settingsStore.autoLaunchWidget) {
+if (isTauri() && !popoutRoute && !isInitialMobileMode && settingsStore.autoLaunchWidget) {
   // 延迟 2 秒，确保主窗口渲染+初始化完毕后再打开悬浮窗
   setTimeout(async () => {
     try {
@@ -70,7 +79,7 @@ if (isTauri() && !popoutRoute && settingsStore.autoLaunchWidget) {
 }
 
 // ─── 自动更新检查 ───
-if (isTauri() && !popoutRoute) {
+if (isTauri() && !popoutRoute && !isInitialMobileMode) {
   const updaterStore = useUpdaterStore()
   // 延迟 5 秒首次检查，避免与启动加载竞争
   setTimeout(() => updaterStore.checkForUpdates(true), 5000)
@@ -102,4 +111,3 @@ document.addEventListener('click', (e) => {
     })
   }
 }, true) // capture phase，确保在任何组件之前拦截
-

@@ -2,6 +2,11 @@
  * Ω Notes V2 — 路由配置
  */
 import { createRouter, createWebHashHistory } from 'vue-router'
+import {
+  isMobileRoutePath,
+  shouldAutoUseMobileMode,
+  toMobilePath,
+} from '../composables/useAppMode'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -66,6 +71,41 @@ const router = createRouter({
       component: () => import('../views/SettingsView.vue'),
       meta: { title: '设置' },
     },
+    /* ─── 移动端模式路由（独立页面结构，复用数据层） ─── */
+    {
+      path: '/m',
+      redirect: '/m/notes',
+    },
+    {
+      path: '/m/notes',
+      name: 'mobile-notes',
+      component: () => import('../mobile/views/MobileNotesView.vue'),
+      meta: { mobile: true, title: '笔记' },
+    },
+    {
+      path: '/m/note/:id',
+      name: 'mobile-note-detail',
+      component: () => import('../mobile/views/MobileNoteDetailView.vue'),
+      meta: { mobile: true, mobilePageHeader: true, title: '笔记' },
+    },
+    {
+      path: '/m/write/:id?',
+      name: 'mobile-write',
+      component: () => import('../mobile/views/MobileWriteView.vue'),
+      meta: { mobile: true, mobilePageHeader: true, mobileHideNav: true, title: '编辑笔记' },
+    },
+    {
+      path: '/m/trash',
+      name: 'mobile-trash',
+      component: () => import('../mobile/views/MobileTrashView.vue'),
+      meta: { mobile: true, title: '回收站' },
+    },
+    {
+      path: '/m/settings',
+      name: 'mobile-settings',
+      component: () => import('../mobile/views/MobileSettingsView.vue'),
+      meta: { mobile: true, title: '设置' },
+    },
     /* ─── 悬挂窗口路由（独立窗口渲染，不含侧边栏） ─── */
     {
       path: '/popout/note/:id',
@@ -86,6 +126,18 @@ const router = createRouter({
       meta: { popout: true, title: '桌面微件面板' },
     },
   ],
+})
+
+router.beforeEach((to) => {
+  if (to.meta.popout || isMobileRoutePath(to.path)) return true
+  if (!shouldAutoUseMobileMode()) return true
+
+  return {
+    path: toMobilePath(to.path),
+    query: to.query,
+    hash: to.hash,
+    replace: true,
+  }
 })
 
 // 页面标题同步

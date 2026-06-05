@@ -46,7 +46,7 @@ omega-v2/
 │   │   └── lib.rs          # Rust 库入口
 │   ├── capabilities/       # 权限配置
 │   └── icons/              # 应用图标
-├── vite.config.ts          # Vite 配置（端口 8080）
+├── vite.config.ts          # Vite 配置（端口 5173）
 └── package.json            # 包含 tauri 脚本
 ```
 
@@ -54,7 +54,7 @@ omega-v2/
 
 | 命令 | 用途 | 说明 |
 |---|---|---|
-| `npm run dev` | 仅前端开发 | 在浏览器中打开 `http://localhost:8080` |
+| `npm run dev` | 仅前端开发 | 在浏览器中打开 `http://localhost:5173` |
 | `npm run tauri:dev` | 桌面应用开发模式 | 自动启动 Vite + 编译 Rust + 弹出桌面窗口 |
 | `npm run tauri:build` | 构建生产包 | 输出 .exe / .msi 安装包 |
 
@@ -75,7 +75,7 @@ omega-v2/
 |---|---|---|
 | `productName` | `Omega Notes` | 应用名称 |
 | `identifier` | `com.nightmin.omega-notes` | 应用唯一标识 |
-| `devUrl` | `http://localhost:8080` | 开发时前端地址 |
+| `devUrl` | `http://localhost:5173` | 开发时前端地址 |
 | `frontendDist` | `../dist` | 构建时前端产物路径 |
 | 窗口大小 | 1200×800 | 默认窗口尺寸 |
 | 最小窗口 | 800×600 | 不能再小了 |
@@ -87,7 +87,7 @@ omega-v2/
 clearScreen: false,        // 避免清屏导致 Tauri 误判进程退出
 server: {
   host: '0.0.0.0',        // 绑定所有接口（避免 IPv6 权限问题）
-  port: 8080,             // 固定端口（5173 在此系统被 Hyper-V 保留）
+  port: 5173,             // 固定端口；如被系统保留，需与 tauri.conf.json 的 devUrl 同步修改
   strictPort: true,       // 端口被占用时直接报错
 }
 ```
@@ -118,8 +118,15 @@ server: {
 
 ## 故障排查
 
-### 1. `EACCES: permission denied ::1:5173`
-Vite 无法绑定 IPv6 localhost。解决：使用 `host: '0.0.0.0'` 绑定。
+### 1. `EACCES: permission denied 0.0.0.0:端口`
+Vite 无法绑定端口。常见原因是端口被进程占用，或 Windows 将端口放进了保留端口段。先检查：
+
+```powershell
+Get-NetTCPConnection -State Listen | Where-Object { $_.LocalPort -eq 5173 }
+netsh interface ipv4 show excludedportrange protocol=tcp
+```
+
+如果当前端口在保留范围内，修改 `vite.config.ts` 的 `server.port`，并同步修改 `src-tauri/tauri.conf.json` 的 `devUrl`。
 
 ### 2. `error: linker 'link.exe' not found`
 MSVC 链接器未安装。解决：安装 VS Build Tools + VCTools 工作负载。

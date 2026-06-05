@@ -30,8 +30,8 @@ omega-v2/
 ├── public/                     # 原生静态资源（用于存放不经过 Vite 处理、原样复制的文件；目前暂空）
 │
 ├── src/                        # 前端源代码
-│   ├── main.ts                 # 应用入口：挂载 Vue + Pinia + Router；检测 ?popout_route= 跳转悬挂窗口路由；启动自动更新检查（5s 延迟 + 4h 定时）；默认启动桌面微件（2s 延迟，受 autoLaunchWidget 设置控制）
-│   ├── App.vue                 # 根组件：Header + Sidebar + RouterView；route.meta.popout 时纯净渲染；定义 --app-main-padding CSS 变量供子页面负 margin 抵消
+│   ├── main.ts                 # 应用入口：挂载 Vue + Pinia + Router；检测 ?popout_route= 跳转悬挂窗口路由；移动端初始模式下跳过全局快捷键/调度器/桌面微件/自动更新巡检
+│   ├── App.vue                 # 根组件：按路由 meta 分发 Popout / MobileLayout / DesktopLayout 三种渲染模式
 │   │
 │   ├── assets/                 # 项目资产
 │   │   └── styles/             # 全局样式
@@ -39,6 +39,9 @@ omega-v2/
 │   │       ├── reset.css       # 浏览器默认样式重置
 │   │       ├── reading-themes.css # 笔记阅读主题（极光/笔墨/终端/羊皮纸/源码）
 │   │       └── editor-themes.css  # 笔记编辑模式主题适配 + WYSIWYG 穿透样式
+│   │
+│   ├── layouts/                # 桌面端布局壳
+│   │   └── DesktopLayout.vue   # 桌面主窗口布局：Header + Sidebar + RouterView；保留桌面快捷键与全局弹窗；手机桌面覆盖模式下提供“移动端”返回按钮
 │   │
 │   ├── components/             # 全局/共享组件
 │   │   ├── AppHeader.vue       # 顶部导航栏（含搜索/快速笔记入口）
@@ -97,6 +100,15 @@ omega-v2/
 │   │       ├── PopoutProgressPanel.vue# 悬浮窗独立展开面板窗口：承载 Tabs 内容区
 │   │       └── PopoutNote.vue    # 悬挂笔记阅读桌面窗口
 │   │
+│   ├── mobile/                 # 移动端独立模式（/m/* 路由，复用 stores/utils，不复用桌面页面结构）
+│   │   ├── MobileLayout.vue    # 手机端布局壳：顶部栏 + 底部导航 + 桌面模式切换；写作页隐藏底部导航
+│   │   └── views/
+│   │       ├── MobileNotesView.vue # 移动端笔记列表：搜索、分类横向筛选、全部/收藏/最近、统计、FAB 新建
+│   │       ├── MobileNoteDetailView.vue # 移动端笔记阅读：Markdown 渲染、Wiki 链接、收藏/置顶/复制/删除、子笔记入口
+│   │       ├── MobileWriteView.vue # 移动端新建/编辑：Markdown 源码输入、基础格式工具、分类、标签、草稿
+│   │       ├── MobileTrashView.vue # 移动端回收站：恢复、永久删除、清空
+│   │       └── MobileSettingsView.vue # 移动端设置：主题、字体、默认编辑器、回收站清理、桌面模式切换
+│   │
 │   ├── stores/                 # Pinia 状态仓库
 │   │   ├── theme.ts            # 主题管理（暗色/亮色 + 持久化）
 │   │   ├── notes.ts            # 笔记数据（async CRUD + 分类 + 搜索 + 排序 + 回收站）
@@ -108,7 +120,9 @@ omega-v2/
 │   ├── composables/            # Vue Composable 函数
 │   │   ├── useEditorActions.ts # 编辑器共用操作（图片/链接/工具栏/粘贴）
 │   │   ├── useReadingTheme.ts  # 阅读主题状态管理（localStorage + BroadcastChannel 跨窗口同步）
-│   │   └── useDraft.ts         # 草稿自动保存（防抖 localStorage + 恢复检测）
+│   │   ├── useDraft.ts         # 草稿自动保存（防抖 localStorage + 恢复检测）
+│   │   ├── useAppShortcuts.ts  # 应用内快捷键匹配、展示与自定义配置读取
+│   │   └── useAppMode.ts       # 桌面/移动端模式判断、/m 路由映射、sessionStorage 模式覆盖
 │   │
 │   ├── utils/                  # 工具函数
 │   │   ├── markdown.ts         # stripMarkdown / truncateText
@@ -124,7 +138,7 @@ omega-v2/
 │   │   └── index.ts            # Note（含 parentId 子笔记引用） / DailyTask / HealthReminder / CountdownState / CustomTemplate 等
 │   │
 │   └── router/                 # 路由配置
-│       └── index.ts            # 路由表 + 页面标题同步；含 3 条 meta.popout 路由（/popout/*）
+│       └── index.ts            # 路由表 + 页面标题同步；含桌面路由、/m/* 移动端路由、/popout/* 悬挂路由；窄屏浏览器自动进移动端
 │
 └── src-tauri/                  # Tauri 后端（Rust）
     ├── Cargo.toml              # Rust 依赖配置
@@ -164,6 +178,14 @@ docs/
 
 **加载顺序**：`main.ts` 中依次 `import variables.css` → `reset.css` → `reading-themes.css` → `editor-themes.css`，确保 Token 在后续样式中可用。
 
+### 布局层 (`src/layouts/`, `src/mobile/`)
+
+| 文件 | 职责 | 说明 |
+|---|---|---|
+| `App.vue` | 根级模式分发 | 根据 route meta 渲染 `RouterView`（popout）、`MobileLayout`（移动端）或 `DesktopLayout`（桌面端），自身不承载具体布局 |
+| `layouts/DesktopLayout.vue` | 桌面端主布局 | 承载 Header、Sidebar、桌面 RouterView、快速笔记、全局搜索、桌面应用内快捷键；手机切到桌面覆盖模式后显示“移动端”返回按钮 |
+| `mobile/MobileLayout.vue` | 移动端主布局 | 承载 `/m/*` 路由的顶部栏、底部导航、桌面模式切换；写作页通过 `meta.mobileHideNav` 隐藏底部导航 |
+
 ### 组件层 (`src/components/`)
 
 | 组件 | 职责 | Props / Events |
@@ -176,7 +198,7 @@ docs/
 | `SidebarShortcutPanel.vue` | 呼出 `ShortcutManagerDialog` 的底部静态按钮 | *无外部接口* |
 | `MilkdownEditor.vue` | 编辑器外壳。提供 `MilkdownProvider` inject 上下文 | Props: `modelValue`, `readonly` / Emits: `update:modelValue` |
 | `MilkdownEditorCore.vue` | 编辑器核心。注册 commonmark/GFM/history/indent/clipboard/**math**/smartPaste 插件，监听 `markdownUpdated`。**智能粘贴**：DOM 层拦截粘贴事件，图片自动转 base64 image 节点，Markdown 文本自动解析为富文本 | Props: `modelValue` / Emits: `update:modelValue` |
-| `MarkdownRenderer.vue` | 只读渲染。markdown-it + highlight.js + **texmath (KaTeX)** + **task-lists** + **Mermaid.js 图表**。支持 `[[title]]` 双向链接语法（渲染为可点击链接 + 跳转导航）。Mermaid 代码块自动渲染为 SVG，支持流程图/序列图/甘特图等。**内嵌 ImageLightbox 灯箱**：点击图片或 Mermaid 图表全屏放大查看 | Props: `content` |
+| `MarkdownRenderer.vue` | 只读渲染。markdown-it + highlight.js + **texmath (KaTeX)** + **task-lists** + **Mermaid.js 图表**。支持 `[[title]]` 双向链接语法（可按桌面 `/note` 或移动端 `/m/note` 跳转）。Mermaid 代码块自动渲染为 SVG，支持流程图/序列图/甘特图等。**内嵌 ImageLightbox 灯箱**：点击图片或 Mermaid 图表全屏放大查看 | Props: `content`, `editableContent`, `notePathPrefix` / Emits: `update:editableContent` |
 | `ImageLightbox.vue` | 全屏灯箱放大查看组件。支持图片和 SVG（Mermaid 图表）两种内容模式，提供缩放（滚轮/按钮 ±/0 重置）、拖拽平移、键盘快捷键（Esc 关闭），Teleport 到 body 层 | Props: `open`, `src`, `svgContent`, `alt` / Emits: `close` |
 | `QuickNote.vue` | 快速笔记弹窗。`<dialog>` 模态框，Markdown 输入 + Ctrl+Enter 保存到收件箱 | Props: `visible` / Emits: `close` |
 | `SearchDialog.vue` | 全局搜索弹窗。全文搜索 + 关键词高亮 + 键盘导航（↑↓ Enter） | Props: `visible` / Emits: `close` |
@@ -220,6 +242,18 @@ docs/
 | `PopoutProgress.vue` | `/popout/progress` | `tasks` | 底部常驻悬浮时间条：常驻时间、拖拽、边缘吸附、分向展开、**位置状态持久化**（localStorage `omega-widget-state`，支持 docked/free 双模式恢复，窗口以 hidden 创建避免闪烁）。通过 `BroadcastChannel('omega-hub-channel')` 与 Panel 通透通信，避免 WebView 渲染迟滞引发重置闪烁 |
 | `PopoutProgressPanel.vue` | `/popout/progress-panel` | `tasks` | 悬浮窗独立展开面板窗口：承载 5 个 Tab 视图组件，支持隐藏状态下的物理坐标判定与预热 | |
 
+### 移动端页面层 (`src/mobile/views/`)
+
+| 页面 | 路由 | 依赖的 Store | 功能 |
+|---|---|---|---|
+| `MobileNotesView.vue` | `/m/notes` | `notes` | 移动端笔记首页：搜索、分类横向筛选、全部/收藏/最近分段切换、统计条、笔记列表、FAB 新建 |
+| `MobileNoteDetailView.vue` | `/m/note/:id` | `notes` | 移动端笔记阅读：Markdown 渲染、`[[title]]` 移动端跳转、任务 checkbox 回写、收藏、置顶、复制、删除、子笔记入口 |
+| `MobileWriteView.vue` | `/m/write/:id?` | `notes` | 移动端新建/编辑：标题、分类、标签、Markdown 源码正文、基础格式插入、未保存离开确认、新建草稿 |
+| `MobileTrashView.vue` | `/m/trash` | `notes` | 移动端回收站：已删除笔记列表、恢复、永久删除、清空回收站 |
+| `MobileSettingsView.vue` | `/m/settings` | `theme`, `settings` | 移动端设置：主题、字体、默认编辑器偏好、回收站自动清理、桌面模式切换 |
+
+**移动端边界**：移动端页面不复用桌面 `views/` 的三栏/双栏页面结构，只复用 Pinia store、工具函数和少量共享渲染组件。桌面微件、全局快捷键、右键菜单、悬挂窗口和分屏编辑不纳入移动端第一版。
+
 **悬浮窗子组件** (`src/components/popout/`)：
 
 | 组件 | 依赖的 Store | 功能 |
@@ -239,6 +273,7 @@ docs/
 | `useEditorActions.ts` | `useEditorActions` | 提取 WYSIWYG / 源码模式下通用的 Markdown 编辑器控制逻辑（图片插入、Wiki 链接、工具栏快捷插入/包裹、粘贴拦截转存） |
 | `useDraft.ts` | `useDraft` | 利用 localStorage 实现高配的草稿自动化引擎：800ms 防抖热挂载保存，按组件销毁周期执行缓冲清洗和强制保存 |
 | `useAppShortcuts.ts`| `useAppShortcuts` | 按键事件拦截与解析组合 API，主要提供 `matchShortcut` 供各面板快速应用自定义或读取的快捷键配置 |
+| `useAppMode.ts` | `useAppMode`, `toMobilePath`, `toDesktopPath`, `setAppModeOverride` | 桌面/移动端/悬挂模式判断；窄屏浏览器自动映射到 `/m/*`；手机端“桌面模式/移动端”切换通过 `sessionStorage` 在当前标签页覆盖自动模式 |
 
 ### 工具层 (`src/utils/`)
 
@@ -290,11 +325,17 @@ docs/
 | `/trash` | `trash` | `TrashView` | 回收站 |
 | `/todos` | `todos` | `TodosView` | 待办事项 |
 | `/settings` | `settings` | `SettingsView` | 设置 |
+| `/m` | - | redirect | 移动端入口，重定向到 `/m/notes` |
+| `/m/notes` | `mobile-notes` | `MobileNotesView` | 移动端笔记列表（`meta.mobile: true`） |
+| `/m/note/:id` | `mobile-note-detail` | `MobileNoteDetailView` | 移动端笔记阅读（`meta.mobile: true`, `meta.mobilePageHeader: true`） |
+| `/m/write/:id?` | `mobile-write` | `MobileWriteView` | 移动端新建/编辑（`meta.mobile: true`, `meta.mobilePageHeader: true`, `meta.mobileHideNav: true`） |
+| `/m/trash` | `mobile-trash` | `MobileTrashView` | 移动端回收站（`meta.mobile: true`） |
+| `/m/settings` | `mobile-settings` | `MobileSettingsView` | 移动端设置（`meta.mobile: true`） |
 | `/popout/note/:id` | `popout-note` | `PopoutNote` | 悬挂笔记（`meta.popout: true`） |
 | `/popout/progress` | `popout-progress` | `PopoutProgress` | 悬浮时间条主窗口（`meta.popout: true`） |
 | `/popout/progress-panel` | `popout-progress-panel` | `PopoutProgressPanel` | 悬浮侧边展开面板（`meta.popout: true`） |
 
-路由使用 **Hash 模式** (`createWebHashHistory`)，Tauri 桌面应用中文件协议不支持 History 模式。
+路由使用 **Hash 模式** (`createWebHashHistory`)，Tauri 桌面应用中文件协议不支持 History 模式。浏览器窄屏或触屏设备会自动从桌面路径映射到 `/m/*`，除非当前标签页通过 `sessionStorage` 设置了桌面模式覆盖。
 
 ### Tauri 后端 (`src-tauri/`)
 
@@ -311,7 +352,7 @@ docs/
 ```
 用户操作
   ↓
-Vue 组件 (views/)
+Vue 组件 (views/ 或 mobile/views/)
   ↓ 调用
 Pinia Store (stores/notes.ts)    ← async API
   ↓ 委托
@@ -319,6 +360,8 @@ storage.ts 存储适配层
   ├── Tauri 环境 → @tauri-apps/plugin-fs → AppData/notes/*.md
   └── 浏览器环境 → localStorage (自动降级)
 ```
+
+移动端 `/m/*` 与桌面端共用同一套 `stores/`、`utils/storage.ts` 和类型定义；差异主要限制在布局、路由页面和交互组件层。
 
 ## 命名约定
 
@@ -335,8 +378,8 @@ storage.ts 存储适配层
 
 | 命令 | 说明 |
 |---|---|
-| `npm run dev` | 启动 Vite 开发服务器（仅前端，浏览器访问） |
-| `npm run tauri:dev` | 启动 Tauri 桌面开发模式（前端 + Rust 后端） |
+| `npm run dev` | 启动 Vite 开发服务器（仅前端，浏览器访问，默认 `http://localhost:5173`） |
+| `npm run tauri:dev` | 启动 Tauri 桌面开发模式（前端 + Rust 后端，`devUrl` 同步为 `http://localhost:5173`） |
 | `npm run type-check` | 运行 `vue-tsc --build`，对全量 `.vue` / `.ts` 文件做严格 TypeScript 类型检查 |
 | `npm run build` | 生产构建 = `type-check` + `vite build` 并行执行（类型检查不通过会中断构建） |
 | `npm run tauri:build` | Tauri 生产构建（内部调用 `npm run build`，因此同样包含类型检查） |
@@ -351,6 +394,8 @@ storage.ts 存储适配层
 |---|---|
 | 新增全局/共享 UI 组件 | `src/components/` |
 | 新增路由页面 | `src/views/` + 在 `router/index.ts` 注册；popout 窗口页加 `meta: { popout: true }` |
+| 新增移动端页面 | `src/mobile/views/` + 在 `router/index.ts` 注册 `/m/*` 路由并加 `meta: { mobile: true }` |
+| 新增布局壳 | `src/layouts/`（桌面）或 `src/mobile/`（移动端） |
 | 新增悬挂窗口 | `src/views/popout/` + router 注册 + Rust `open_popout` 新增 kind 分支 + capabilities 窗口标签 |
 | 新增数据/状态管理 | `src/stores/` |
 | 新增全局 CSS | `src/assets/styles/` + 在 `main.ts` 引入 |
