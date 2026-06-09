@@ -75,6 +75,7 @@ omega-v2/
 │   │   ├── NoteOutline.vue    # 笔记目录大纲侧边栏（字数统计 + 阅读进度 + 标题 TOC 导航）
 │   │   ├── SubNotePanel.vue   # 子笔记面板（双模式：sidebar 侧边栏用于 NoteDetailView 左侧 / dropdown 下拉面板用于 NoteReaderPanel 工具栏，子笔记列表 + 新建 + 删除）
 │   │   ├── ThemeSwitcher.vue  # 阅读主题切换器（v-model 绑定，支持紧凑模式，三方共用）
+│   │   ├── ScrollableTagBar.vue # 通用气泡滚动栏组件（支持外置按钮点击、手势拖拽、阻尼惯性与点击防误触）
 │   │   ├── shared/             # 跨视图共享独立业务模块
 │   │   │   └── CountdownModule.vue # 全能型悬浮倒计时控制台（主面板与 Hub 悬浮窗高度统一互通）
 │   │   └── popout/             # 桌面悬浮窗子组件（非路由，由 views/popout/ 引用）
@@ -220,6 +221,7 @@ docs/
 | `NoteOutline.vue` | 笔记目录大纲侧边栏。字数/段落/章节统计、阅读进度条、从 Markdown 标题解析 TOC 导航（滚动跟踪高亮 + 点击跳转）。无标题时显示统计信息 + 提示 | Props: `content`, `scrollContainer` |
 | `SubNotePanel.vue` | 子笔记可折叠侧边面板。折叠态显示图标+子笔记数量角标，展开态显示子笔记列表（选中高亮）、新建输入框、删除确认。仅父笔记视图显示，子笔记视图自动隐藏 | Props: `parentId`, `activeChildId`, `isChildNote` / Emits: `select`, `back`, `created` |
 | `ThemeSwitcher.vue` | 阅读主题切换器（v-model 绑定，支持深浅色与预设组合，三方共用） | v-model: `modelValue`, Props: `compact` |
+| `ScrollableTagBar.vue` | 通用气泡滚动栏组件。支持外置控制按钮平滑滚动、鼠标拖拽、阻尼惯性滑行、点击防误触和 ResizeObserver 局部自适应 | Props: `watchData` |
 | `shared/CountdownModule.vue` | 现代化并轨番茄钟 / 倒计时核心面板。负责与全局 Tasks 引擎交互，带有高频视图绑定与自适应光影 UI | 依赖: `useTasksStore` |
 
 **编辑器架构说明**：`MilkdownEditor` 和 `MilkdownEditorCore` 必须拆分为两个组件，因为 `useEditor()` 需要在 `MilkdownProvider` 的 inject 上下文内调用。如果合并为一个组件会导致 `Symbol(editorInfoCtxKey) not found` 错误。

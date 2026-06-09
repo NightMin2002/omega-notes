@@ -8,6 +8,7 @@ import ContextMenu from '../components/ContextMenu.vue'
 import type { ContextMenuItem } from '../components/ContextMenu.vue'
 import InputDialog from '../components/InputDialog.vue'
 import CategoryDialog from '../components/CategoryDialog.vue'
+import ScrollableTagBar from '../components/ScrollableTagBar.vue'
 
 const notesStore = useNotesStore()
 const router = useRouter()
@@ -394,7 +395,11 @@ function handlePillMouseUp(cat: string) {
     </nav>
 
     <!-- 分类药丸（收藏夹/最近视图时隐藏） -->
-    <div v-if="!activeView" class="category-bar">
+    <ScrollableTagBar
+      v-if="!activeView"
+      class="category-bar"
+      :watch-data="notesStore.categories"
+    >
       <button
         class="category-pill"
         :class="{ active: notesStore.currentCategory === 'all' }"
@@ -414,10 +419,14 @@ function handlePillMouseUp(cat: string) {
       >
         {{ cat }}
       </button>
-    </div>
+    </ScrollableTagBar>
 
     <!-- 标签云（普通模式 + 有标签时显示） -->
-    <div v-if="!activeView && notesStore.allTags.length > 0" class="tag-cloud">
+    <ScrollableTagBar
+      v-if="!activeView && notesStore.allTags.length > 0"
+      class="tag-cloud"
+      :watch-data="notesStore.allTags"
+    >
       <button
         class="tag-pill"
         :class="{ active: !activeTag }"
@@ -435,7 +444,7 @@ function handlePillMouseUp(cat: string) {
         {{ t.name }}
         <span class="tag-count">{{ t.count }}</span>
       </button>
-    </div>
+    </ScrollableTagBar>
 
     <!-- 笔记网格 -->
     <div
@@ -712,18 +721,11 @@ function handlePillMouseUp(cat: string) {
 
 /* ─── 分类药丸 ─── */
 .category-bar {
-  display: flex;
-  gap: var(--space-2);
   margin-bottom: var(--space-4);
-  overflow-x: auto;
-  padding-bottom: var(--space-2);
 }
 
 /* ─── 标签云 ─── */
 .tag-cloud {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
   margin-bottom: var(--space-6);
 }
 
