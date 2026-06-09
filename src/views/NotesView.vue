@@ -105,6 +105,10 @@ function selectCategory(cat: string) {
 }
 
 function openNote(id: string) {
+  // 如果是刚刚关闭右键菜单而触发的点击，则拦截不打开
+  if (Date.now() - menuClosedAt < 100) {
+    return
+  }
   notesStore.recordOpen(id)
   router.push(`/note/${id}`)
 }
@@ -207,8 +211,18 @@ useDraggable(gridRef, draggableNotes, {
 
 /* ─── 卡片右键菜单 ─── */
 const showContextMenu = ref(false)
+const showPageContextMenu = ref(false)
 const contextMenuPos = ref({ x: 0, y: 0 })
 const contextMenuTarget = ref<string | null>(null)
+
+// 拦截右键菜单关闭时的左键穿透
+let menuClosedAt = 0
+watch([showContextMenu, showPageContextMenu], ([newCtx, newPageCtx], [oldCtx, oldPageCtx]) => {
+  const closed = (oldCtx && !newCtx) || (oldPageCtx && !newPageCtx)
+  if (closed) {
+    menuClosedAt = Date.now()
+  }
+})
 
 const contextMenuItems = computed<ContextMenuItem[]>(() => [
   { id: 'create-note', label: '新建笔记' },
@@ -219,10 +233,43 @@ const contextMenuItems = computed<ContextMenuItem[]>(() => [
   { id: 'delete', label: '删除', danger: true },
 ])
 
+function getMenuPositionForCard(cardEl: HTMLElement, menuWidth = 160, menuHeight = 210) {
+  const rect = cardEl.getBoundingClientRect()
+  
+  let left = rect.right + 12
+  // 如果右侧空间不足且左侧空间更大，则翻转到左侧
+  if (left + menuWidth > window.innerWidth - 8 && rect.left > window.innerWidth - rect.right) {
+    left = rect.left - menuWidth - 12
+  }
+  
+  // 纵向居中
+  let top = rect.top + (rect.height - menuHeight) / 2
+  // 边界修正
+  if (top < 8) top = 8
+  if (top + menuHeight > window.innerHeight - 8) {
+    top = window.innerHeight - menuHeight - 8
+  }
+  
+  return { x: left, y: top }
+}
+
 function handleCardContextMenu(e: MouseEvent, noteId: string) {
   showPageContextMenu.value = false
+  
+  // 如果当前菜单是由于本次右键捕获刚刚关闭的，且针对的是同一个卡片，则直接拦截 return，实现再次右键卡片直接关闭菜单
+  if (Date.now() - menuClosedAt < 50 && contextMenuTarget.value === noteId) {
+    return
+  }
+  
   contextMenuTarget.value = noteId
-  contextMenuPos.value = { x: e.clientX, y: e.clientY }
+  
+  const cardEl = (e.currentTarget as HTMLElement) || (e.target as HTMLElement).closest('.note-card')
+  if (cardEl) {
+    contextMenuPos.value = getMenuPositionForCard(cardEl)
+  } else {
+    contextMenuPos.value = { x: e.clientX, y: e.clientY }
+  }
+  
   showContextMenu.value = true
 }
 
@@ -261,7 +308,6 @@ async function handleContextMenuSelect(id: string) {
 }
 
 /* ─── 页面级右键菜单（空白区域）─── */
-const showPageContextMenu = ref(false)
 const pageContextMenuPos = ref({ x: 0, y: 0 })
 const pageContextMenuItems = computed<ContextMenuItem[]>(() => [
   { id: 'create-note', label: '新建笔记' },
@@ -271,6 +317,12 @@ function handlePageContextMenu(e: MouseEvent) {
   // 如果右键在卡片上，不触发页面级菜单
   if ((e.target as HTMLElement).closest('.note-card')) return
   e.preventDefault()
+  
+  // 如果页面级菜单是由于本次右键捕获刚刚关闭的，则直接拦截 return，实现再次右键空白处直接关闭菜单
+  if (Date.now() - menuClosedAt < 50) {
+    return
+  }
+  
   showContextMenu.value = false
   pageContextMenuPos.value = { x: e.clientX, y: e.clientY }
   showPageContextMenu.value = true
@@ -320,6 +372,84 @@ function handlePillMouseUp(cat: string) {
     notesStore.draggingNoteId = null
     dropTargetCategory.value = null
   }
+}
+
+import type { Note } from '../types'
+
+function formatDetailedDate(dateStr: string): string {
+  const date = new Date(dateStr)
+  const yyyy = date.getFullYear()
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  const hh = String(date.getHours()).padStart(2, '0')
+  const min = String(date.getMinutes()).padStart(2, '0')
+  const ss = String(date.getSeconds()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`
+}
+
+function getCardTooltipHtml(note: Note): string {
+  let badgesHtml = ''
+  if (note.isPinned) {
+    badgesHtml += '<span class="status-badge pinned">置顶</span>'
+  }
+  if (note.isFavorite) {
+    badgesHtml += '<span class="status-badge fav">收藏</span>'
+  }
+  const childCount = notesStore.getChildCount(note.id)
+  if (childCount > 0) {
+    badgesHtml += `<span class="status-badge children">${childCount}子笔记</span>`
+  }
+  
+  const titleText = note.title || '未命名笔记'
+  const headerHtml = `
+    <div class="tooltip-header">
+      <span class="tooltip-title">${titleText}</span>
+      <div class="tooltip-status-badges">${badgesHtml}</div>
+    </div>
+  `
+
+  const categoryHtml = `
+    <div class="tooltip-row">
+      <span class="tooltip-label">分类</span>
+      <span class="tooltip-value">${note.category || '未分类'}</span>
+    </div>
+  `
+
+  let tagsHtml = ''
+  if (note.tags && note.tags.length > 0) {
+    const tagsList = note.tags.map(t => `<span class="tooltip-tag">#${t}</span>`).join('')
+    tagsHtml = `
+      <div class="tooltip-row">
+        <span class="tooltip-label">标签</span>
+        <div class="tooltip-tags">${tagsList}</div>
+      </div>
+    `
+  }
+
+  const updatedDateHtml = `
+    <div class="tooltip-row">
+      <span class="tooltip-label">修改时间</span>
+      <span class="tooltip-value">${formatDetailedDate(note.updatedAt)}</span>
+    </div>
+  `
+  const createdDateHtml = `
+    <div class="tooltip-row">
+      <span class="tooltip-label">创建时间</span>
+      <span class="tooltip-value">${formatDetailedDate(note.createdAt)}</span>
+    </div>
+  `
+
+  return `
+    <div class="card-hover-tooltip">
+      ${headerHtml}
+      <div class="tooltip-body">
+        ${categoryHtml}
+        ${tagsHtml}
+        ${updatedDateHtml}
+        ${createdDateHtml}
+      </div>
+    </div>
+  `
 }
 </script>
 
@@ -463,29 +593,11 @@ function handlePillMouseUp(cat: string) {
         @click="openNote(note.id)"
         @keydown.enter="openNote(note.id)"
         @contextmenu.prevent.stop="handleCardContextMenu($event, note.id)"
+        :data-tooltip-html="notesStore.draggingNoteId ? null : getCardTooltipHtml(note)"
+        data-tooltip-pos="right"
       >
-        <div class="card-badges">
-          <svg v-if="note.isFavorite" class="fav-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-          </svg>
-          <svg v-if="note.isPinned" class="pin-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-            <circle cx="12" cy="10" r="3" />
-          </svg>
-          <span v-if="notesStore.getChildCount(note.id) > 0" class="child-count-badge" :data-tooltip="`${notesStore.getChildCount(note.id)} 个子笔记`" data-tooltip-pos="bottom">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-            </svg>
-            {{ notesStore.getChildCount(note.id) }}
-          </span>
-        </div>
         <h3 class="note-card-title">{{ note.title || '未命名笔记' }}</h3>
         <div class="note-card-content" v-html="previewHtml(note.content)" />
-        <div class="note-card-footer">
-          <span class="note-card-category">{{ note.category }}</span>
-          <span class="note-card-date">{{ formatDate(note.updatedAt) }}</span>
-        </div>
       </div>
     </div>
 

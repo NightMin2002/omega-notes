@@ -126,6 +126,8 @@ omega-v2/
 │   │   └── useAppMode.ts       # 桌面/移动端模式判断、/m 路由映射、sessionStorage 模式覆盖
 │   │
 │   ├── utils/                  # 工具函数
+│   │
+│   ├── utils/                  # 工具函数
 │   │   ├── markdown.ts         # stripMarkdown / truncateText
 │   │   ├── storage.ts          # 存储适配层（Tauri fs / localStorage 降级）
 │   │   ├── shortcuts.ts        # 全局快捷键注册（Tauri 环境）
@@ -133,7 +135,7 @@ omega-v2/
 │   │   ├── images.ts           # 图片粘贴处理（base64 转换）
 │   │   ├── dataio.ts           # 数据导入/导出（JSON + .md 支持）
 │   │   ├── scheduler.ts        # 后台调度器（任务提醒 + 健康提醒巡检）
-│   │   └── tooltip.ts          # 全局 JS Tooltip 引擎（解决 CSS overflow 截断问题）
+│   │   └── tooltip.ts          # 全局 JS Tooltip 引擎（支持富 HTML 浮层与智能左右翻转）
 │   │
 │   ├── types/                  # 共享类型定义
 │   │   └── index.ts            # Note（含 parentId 子笔记引用） / DailyTask / HealthReminder / CountdownState / CustomTemplate 等
@@ -232,7 +234,7 @@ docs/
 |---|---|---|---|
 | `HomeView.vue` | `/` | `tasks`, `todos`, `notes` | 效率主页：Mega Hero 看板（动态时间问候/日期/超大任务进度环 + 完成庆祝效果/浮动光效装饰/今日数据亮点 Chips）与四格行动卡片（日常打卡/待办事项/新建笔记/知识库，渐变色带 + 悬浮底光） |
 | `KnowledgeBaseView.vue`| `/kb-home` | `notes` | 知识库专属底座：呈现全库统计（文章数/类目/收藏）、收件箱未理及最近更新 |
-| `NotesView.vue` | `/notes` | `notes` | 搜索框、**网格/列表视图切换（localStorage 持久化）**、分类药丸（支持拖拽放入移动分类）、面包屑（嵌套分类时）、标签云筛选（`?tag=`）、收藏夹/最近视图（`?view=`）、笔记卡片网格（自适应 2-3 列）、列表视图、笔记数量统计、**FLIP 拖拽动画**、**拖拽卡片到分类药丸/侧边栏文件夹移动分类**、**Markdown 卡片预览** |
+| `NotesView.vue` | `/notes` | `notes` | 搜索框、**网格/列表视图切换（localStorage 持久化）**、分类药丸（支持拖拽放入移动分类）、面包屑（嵌套分类时）、标签云筛选（`?tag=`）、收藏夹/最近视图（`?view=`）、笔记卡片网格（自适应 2-3 列）、列表视图、笔记数量统计、**FLIP 拖拽动画**、**拖拽卡片到分类药丸/侧边栏文件夹移动分类**、**极简卡片与智能富 HTML Tooltip** |
 | `ExplorerView.vue` | `/explorer/:id?` | `notes` | **知识库浏览器（主从布局）**：左侧 NoteListPanel（Master）+ 右侧 NoteReaderPanel（Detail）+ 可拖拽分隔条（宽度持久化）+ URL 同步选中笔记 + 窄屏上下分栏降级 |
 | `WriteView.vue` | `/write` | `notes`, `settings` | 模板选择器 → WYSIWYG/分屏编辑 + 图片插入 + `[[title]]` 链接插入 + 标题/分类/标签表单 + **自定义模板管理（新建/编辑/删除/右键菜单）** + **待办事项跳转入口** |
 | `NoteDetailView.vue` | `/note/:id` | `notes` | **Flex 内部滚动架构**：detail-toolbar + editor-toolbar 固定不滚动，detail-content 独立滚动（分屏时 flex 填充，pane 独立滚动）；阅读/编辑/分屏切换，收藏/置顶/删除，`[[title]]` 链接，反向链接，**5 种阅读主题 + 编辑器主题适配**，字体缩放，悬挂窗口 |

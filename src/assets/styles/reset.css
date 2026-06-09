@@ -224,3 +224,123 @@ textarea::placeholder {
   /* 穿透克隆体，让底层元素（如侧边栏文件夹）接收拖放事件 */
   pointer-events: none !important;
 }
+
+/* ─── 丰富富文本 Tooltip 专属样式 ─── */
+.global-js-tooltip.has-html {
+  white-space: normal;
+  padding: var(--space-4) var(--space-6);
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--color-glass-border, var(--color-border-strong));
+  border-radius: var(--radius-lg);
+  width: 310px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22),
+              0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.card-hover-tooltip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  font-size: 0.75rem;
+}
+
+.card-hover-tooltip .tooltip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-divider);
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.card-hover-tooltip .tooltip-title {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: var(--space-2);
+}
+
+.card-hover-tooltip .tooltip-status-badges {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.card-hover-tooltip .status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5px 5px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.02em;
+}
+
+.card-hover-tooltip .status-badge.pinned {
+  background: var(--color-accent-muted);
+  color: var(--color-accent);
+  border: 1.5px solid color-mix(in srgb, var(--color-accent) 20%, transparent);
+}
+
+.card-hover-tooltip .status-badge.fav {
+  background: rgba(230, 168, 23, 0.1);
+  color: var(--color-warning, #e6a817);
+  border: 1.5px solid rgba(230, 168, 23, 0.2);
+}
+
+.card-hover-tooltip .status-badge.children {
+  background: var(--color-info-muted, rgba(99, 179, 237, 0.1));
+  color: var(--color-info, #63b3ed);
+  border: 1.5px solid rgba(99, 179, 237, 0.2);
+}
+
+.card-hover-tooltip .tooltip-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.card-hover-tooltip .tooltip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  line-height: 1.4;
+}
+
+.card-hover-tooltip .tooltip-label {
+  color: var(--color-text-tertiary);
+  font-weight: 500;
+  flex-shrink: 0;
+  font-size: 0.72rem;
+}
+
+.card-hover-tooltip .tooltip-value {
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  text-align: right;
+  word-break: break-all;
+  font-size: 0.75rem;
+}
+
+.card-hover-tooltip .tooltip-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  justify-content: flex-end;
+}
+
+.card-hover-tooltip .tooltip-tag {
+  background: var(--color-accent-muted);
+  color: var(--color-accent);
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  font-size: 0.65rem;
+  font-weight: 600;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 15%, transparent);
+}

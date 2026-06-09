@@ -45,6 +45,12 @@ function handleClickOutside(e: MouseEvent) {
   }
 }
 
+function handleContextMenuOutside(e: MouseEvent) {
+  if (menuRef.value && !menuRef.value.contains(e.target as Node)) {
+    close()
+  }
+}
+
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') close()
 }
@@ -57,11 +63,13 @@ watch(() => props.show, (val) => {
   if (val) {
     setTimeout(() => {
       document.addEventListener('click', handleClickOutside, true)
+      document.addEventListener('contextmenu', handleContextMenuOutside, true)
       document.addEventListener('keydown', handleKeydown, true)
       document.addEventListener('scroll', handleScroll, true)
     }, 0)
   } else {
     document.removeEventListener('click', handleClickOutside, true)
+    document.removeEventListener('contextmenu', handleContextMenuOutside, true)
     document.removeEventListener('keydown', handleKeydown, true)
     document.removeEventListener('scroll', handleScroll, true)
   }
@@ -69,6 +77,7 @@ watch(() => props.show, (val) => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside, true)
+  document.removeEventListener('contextmenu', handleContextMenuOutside, true)
   document.removeEventListener('keydown', handleKeydown, true)
   document.removeEventListener('scroll', handleScroll, true)
 })
